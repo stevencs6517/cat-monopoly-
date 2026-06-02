@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cat Monopoly</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#ffe3f3;
+    --bg2:#e9ddff;
+    --bg3:#d8f3ff;
+    --panel:#fffafd;
+    --panel2:#fdeef7;
+    --ink:#7a5a86;
+    --ink2:#a98fbb;
+    --pink:#ff9ec7;
+    --pink-d:#ff6fae;
+    --lav:#b69ce8;
+    --gold:#ffce5c;
+    --gold-d:#f5b32e;
+    --good:#6fd6a3;
+    --danger:#ff7b9c;
+    --line:#f3d9ea;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Quicksand","Segoe UI",sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 0%, #fff2fb 0%, transparent 45%),
+      radial-gradient(circle at 85% 10%, #eafaff 0%, transparent 45%),
+      linear-gradient(160deg,var(--bg1),var(--bg2) 55%,var(--bg3));
+    background-attachment:fixed;
+  }
+  h1,h2,.money,.buy,.name,.tab{font-family:"Baloo 2","Quicksand",sans-serif;}
+
+  header{text-align:center;padding:20px 10px 6px;position:relative;}
+  header h1{
+    margin:0;font-size:38px;font-weight:800;letter-spacing:.5px;
+    color:var(--pink-d);
+    text-shadow:0 2px 0 #fff, 0 4px 14px rgba(255,111,174,.35);
+  }
+  header .tag{color:var(--ink2);font-size:14px;margin-top:2px;font-weight:600;}
+  .sparkles{position:absolute;inset:0;pointer-events:none;font-size:18px;opacity:.6;}
+
+  .wrap{
+    max-width:1020px;margin:0 auto;padding:10px 14px 70px;
+    display:grid;grid-template-columns:1fr 1.25fr;gap:18px;
+  }
+  @media(max-width:800px){.wrap{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--panel);
+    border:2px solid #ffd9ee;
+    border-radius:26px;
+    padding:18px;
+    box-shadow:0 12px 30px rgba(182,156,232,.25), inset 0 0 0 4px #fff;
+  }
+  .stat{text-align:center;}
+  .money{font-size:42px;font-weight:800;color:var(--gold-d);line-height:1.05;text-shadow:0 2px 0 #fff;}
+  .persec{color:var(--good);font-size:16px;margin-top:2px;font-weight:700;}
+  .sub{color:var(--ink2);font-size:13px;margin-top:6px;font-weight:600;}
+
+  .pedestal{
+    margin:12px auto 4px;width:180px;height:180px;border:none;background:none;cursor:pointer;
+    position:relative;display:flex;align-items:center;justify-content:center;
+    transition:transform .06s;
+  }
+  .pedestal::after{
+    content:"";position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+    width:120px;height:26px;border-radius:50%;
+    background:radial-gradient(closest-side, rgba(182,156,232,.45), transparent);
+  }
+  .pedestal:active{transform:scale(.94);}
+  .pedestal svg{filter:drop-shadow(0 6px 8px rgba(182,156,232,.35));z-index:1;}
+  .topcat{font-weight:700;color:var(--pink-d);font-size:14px;margin-top:-4px;}
+  .clickhint{color:var(--ink2);font-size:12px;font-weight:600;}
+
+  .mult-badge{
+    display:inline-block;background:#f6ecff;border:2px solid #e3d3ff;
+    border-radius:20px;padding:5px 14px;color:var(--lav);font-weight:700;font-size:13px;margin:6px 3px 0;
+  }
+
+  .footer-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px;}
+  .smallbtn{
+    background:#fff;border:2px solid #f0dcea;color:var(--ink);
+    border-radius:16px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700;
+    font-family:"Quicksand";transition:.15s;
+  }
+  .smallbtn:hover{border-color:var(--pink);transform:translateY(-1px);}
+  .smallbtn.active{background:var(--pink);color:#fff;border-color:var(--pink-d);}
+  .smallbtn.danger:hover{border-color:var(--danger);color:var(--danger);}
+
+  .tabs{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap;}
+  .tab{
+    flex:1;padding:10px 6px;text-align:center;background:var(--panel2);
+    border-radius:16px;cursor:pointer;font-size:15px;font-weight:700;color:var(--ink2);
+    border:2px solid transparent;min-width:78px;transition:.15s;
+  }
+  .tab.active{color:#fff;background:linear-gradient(180deg,var(--pink),var(--pink-d));border-color:#fff;box-shadow:0 4px 12px rgba(255,111,174,.35);}
+
+  .item{
+    display:flex;align-items:center;gap:12px;background:var(--panel2);
+    border-radius:20px;padding:10px 12px;margin-bottom:10px;border:2px solid #fbe6f3;
+  }
+  .item .icon{width:54px;height:54px;flex:0 0 54px;display:flex;align-items:center;justify-content:center;}
+  .item .icon svg{filter:drop-shadow(0 2px 3px rgba(182,156,232,.3));}
+  .item .info{flex:1;min-width:0;}
+  .item .name{font-weight:700;font-size:15px;}
+  .item .desc{color:var(--ink2);font-size:12px;font-weight:600;}
+  .item .owned{font-size:24px;font-weight:800;color:var(--lav);min-width:30px;text-align:right;}
+  .buy{
+    border:none;border-radius:16px;padding:9px 12px;font-weight:800;cursor:pointer;
+    background:linear-gradient(180deg,var(--gold),var(--gold-d));color:#7a4a00;font-size:13px;
+    white-space:nowrap;text-align:center;line-height:1.15;box-shadow:0 3px 0 #e09a16;transition:.1s;
+  }
+  .buy:active{transform:translateY(2px);box-shadow:0 1px 0 #e09a16;}
+  .buy:disabled{filter:grayscale(.6) brightness(.97);opacity:.6;cursor:not-allowed;box-shadow:none;}
+  .buy.alt{background:linear-gradient(180deg,var(--pink),var(--pink-d));color:#fff;box-shadow:0 3px 0 var(--pink-d);}
+  .locked{opacity:.6;}
+
+  .rebirth-box{text-align:center;}
+  .rebirth-box .big{font-size:28px;color:var(--pink-d);font-weight:800;}
+  hr{border:none;border-top:2px dashed #f0dcea;margin:12px 0;}
+
+  /* leaderboard */
+  .lbrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:16px;background:var(--panel2);margin-bottom:7px;border:2px solid #fbe6f3;}
+  .lbrow .rank{font-size:18px;font-weight:800;width:34px;text-align:center;}
+  .lbrow .who{flex:1;min-width:0;}
+  .lbrow .who b{font-size:14px;}
+  .lbrow .who .meta{font-size:11px;color:var(--ink2);font-weight:600;}
+  .lbrow .val{font-weight:800;color:var(--gold-d);font-size:14px;}
+  .lbrow.me{border-color:var(--pink);background:#fff2fa;}
+  input.nameinput{
+    border:2px solid #f0dcea;border-radius:14px;padding:9px 12px;font-family:"Quicksand";
+    font-weight:700;color:var(--ink);font-size:14px;width:100%;
+  }
+  input.nameinput:focus{outline:none;border-color:var(--pink);}
+
+  .overlay{position:fixed;inset:0;background:rgba(122,90,134,.35);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;padding:16px;z-index:50;}
+  .overlay.show{display:flex;}
+  .modal{background:var(--panel);border:3px solid #ffd9ee;border-radius:26px;padding:24px;
+    max-width:480px;width:100%;box-shadow:0 24px 60px rgba(122,90,134,.4);text-align:left;}
+  .modal h2{margin-top:0;color:var(--pink-d);}
+  textarea{width:100%;height:110px;background:#fdf3fa;color:var(--lav);border:2px solid #f0dcea;
+    border-radius:14px;padding:10px;font-family:monospace;font-size:12px;resize:vertical;}
+  .modal .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+  .modal .row .smallbtn{flex:1;}
+
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+    background:#fff;border:2px solid var(--pink);color:var(--ink);padding:10px 20px;
+    border-radius:30px;font-size:14px;font-weight:700;opacity:0;transition:opacity .3s;
+    pointer-events:none;z-index:60;box-shadow:0 8px 20px rgba(255,111,174,.3);}
+  #toast.show{opacity:1;}
+  .float{position:absolute;pointer-events:none;color:var(--gold-d);font-weight:800;
+    animation:floatUp 1s ease-out forwards;font-size:20px;z-index:70;text-shadow:0 1px 0 #fff;}
+  @keyframes floatUp{to{transform:translateY(-55px) scale(1.1);opacity:0;}}
+
+  /* ===== ✿ extra kawaii desu ✿ ===== */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Ctext x='12' y='34' font-size='20' fill='%23ffd0e8'%3E%E2%99%A5%3C/text%3E%3Ctext x='56' y='74' font-size='15' fill='%23e3d4ff'%3E%E2%9C%A6%3C/text%3E%3Ctext x='60' y='28' font-size='12' fill='%23ffe3b0'%3E%E2%9C%A7%3C/text%3E%3C/svg%3E");
+    background-size:90px 90px;
+  }
+  header, .wrap{position:relative;z-index:1;}
+
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  @keyframes wiggle{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+  @keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(.92);opacity:.5}50%{transform:translate(-50%,-50%) scale(1.12);opacity:.85}}
+  @keyframes shimmer{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+  @keyframes pop{0%{transform:scale(.6)}70%{transform:scale(1.12)}100%{transform:scale(1)}}
+  @keyframes rise{0%{transform:translateY(0) scale(.5) rotate(0);opacity:0}
+    12%{opacity:.85}88%{opacity:.85}100%{transform:translateY(-105vh) scale(1) rotate(25deg);opacity:0}}
+
+  header h1{animation:bob 3.2s ease-in-out infinite;}
+  .card{border-radius:30px;box-shadow:0 14px 34px rgba(255,158,199,.30), inset 0 0 0 4px #fff, 0 0 0 3px #ffe1f0;}
+  .money{
+    background:linear-gradient(90deg,#ffb14e,#ff7ac6,#b69ce8,#ffb14e);
+    background-size:250% auto;-webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent;animation:shimmer 5s linear infinite;
+  }
+  .pedestal::before{
+    content:"";position:absolute;left:50%;top:46%;width:160px;height:160px;border-radius:50%;
+    background:radial-gradient(circle, rgba(255,158,199,.45), rgba(182,156,232,.18) 55%, transparent 72%);
+    animation:pulse 2.8s ease-in-out infinite;z-index:0;
+  }
+  .pedestal svg, .pedestal img{animation:bob 2.8s ease-in-out infinite;position:relative;z-index:1;}
+  .buy:hover:not(:disabled){animation:wiggle .45s ease-in-out;}
+  .smallbtn:hover{animation:wiggle .45s ease-in-out;}
+  .tab.active{animation:pop .3s ease-out;}
+  .item{transition:transform .12s ease;}
+  .item:hover{transform:translateY(-2px) scale(1.012);}
+  .mult-badge{box-shadow:0 3px 8px rgba(182,156,232,.25);}
+
+  .kw-particle{position:fixed;bottom:-24px;pointer-events:none;z-index:0;
+    animation:rise linear forwards;filter:drop-shadow(0 1px 2px rgba(255,158,199,.4));}
+
+  ::-webkit-scrollbar{width:13px;}
+  ::-webkit-scrollbar-thumb{background:#ffb6d5;border-radius:12px;border:3px solid #ffe3f3;}
+  ::-webkit-scrollbar-thumb:hover{background:#ff9ec7;}
+  ::-webkit-scrollbar-track{background:#ffeef7;}
+</style>
+</head>
+<body>
+<header>
+  <div class="sparkles">✨ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🐾&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 💗 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ✨</div>
+  <h1>🐱 Cat Monopoly 🎀</h1>
+  <div class="tag">♡ build your fluffy little empire ♡ &nbsp;(=^･ω･^=)</div>
+</header>
+
+<div class="wrap">
+  <div>
+    <div class="card stat">
+      <div class="money" id="money">$0</div>
+      <div class="persec" id="persec">$0 / sec</div>
+      <button class="pedestal" id="clickCat"><span id="mascot"></span></button>
+      <div class="topcat" id="topcat">Stray Kitten</div>
+      <div class="clickhint">tap your cat for <span id="clickval">$1</span> ♡</div>
+      <div class="sub" id="lifetime">Lifetime earned: $0</div>
+      <div>
+        <span class="mult-badge" id="rebirthMult">Prestige x1.00</span>
+        <span class="mult-badge" id="timeBadge">⏱ 0m</span>
+      </div>
+      <div class="footer-btns">
+        <button class="smallbtn" id="saveBtn">💾 Save</button>
+        <button class="smallbtn" id="keyBtn">🔑 Key</button>
+        <button class="smallbtn danger" id="resetBtn">⚠️ Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <div class="tab active" data-tab="cats">🐈 Cats</div>
+      <div class="tab" data-tab="upgrades">⬆️ Upgrades</div>
+      <div class="tab" data-tab="rebirth">✨ Rebirth</div>
+      <div class="tab" data-tab="ranks">🏆 Ranks</div>
+    </div>
+    <div id="buyAmtRow" style="margin-bottom:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <span class="sub" style="margin:0;">Buy:</span>
+      <button class="smallbtn buyamt active" data-amt="1">x1</button>
+      <button class="smallbtn buyamt" data-amt="10">x10</button>
+      <button class="smallbtn buyamt" data-amt="100">x100</button>
+      <button class="smallbtn buyamt" data-amt="max">MAX</button>
+    </div>
+    <div id="panel-cats"></div>
+    <div id="panel-upgrades" style="display:none;"></div>
+    <div id="panel-rebirth" style="display:none;"></div>
+    <div id="panel-ranks" style="display:none;"></div>
+  </div>
+</div>
+
+<div class="overlay" id="keyModal">
+  <div class="modal">
+    <h2>🔑 Save Key</h2>
+    <p class="sub" style="margin:0 0 8px;">Copy this key to move your game to another device. To load, paste a key and press <b>Load Key</b>.</p>
+    <textarea id="keyText" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="smallbtn" id="copyKey">📋 Copy</button>
+      <button class="smallbtn" id="loadKey">📥 Load Key</button>
+      <button class="smallbtn" id="closeKey">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="welcomeModal">
+  <div class="modal" style="text-align:center;">
+    <h2 style="text-align:center;">😺 Welcome Back!</h2>
+    <p style="font-weight:600;">Your kitties kept earning while you were away ♡</p>
+    <div class="money" id="offlineEarned" style="font-size:30px;">$0</div>
+    <div class="sub" id="offlineTime"></div>
+    <div class="row"><button class="smallbtn" id="closeWelcome" style="flex:1;">Collect 💰</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   CAT MONOPOLY — kawaii idle game (single file)
+   ===================================================================== */
+const SAVE_KEY = "catMonopolySave_v2";
+const LB_KEY   = "catMonopolyLB_v1";
+const VERSION  = 2;
+const OFFLINE_CAP_HOURS = 12;
+const COST_GROWTH = 1.15;
+
+/* ===========================================================
+   GLOBAL LEADERBOARD (Supabase) — paste your two values below.
+   Get them from your Supabase project: Settings → API.
+   Leave both blank to keep the on-device local leaderboard.
+   See SUPABASE_SETUP.md for the full step-by-step.
+   =========================================================== */
+const SUPABASE_URL = "";   // e.g. "https://abcdefgh.supabase.co"
+const SUPABASE_KEY = "";   // your project's public "anon" key
+const ONLINE = !!(SUPABASE_URL && SUPABASE_KEY);
+
+/* ---------- Cat tiers (your names) + kawaii palettes ----------
+   coat: solid | stripes | spots | tuxedo | pointed
+   ear : up | big | fold
+*/
+const CAT_BASE = [
+  {name:"Stray Kitten",   fur:"#9fa9b8", inner:"#ffd0e0", eye:"#5a4a78", coat:"solid", extra:"patch"},
+  {name:"Shorthair Cat",  fur:"#e8c79c", inner:"#ffd0e0", eye:"#7a5630", coat:"solid", extra:"collar"},
+  {name:"Black Cat",      fur:"#3f3d4e", inner:"#7a5f8c", eye:"#8fe06b", coat:"solid", extra:"moon"},
+  {name:"Tuxedo Cat",     fur:"#33313f", inner:"#5a4a6a", eye:"#ffd24d", coat:"tuxedo", acc:"#33313f", extra:"bowtie"},
+  {name:"Ragdoll Cat",    fur:"#f3e7d7", inner:"#ffc2d6", eye:"#6fb3e0", coat:"pointed", acc:"#b59b86", fluffy:true, fluff:"#f8eee2", extra:"flower"},
+  {name:"Garfield Cat",   fur:"#f5a623", inner:"#ffcaa0", eye:"#5a3a1a", coat:"stripes", acc:"#d97e16", eyeStyle:"sleepy", extra:"zzz"},
+  {name:"Ginger Cat",     fur:"#f0883c", inner:"#ffc8a0", eye:"#7a4a1a", coat:"stripes", acc:"#d4691f", extra:"fish"},
+  {name:"Sphinx Cat",     fur:"#f3c9bb", inner:"#ffb3c9", eye:"#9a7bd0", coat:"solid", ear:"big", extra:"wrinkle"},
+  {name:"Persian Cat",    fur:"#efe9f2", inner:"#ffd0e0", eye:"#f5b347", coat:"solid", fluffy:true, fluff:"#f7f2f9", acc:"#dccfe6", extra:"hairbow"},
+  {name:"Bengal Cat",     fur:"#e6a93c", inner:"#ffc8a0", eye:"#8fe06b", coat:"spots", acc:"#4a3320"},
+  {name:"Scottish Fold",  fur:"#aab7c6", inner:"#ffd0e0", eye:"#d4a24a", coat:"solid", ear:"fold"},
+  {name:"Siamese Cat",    fur:"#efe3cf", inner:"#caa", eye:"#6fb3e0", coat:"pointed", acc:"#6b5848", extra:"star"},
+  {name:"Devon Rex Cat",  fur:"#cdbaa9", inner:"#ffc2d6", eye:"#8ac06b", coat:"solid", ear:"big", extra:"curl"},
+  {name:"Maine Coon Cat", fur:"#b08d57", inner:"#ffc8a0", eye:"#d4a24a", coat:"stripes", acc:"#6e5436", fluffy:true, fluff:"#bd9a64", extra:"tufts"},
+  {name:"Angora Cat",     fur:"#fbfaff", inner:"#ffd0e0", eye:"#6fb3e0", coat:"solid", fluffy:true, fluff:"#ffffff", acc:"#e7e0f0", extra:"sparkle"},
+  {name:"Siberian Cat",   fur:"#9c8b76", inner:"#ffc8a0", eye:"#c0903a", coat:"stripes", acc:"#6e5f4c", fluffy:true, fluff:"#a8967f", extra:"scarf"},
+  {name:"Russian Blue",   fur:"#8fa3b8", inner:"#c9b3d6", eye:"#8fe06b", coat:"solid", extra:"gem"},
+  {name:"Tabby Cat",      fur:"#c8a06a", inner:"#ffc8a0", eye:"#9ad06b", coat:"stripes", acc:"#8a6a3e", extra:"crown"},
+];
+
+// generate balanced cost/production for all tiers
+function sig(n,d){ if(n<=0)return 0; const p=Math.pow(10,d-1-Math.floor(Math.log10(n))); return Math.round(n*p)/p; }
+function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+const CAT_DEFS = CAT_BASE.map((c,i)=>({
+  ...c, id:i,
+  slug: slugify(c.name),
+  baseCost: sig(15*Math.pow(7,i),3),
+  baseProd: sig(0.1*Math.pow(5.2,i),2),
+}));
+
+/* ---------- Upgrades / modifiers ---------- */
+const UPGRADE_DEFS = [
+  { id:"catnip", name:"Catnip Stash",      emoji:"🌿", cost:1000,   mult:2, desc:"x2 all cat income" },
+  { id:"collar", name:"Golden Collar",     emoji:"⭐", cost:30000,  mult:2, desc:"x2 all cat income" },
+  { id:"food",   name:"Premium Cat Food",  emoji:"🍣", cost:600000, mult:2, desc:"x2 all cat income" },
+  { id:"tower",  name:"Luxury Cat Tower",  emoji:"🏰", cost:1.2e7,  mult:3, desc:"x3 all cat income" },
+  { id:"laser",  name:"Laser Pointer Co",  emoji:"🔴", cost:3e8,    mult:3, desc:"x3 all cat income" },
+  { id:"spa",    name:"Kitty Spa Resort",  emoji:"🛁", cost:8e9,    mult:4, desc:"x4 all cat income" },
+  { id:"fund",   name:"Feline Hedge Fund", emoji:"📈", cost:2e11,   mult:4, desc:"x4 all cat income" },
+  { id:"island", name:"Private Cat Island",emoji:"🏝️", cost:6e12,   mult:5, desc:"x5 all cat income" },
+  { id:"bank",   name:"Cat Central Bank",  emoji:"🏛️", cost:2e14,   mult:5, desc:"x5 all cat income" },
+  { id:"glove1", name:"Petting Glove",     emoji:"🧤", cost:5000,   clickMult:5,  desc:"x5 tap income" },
+  { id:"glove2", name:"Massage Mitt",      emoji:"💆", cost:5e6,    clickMult:10, desc:"x10 tap income" },
+  { id:"glove3", name:"Royal Paw Scepter", emoji:"👑", cost:5e9,    clickMult:20, desc:"x20 tap income" },
+];
+
+/* ---------- State ---------- */
+function newState(){
+  return {
+    version:VERSION, money:0, lifetime:0, totalEarned:0,
+    cats:CAT_DEFS.map(()=>0), upgrades:{},
+    goldenMice:0, rebirths:0, timePlayed:0,
+    name:"", lastSave:Date.now(),
+  };
+}
+let state = newState();
+let buyAmount = 1;
+let currentTab = "cats";
+let lastUnlocked = -1;
+
+/* ---------- Number format ---------- */
+const UNITS=["","K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc","Ud","Dd"];
+function fmt(n){
+  if(n<1000) return (Math.floor(n*100)/100).toLocaleString(undefined,{maximumFractionDigits:2});
+  let t=Math.floor(Math.log10(n)/3);
+  if(t>=UNITS.length) return n.toExponential(2);
+  return (n/Math.pow(1000,t)).toFixed(2)+UNITS[t];
+}
+function money(n){ return "$"+fmt(n); }
+
+/* ---------- Kawaii cat SVG generator ---------- */
+function earMarkup(ear, earColor, inner){
+  if(ear==="big") return `
+    <path d="M32 38 L18 2 L58 26 Z" fill="${earColor}"/>
+    <path d="M88 38 L102 2 L62 26 Z" fill="${earColor}"/>
+    <path d="M36 32 L27 11 L51 26 Z" fill="${inner}"/>
+    <path d="M84 32 L93 11 L69 26 Z" fill="${inner}"/>`;
+  if(ear==="fold") return `
+    <path d="M41 25 Q30 17 22 26 Q31 35 43 31 Z" fill="${earColor}"/>
+    <path d="M79 25 Q90 17 98 26 Q89 35 77 31 Z" fill="${earColor}"/>
+    <path d="M39 26 Q33 22 28 27 Q34 31 40 29 Z" fill="${inner}" opacity=".85"/>
+    <path d="M81 26 Q87 22 92 27 Q86 31 80 29 Z" fill="${inner}" opacity=".85"/>`;
+  return `
+    <path d="M34 36 L26 7 L55 28 Z" fill="${earColor}"/>
+    <path d="M86 36 L94 7 L65 28 Z" fill="${earColor}"/>
+    <path d="M37 31 L31 14 L49 27 Z" fill="${inner}"/>
+    <path d="M83 31 L89 14 L71 27 Z" fill="${inner}"/>`;
+}
+function coatMarkup(c){
+  const a=c.acc||"#000";
+  if(c.coat==="stripes") return `
+    <g stroke="${a}" stroke-width="3.4" stroke-linecap="round" fill="none" opacity=".7">
+      <path d="M60 28 v15"/><path d="M50 30 q-1 8 1 13"/><path d="M70 30 q1 8 -1 13"/>
+      <path d="M30 52 h9"/><path d="M81 52 h9"/><path d="M31 62 h8"/><path d="M81 62 h8"/>
+    </g>`;
+  if(c.coat==="spots"){
+    const pts=[[44,46],[58,40],[73,48],[46,64],[70,66],[60,56],[36,58],[84,58]];
+    return `<g fill="${a}" opacity=".55">`+pts.map(p=>`<ellipse cx="${p[0]}" cy="${p[1]}" rx="3.6" ry="4.6"/>`).join("")+`</g>`;
+  }
+  if(c.coat==="tuxedo") return `
+    <path d="M60 26 Q53 50 60 62 Q67 50 60 26 Z" fill="#fff"/>
+    <ellipse cx="60" cy="80" rx="20" ry="15" fill="#fff"/>`;
+  if(c.coat==="pointed") return `<ellipse cx="60" cy="74" rx="18" ry="13" fill="${a}" opacity=".32"/>`;
+  return "";
+}
+function fluffMarkup(c){
+  if(!c.fluffy) return "";
+  let s=`<circle cx="60" cy="64" r="44" fill="${c.fluff||c.fur}" opacity=".7"/>`;
+  for(let ang=0; ang<360; ang+=24){
+    const x=60+44*Math.cos(ang*Math.PI/180), y=64+44*Math.sin(ang*Math.PI/180);
+    s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="12" fill="${c.fluff||c.fur}"/>`;
+  }
+  return s;
+}
+function eyeMarkup(c, eyec){
+  if(c.eyeStyle==="sleepy") return `
+    <ellipse cx="46" cy="67" rx="7" ry="5.5" fill="${eyec}"/>
+    <ellipse cx="74" cy="67" rx="7" ry="5.5" fill="${eyec}"/>
+    <circle cx="48" cy="64.5" r="2.2" fill="#fff"/>
+    <circle cx="76" cy="64.5" r="2.2" fill="#fff"/>
+    <path d="M38 62 q8 -5 16 0" stroke="${c.fur}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M66 62 q8 -5 16 0" stroke="${c.fur}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  return `
+    <ellipse cx="46" cy="65" rx="7.8" ry="9.8" fill="${eyec}"/>
+    <ellipse cx="74" cy="65" rx="7.8" ry="9.8" fill="${eyec}"/>
+    <circle cx="48.6" cy="60.8" r="3.1" fill="#fff"/>
+    <circle cx="76.6" cy="60.8" r="3.1" fill="#fff"/>
+    <circle cx="43.2" cy="68.5" r="1.8" fill="#fff" opacity=".85"/>
+    <circle cx="71.2" cy="68.5" r="1.8" fill="#fff" opacity=".85"/>`;
+}
+function accessoryMarkup(c){
+  switch(c.extra){
+    case "bowtie": return `
+      <path d="M60 97 L49 90 L49 104 Z" fill="#ff6fae"/>
+      <path d="M60 97 L71 90 L71 104 Z" fill="#ff6fae"/>
+      <circle cx="60" cy="97" r="3.6" fill="#ff9ec7"/>`;
+    case "crown": return `
+      <path d="M43 27 L49 13 L60 21 L71 13 L77 27 Z" fill="#ffce5c" stroke="#f5b32e" stroke-width="1.6"/>
+      <circle cx="49" cy="13" r="2.3" fill="#ff6fae"/><circle cx="60" cy="21" r="2.3" fill="#ff6fae"/><circle cx="71" cy="13" r="2.3" fill="#ff6fae"/>`;
+    case "wrinkle": return `
+      <g stroke="#d49a88" stroke-width="1.5" fill="none" opacity=".6" stroke-linecap="round">
+        <path d="M49 47 q11 -3 22 0"/><path d="M51 52 q9 -2 18 0"/></g>`;
+    case "patch": return `
+      <g transform="rotate(-18 35 64)"><rect x="27" y="60" width="16" height="9" rx="4.5" fill="#ffdca8" stroke="#e7b07a" stroke-width="1"/>
+      <g fill="#e7b07a"><circle cx="31" cy="64.5" r="1"/><circle cx="35" cy="62.5" r="1"/><circle cx="35" cy="66.5" r="1"/><circle cx="39" cy="64.5" r="1"/></g></g>`;
+    case "collar": return `
+      <path d="M41 93 Q60 102 79 93" stroke="#5aa9ff" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <circle cx="60" cy="99" r="4" fill="#ffce5c" stroke="#f5b32e" stroke-width="1"/>`;
+    case "moon": return `<path d="M92 19 a9 9 0 1 0 5 16.5 a6.5 6.5 0 1 1 -5 -16.5 Z" fill="#fff0b0" stroke="#ffce5c" stroke-width="1"/>`;
+    case "flower": {
+      const cx=83, cy=29; let p="";
+      for(let k=0;k<5;k++){ const a=k*72*Math.PI/180; p+=`<circle cx="${(cx+5*Math.cos(a)).toFixed(1)}" cy="${(cy+5*Math.sin(a)).toFixed(1)}" r="3.2" fill="#ff9ec7"/>`; }
+      return `<g>${p}<circle cx="${cx}" cy="${cy}" r="2.6" fill="#ffce5c"/></g>`;
+    }
+    case "zzz": return `<g fill="#8c7ab0" font-family="'Baloo 2',sans-serif" font-weight="800">
+      <text x="82" y="36" font-size="11">z</text><text x="89" y="27" font-size="15">Z</text></g>`;
+    case "fish": return `<g transform="translate(88 88)">
+      <ellipse cx="0" cy="0" rx="7" ry="4.5" fill="#9fd8ff" stroke="#5aa9ff" stroke-width="1"/>
+      <path d="M6 0 L12 -4 L12 4 Z" fill="#9fd8ff" stroke="#5aa9ff" stroke-width="1"/>
+      <circle cx="-3" cy="-1" r="1" fill="#33485f"/></g>`;
+    case "hairbow": return `
+      <path d="M60 22 L49 16 L49 28 Z" fill="#ff6fae"/>
+      <path d="M60 22 L71 16 L71 28 Z" fill="#ff6fae"/>
+      <circle cx="60" cy="22" r="3.4" fill="#ff9ec7"/>`;
+    case "star": return `<path d="M60 33 l2.2 4.6 l5 .5 l-3.8 3.4 l1.2 5 l-4.6 -2.6 l-4.6 2.6 l1.2 -5 l-3.8 -3.4 l5 -.5 Z" fill="#ffe06a" stroke="#f5b32e" stroke-width="0.8"/>`;
+    case "curl": return `<path d="M60 31 q-6 3 0 7 q6 4 0 8" stroke="#9c8266" stroke-width="2.6" fill="none" stroke-linecap="round" opacity=".85"/>`;
+    case "tufts": return `<g stroke="#6e5436" stroke-width="2.4" stroke-linecap="round">
+      <line x1="27" y1="9" x2="24" y2="1"/><line x1="31" y1="9" x2="30" y2="0"/>
+      <line x1="93" y1="9" x2="96" y2="1"/><line x1="89" y1="9" x2="90" y2="0"/></g>`;
+    case "sparkle": return `<g fill="#fff7c0" stroke="#ffd24d" stroke-width="0.7">
+      <path d="M88 25 l1.6 4 l4 1.6 l-4 1.6 l-1.6 4 l-1.6 -4 l-4 -1.6 l4 -1.6 Z"/>
+      <path d="M30 41 l1 2.6 l2.6 1 l-2.6 1 l-1 2.6 l-1 -2.6 l-2.6 -1 l2.6 -1 Z"/></g>`;
+    case "scarf": return `<g fill="#ff8f8f">
+      <path d="M40 89 Q60 99 80 89 L78 98 Q60 107 42 98 Z"/>
+      <path d="M73 96 l5 13 l6 -2 l-5 -13 Z"/></g>`;
+    case "gem": return `
+      <path d="M48 92 Q60 100 72 92" stroke="#c9d6e0" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path d="M60 97 l-4 4 l4 5 l4 -5 Z" fill="#7fe0d0" stroke="#3fb9a6" stroke-width="1"/>`;
+  }
+  return "";
+}
+function catSVG(c, size){
+  const inner=c.inner||"#ffd0e0", eyec=c.eye||"#5a4a78";
+  const earColor = c.coat==="pointed" ? (c.acc||c.fur) : c.fur;
+  const svg=`
+  <svg viewBox="0 0 120 120" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+    ${fluffMarkup(c)}
+    ${earMarkup(c.ear||"up", earColor, inner)}
+    <ellipse cx="60" cy="65" rx="41" ry="37" fill="${c.fur}"/>
+    ${coatMarkup(c)}
+    ${eyeMarkup(c, eyec)}
+    <!-- blush -->
+    <ellipse cx="39" cy="75" rx="7" ry="4" fill="#ff8fb8" opacity=".5"/>
+    <ellipse cx="81" cy="75" rx="7" ry="4" fill="#ff8fb8" opacity=".5"/>
+    <!-- nose + mouth -->
+    <path d="M56 72 L64 72 L60 77 Z" fill="#ff8fb8"/>
+    <path d="M60 77 q-5 5 -9 2 M60 77 q5 5 9 2" stroke="#8a6a86" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7"/>
+    <!-- whiskers -->
+    <g stroke="#b9a3c9" stroke-width="1.4" stroke-linecap="round" opacity=".6">
+      <line x1="30" y1="69" x2="13" y2="65"/><line x1="30" y1="73" x2="13" y2="75"/>
+      <line x1="90" y1="69" x2="107" y2="65"/><line x1="90" y1="73" x2="107" y2="75"/>
+    </g>
+    ${accessoryMarkup(c)}
+  </svg>`;
+  return svg;
+}
+// Prefer a real PNG (images/<slug>.png); fall back to the kawaii SVG if missing.
+function catVisual(c, size){
+  if(c.slug){
+    return `<img src="images/${c.slug}.png" width="${size}" height="${size}" alt="${c.name}"
+      style="width:${size}px;height:${size}px;object-fit:contain;border-radius:50%;"
+      onerror="catImgFail(this,${c.id},${size})">`;
+  }
+  return catSVG(c,size);
+}
+function catImgFail(img,id,size){ img.outerHTML = catSVG(CAT_DEFS[id], size); }
+
+/* ---------- Derived ---------- */
+function rebirthMultiplier(){ return 1 + state.goldenMice*0.02; }
+function globalUpgradeMult(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.mult&&state.upgrades[u.id]) m*=u.mult; } return m; }
+function clickMultiplier(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.clickMult&&state.upgrades[u.id]) m*=u.clickMult; } return m; }
+function catProduction(i){ return state.cats[i]*CAT_DEFS[i].baseProd; }
+function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*globalUpgradeMult()*rebirthMultiplier(); }
+function clickValue(){ return (1+incomePerSec()*0.10)*clickMultiplier()*rebirthMultiplier(); }
+function catCost(i,owned){ return CAT_DEFS[i].baseCost*Math.pow(COST_GROWTH,owned); }
+function catUnlocked(i){ return i===0 || state.cats[i-1]>=1; }
+function highestOwned(){ let h=0; for(let i=0;i<CAT_DEFS.length;i++) if(state.cats[i]>0) h=i; return h; }
+function unlockedCount(){ let n=0; for(let i=0;i<CAT_DEFS.length;i++) if(catUnlocked(i)) n++; return n; }
+
+function catBulk(i){
+  const owned=state.cats[i];
+  if(buyAmount==="max"){
+    let count=0,cost=0,cur=catCost(i,owned),cash=state.money;
+    while(cash>=cur && count<200000){ cash-=cur; cost+=cur; count++; cur=catCost(i,owned+count); }
+    if(count===0){ return {count:1, cost:catCost(i,owned), affordable:false}; }
+    return {count,cost,affordable:true};
+  }
+  let cost=0; for(let k=0;k<buyAmount;k++) cost+=catCost(i,owned+k);
+  return {count:buyAmount, cost, affordable:state.money>=cost};
+}
+
+/* ---------- Render ---------- */
+const $=id=>document.getElementById(id);
+
+function renderStats(){
+  $("money").textContent=money(state.money);
+  $("persec").textContent=money(incomePerSec())+" / sec";
+  $("clickval").textContent=money(clickValue());
+  $("lifetime").textContent="Lifetime earned: "+money(state.lifetime);
+  $("rebirthMult").textContent="Prestige x"+rebirthMultiplier().toFixed(2)+(state.goldenMice>0?"  ("+fmt(state.goldenMice)+" 🐭)":"");
+  $("timeBadge").textContent="⏱ "+fmtTime(state.timePlayed);
+}
+function updateMascot(){
+  const c=CAT_DEFS[highestOwned()];
+  $("mascot").innerHTML=catVisual(c,150);
+  $("topcat").textContent="Top cat: "+c.name;
+}
+
+function renderCatsFull(){
+  lastUnlocked=unlockedCount();
+  const p=$("panel-cats");
+  let html="";
+  for(let i=0;i<CAT_DEFS.length;i++){
+    const c=CAT_DEFS[i];
+    if(!catUnlocked(i)){
+      html+=`<div class="item locked">
+        <div class="icon">${catSVG({fur:"#e7dcec",inner:"#f3e6f0",eye:"#cbb6da",coat:"solid"},48)}</div>
+        <div class="info"><div class="name">??? Cat</div><div class="desc">Buy a ${CAT_DEFS[i-1].name} to unlock</div></div>
+      </div>`; continue;
+    }
+    const prodEach=c.baseProd*globalUpgradeMult()*rebirthMultiplier();
+    html+=`<div class="item" id="catrow-${i}">
+      <div class="icon">${catVisual(c,48)}</div>
+      <div class="info">
+        <div class="name">${c.name}</div>
+        <div class="desc">+${money(prodEach)}/sec each · <span id="catearn-${i}">${money(catProduction(i)*globalUpgradeMult()*rebirthMultiplier())}/sec</span></div>
+      </div>
+      <div class="owned" id="catowned-${i}">${state.cats[i]}</div>
+      <button class="buy" id="catbuy-${i}" data-cat="${i}"></button>
+    </div>`;
+  }
+  p.innerHTML=html;
+  updateCats();
+}
+function updateCats(){
+  for(let i=0;i<CAT_DEFS.length;i++){
+    if(!catUnlocked(i)) continue;
+    const btn=$("catbuy-"+i); if(!btn) continue;
+    const b=catBulk(i);
+    btn.innerHTML="Buy "+(b.count===1?"":"x"+b.count)+"<br>"+money(b.cost);
+    btn.disabled=!b.affordable;
+    const ow=$("catowned-"+i); if(ow) ow.textContent=state.cats[i];
+    const ce=$("catearn-"+i); if(ce) ce.textContent=money(catProduction(i)*globalUpgradeMult()*rebirthMultiplier())+"/sec";
+  }
+}
+
+function renderUpgrades(){
+  let html="";
+  for(const u of UPGRADE_DEFS){
+    const owned=!!state.upgrades[u.id];
+    html+=`<div class="item ${owned?'locked':''}">
+      <div class="icon" style="font-size:30px;">${u.emoji}</div>
+      <div class="info"><div class="name">${u.name} ${owned?'✅':''}</div><div class="desc">${u.desc}</div></div>
+      ${owned?`<span class="owned" style="font-size:14px;color:var(--good)">Owned</span>`
+        :`<button class="buy alt" data-up="${u.id}" ${state.money>=u.cost?"":"disabled"}>${money(u.cost)}</button>`}
+    </div>`;
+  }
+  $("panel-upgrades").innerHTML=html;
+}
+
+function miceFromRebirth(){ if(state.lifetime<1e6) return 0; return Math.floor(Math.pow(state.lifetime/1e6,0.5)); }
+function renderRebirth(){
+  const gain=miceFromRebirth();
+  const newMult=1+(state.goldenMice+gain)*0.02;
+  $("panel-rebirth").innerHTML=`<div class="rebirth-box">
+    <p style="font-weight:600;">Rebirth resets your cash, cats &amp; upgrades — but you keep <b>Golden Mice 🐭</b> forever. Each mouse gives <b>+2%</b> income permanently.</p>
+    <div class="mult-badge">Now: ${fmt(state.goldenMice)} 🐭 · x${rebirthMultiplier().toFixed(2)}</div>
+    <hr>
+    <p class="sub">Rebirths completed: <b>${state.rebirths}</b></p>
+    <div class="big">+${fmt(gain)} 🐭</div>
+    <p class="sub">on rebirth → x${newMult.toFixed(2)} total income</p>
+    <p class="sub">${gain>0?"Ready to rebirth! ♡":"Reach "+money(1e6)+" lifetime earned to gain mice (you have "+money(state.lifetime)+")."}</p>
+    <button class="buy alt" id="doRebirth" ${gain>0?"":"disabled"} style="font-size:16px;padding:13px 24px;margin-top:6px;">✨ REBIRTH for ${fmt(gain)} 🐭</button>
+  </div>`;
+  const b=$("doRebirth"); if(b) b.onclick=doRebirth;
+}
+
+/* ---------- Leaderboard (local + optional global Supabase) ---------- */
+function loadLB(){ try{ return JSON.parse(localStorage.getItem(LB_KEY))||[]; }catch(e){ return []; } }
+function saveLB(arr){ try{ localStorage.setItem(LB_KEY, JSON.stringify(arr)); }catch(e){} }
+function myScore(){ return Math.floor(state.totalEarned||state.lifetime||0); }
+
+// --- Supabase REST calls (only used when ONLINE) ---
+async function fetchTopScores(){
+  if(!ONLINE) return null;
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name,score,rebirths,time&order=score.desc&limit=25`,
+      { headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY } });
+    if(!r.ok) throw 0;
+    const data=await r.json();
+    return data.map(e=>({ name:e.name, lifetime:Number(e.score)||0, rebirths:e.rebirths||0, time:e.time||0 }));
+  }catch(e){ return null; }
+}
+async function fetchMyRank(score){
+  if(!ONLINE) return null;
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name&score=gt.${Math.floor(score)}`,
+      { headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY, Prefer:"count=exact", Range:"0-0" } });
+    const cr=r.headers.get("content-range");           // e.g. "0-0/42" or "*/42"
+    const total=cr ? parseInt(cr.split("/")[1],10) : 0;
+    return (isNaN(total)?0:total)+1;                   // players above me + 1
+  }catch(e){ return null; }
+}
+async function submitScoreOnline(entry){
+  if(!ONLINE) return false;
+  try{
+    const r=await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`,
+      { method:"POST",
+        headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY,
+                  "Content-Type":"application/json", Prefer:"resolution=merge-duplicates" },
+        body:JSON.stringify([{ name:entry.name, score:entry.lifetime, rebirths:entry.rebirths, time:entry.time }]) });
+    return r.ok;
+  }catch(e){ return false; }
+}
+
+async function submitScore(){
+  const nm=($("lbName")?$("lbName").value:"").trim().slice(0,16) || "Anonymous Cat";
+  state.name=nm;
+  const entry={ name:nm, lifetime:myScore(), rebirths:state.rebirths, time:Math.floor(state.timePlayed) };
+  // always keep a local copy (works offline / as fallback)
+  let arr=loadLB();
+  const local={ ...entry, date:Date.now() };
+  const idx=arr.findIndex(e=>e.name.toLowerCase()===nm.toLowerCase());
+  if(idx>=0){ if(entry.lifetime>=arr[idx].lifetime) arr[idx]=local; } else arr.push(local);
+  arr.sort((a,b)=>b.lifetime-a.lifetime); saveLB(arr.slice(0,25));
+  if(ONLINE){
+    const btn=$("lbSubmit"); if(btn){ btn.disabled=true; btn.textContent="Submitting…"; }
+    const ok=await submitScoreOnline(entry);
+    toast(ok ? "Submitted to global! 🌍" : "Saved locally (global unreachable) ⚠️");
+  } else {
+    toast("Score submitted! 🏆");
+  }
+  renderRanks();
+}
+
+function lbRows(arr){
+  const medal=["🥇","🥈","🥉"];
+  if(!arr || !arr.length) return `<p class="sub" style="text-align:center;">No scores yet — be the first! 🎀</p>`;
+  return arr.map((e,i)=>`
+    <div class="lbrow ${e.name===state.name?'me':''}">
+      <div class="rank">${medal[i]||("#"+(i+1))}</div>
+      <div class="who"><b>${escapeHtml(e.name)}</b><div class="meta">✨ ${e.rebirths} rebirths · ⏱ ${fmtTime(e.time)}</div></div>
+      <div class="val">${money(e.lifetime)}</div>
+    </div>`).join("");
+}
+
+function renderRanks(){
+  $("panel-ranks").innerHTML=`
+    <div class="item" style="flex-direction:column;align-items:stretch;gap:8px;">
+      <div class="sub" style="margin:0;">Your run</div>
+      <div style="display:flex;justify-content:space-between;font-weight:700;">
+        <span>💰 ${money(myScore())}</span><span>✨ ${state.rebirths}</span><span>⏱ ${fmtTime(state.timePlayed)}</span>
+      </div>
+      ${ONLINE?`<div class="sub" id="lbRank" style="margin:2px 0;text-align:center;font-weight:800;font-size:15px;color:var(--lav);">🌍 Global rank: …</div>`:""}
+      <input class="nameinput" id="lbName" maxlength="16" placeholder="Your cat name..." value="${escapeHtml(state.name)}">
+      <button class="buy alt" id="lbSubmit">${ONLINE?"🌍 Submit to global leaderboard":"🏆 Submit my score"}</button>
+    </div>
+    <div class="sub" style="text-align:center;margin:4px 0 10px;">${ONLINE?"🌍 Global Leaderboard":"🏆 Local Leaderboard (this device)"}</div>
+    <div id="lbList"><p class="sub" style="text-align:center;">${ONLINE?"Loading global ranks… ⋆":""}</p></div>
+    <div style="text-align:center;margin-top:10px;">${ONLINE?"":'<button class="smallbtn danger" id="lbClear">Clear leaderboard</button>'}</div>`;
+  $("lbSubmit").onclick=submitScore;
+  const clr=$("lbClear"); if(clr) clr.onclick=()=>{ if(confirm("Clear the local leaderboard?")){ saveLB([]); renderRanks(); } };
+  loadRanksList();
+}
+async function loadRanksList(){
+  const el=$("lbList"); if(!el) return;
+  if(ONLINE){
+    const arr=await fetchTopScores();
+    if(!$("lbList")) return; // tab changed while loading
+    if(arr===null){
+      el.innerHTML=`<p class="sub" style="text-align:center;color:var(--danger)">Couldn't reach the global leaderboard — showing your local scores.</p>`+lbRows(loadLB());
+      const rk=$("lbRank"); if(rk) rk.textContent="🌍 Global rank: offline";
+    } else {
+      el.innerHTML=lbRows(arr);
+      updateMyRank();
+    }
+  } else {
+    el.innerHTML=lbRows(loadLB());
+  }
+}
+async function updateMyRank(){
+  const rk=$("lbRank"); if(!rk) return;
+  const rank=await fetchMyRank(myScore());
+  const cur=$("lbRank"); if(!cur) return;            // tab may have changed
+  cur.textContent = rank ? `🌍 Global rank: #${rank.toLocaleString()}` : "🌍 Global rank: —";
+}
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+
+function renderAll(){
+  renderStats();
+  if(currentTab==="cats") renderCatsFull();
+  else if(currentTab==="upgrades") renderUpgrades();
+  else if(currentTab==="rebirth") renderRebirth();
+  else if(currentTab==="ranks") renderRanks();
+}
+
+/* ---------- Actions ---------- */
+function buyCat(i){
+  if(!catUnlocked(i)) return;
+  const b=catBulk(i); if(!b.affordable) return;
+  state.money-=b.cost; state.cats[i]+=b.count;
+  if(unlockedCount()!==lastUnlocked) renderCatsFull(); else updateCats();
+  updateMascot(); renderStats();
+}
+function buyUpgrade(id){
+  const u=UPGRADE_DEFS.find(x=>x.id===id);
+  if(!u||state.upgrades[id]||state.money<u.cost) return;
+  state.money-=u.cost; state.upgrades[id]=true;
+  toast(u.name+" purchased! ♡"); renderUpgrades(); renderStats();
+}
+function doRebirth(){
+  const gain=miceFromRebirth(); if(gain<=0) return;
+  if(!confirm(`Rebirth for ${fmt(gain)} Golden Mice? Cash, cats & upgrades reset.`)) return;
+  state.goldenMice+=gain; state.rebirths+=1;
+  state.money=0; state.lifetime=0; state.cats=CAT_DEFS.map(()=>0); state.upgrades={};
+  toast("✨ Reborn! +"+fmt(gain)+" 🐭");
+  currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); save();
+}
+function petCat(ev){
+  const v=clickValue(); state.money+=v; state.lifetime+=v; state.totalEarned+=v;
+  spawnFloat(ev,"+"+money(v)); renderStats();
+  if(currentTab==="cats") updateCats();
+}
+
+/* ---------- Loop ---------- */
+let lastTick=Date.now();
+function tick(){
+  const now=Date.now(); const dt=(now-lastTick)/1000; lastTick=now;
+  const earned=incomePerSec()*dt;
+  state.money+=earned; state.lifetime+=earned; state.totalEarned+=earned; state.timePlayed+=dt;
+  renderStats();
+  if(currentTab==="cats") updateCats();
+  else if(currentTab==="upgrades") renderUpgrades();
+}
+
+/* ---------- Save/Load ---------- */
+function encode(s){ return btoa(unescape(encodeURIComponent(JSON.stringify(s)))); }
+function decode(str){ return JSON.parse(decodeURIComponent(escape(atob(str.trim())))); }
+function save(){ state.lastSave=Date.now(); try{ localStorage.setItem(SAVE_KEY,encode(state)); }catch(e){} }
+function load(){
+  const raw=localStorage.getItem(SAVE_KEY); if(!raw) return false;
+  try{ applyLoadedState(decode(raw)); return true; }catch(e){ return false; }
+}
+function applyLoadedState(s){
+  state=Object.assign(newState(),s);
+  if(!Array.isArray(state.cats)||state.cats.length!==CAT_DEFS.length){
+    const c=CAT_DEFS.map(()=>0);
+    if(Array.isArray(s.cats)) s.cats.forEach((v,i)=>{ if(i<c.length)c[i]=v||0; });
+    state.cats=c;
+  }
+  if(typeof state.upgrades!=="object"||!state.upgrades) state.upgrades={};
+  if(typeof state.timePlayed!=="number") state.timePlayed=0;
+  if(typeof state.totalEarned!=="number" || state.totalEarned < state.lifetime) state.totalEarned=state.lifetime||0;
+}
+function applyOffline(){
+  const now=Date.now(); let elapsed=(now-(state.lastSave||now))/1000;
+  if(elapsed<5) return;
+  const capped=Math.min(elapsed,OFFLINE_CAP_HOURS*3600);
+  const earned=incomePerSec()*capped; if(earned<=0) return;
+  state.money+=earned; state.lifetime+=earned; state.totalEarned+=earned;
+  $("offlineEarned").textContent=money(earned);
+  $("offlineTime").textContent="Away for "+fmtTime(elapsed)+(elapsed>capped?" (capped at "+OFFLINE_CAP_HOURS+"h)":"");
+  $("welcomeModal").classList.add("show");
+}
+function fmtTime(sec){
+  sec=Math.floor(sec); const d=Math.floor(sec/86400), h=Math.floor((sec%86400)/3600), m=Math.floor((sec%3600)/60), s=sec%60;
+  if(d>0) return `${d}d ${h}h`;
+  if(h>0) return `${h}h ${m}m`;
+  if(m>0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+/* ---------- UI helpers ---------- */
+let toastTimer;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2200); }
+function spawnFloat(ev,txt){ const f=document.createElement("div"); f.className="float"; f.textContent=txt;
+  const x=(ev.clientX||window.innerWidth/4), y=(ev.clientY||200);
+  f.style.left=x+"px"; f.style.top=y+"px"; document.body.appendChild(f); setTimeout(()=>f.remove(),1000); }
+function setActiveTab(){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===currentTab));
+  $("panel-cats").style.display=currentTab==="cats"?"":"none";
+  $("panel-upgrades").style.display=currentTab==="upgrades"?"":"none";
+  $("panel-rebirth").style.display=currentTab==="rebirth"?"":"none";
+  $("panel-ranks").style.display=currentTab==="ranks"?"":"none";
+  $("buyAmtRow").style.display=currentTab==="cats"?"flex":"none";
+}
+
+/* ---------- Events ---------- */
+$("clickCat").addEventListener("click",petCat);
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{ currentTab=t.dataset.tab; setActiveTab(); renderAll(); }));
+document.querySelectorAll(".buyamt").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".buyamt").forEach(x=>x.classList.remove("active")); b.classList.add("active");
+  buyAmount=b.dataset.amt==="max"?"max":parseInt(b.dataset.amt); if(currentTab==="cats") updateCats();
+}));
+$("panel-cats").addEventListener("click",e=>{ const btn=e.target.closest("[data-cat]"); if(btn) buyCat(parseInt(btn.dataset.cat)); });
+$("panel-upgrades").addEventListener("click",e=>{ const btn=e.target.closest("[data-up]"); if(btn) buyUpgrade(btn.dataset.up); });
+
+$("saveBtn").addEventListener("click",()=>{ save(); toast("Game saved 💾"); });
+$("keyBtn").addEventListener("click",()=>{ save(); $("keyText").value=encode(state); $("keyModal").classList.add("show"); });
+$("closeKey").addEventListener("click",()=>$("keyModal").classList.remove("show"));
+$("copyKey").addEventListener("click",()=>{ const ta=$("keyText"); ta.select();
+  navigator.clipboard?.writeText(ta.value).then(()=>toast("Key copied!"),()=>{ document.execCommand("copy"); toast("Key copied!"); }); });
+$("loadKey").addEventListener("click",()=>{
+  const v=$("keyText").value.trim(); if(!v){ toast("Paste a key first"); return; }
+  if(!confirm("Load this key? It overwrites your current game.")) return;
+  try{ const s=decode(v); if(typeof s!=="object"||!("cats"in s)) throw 0;
+    applyLoadedState(s); save(); $("keyModal").classList.remove("show");
+    currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); toast("Save loaded! 😺");
+  }catch(err){ toast("Invalid key ❌"); }
+});
+$("resetBtn").addEventListener("click",()=>{
+  if(!confirm("Hard reset EVERYTHING including prestige? Cannot be undone.")) return;
+  state=newState(); save(); currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); toast("Game reset");
+});
+$("closeWelcome").addEventListener("click",()=>{ $("welcomeModal").classList.remove("show"); renderAll(); });
+window.addEventListener("beforeunload",save);
+
+/* ---------- Boot ---------- */
+load(); applyOffline(); setActiveTab(); updateMascot(); renderAll();
+lastTick=Date.now();
+setInterval(tick,100);
+setInterval(save,10000);
+
+/* ---------- floating kawaii particles ✿ ---------- */
+const KW_EMOJI=["✨","💗","⭐","🌸","🐾","💖","🎀","⋆","🍬","☁️"];
+function kawaiiParticle(){
+  if(document.hidden) return;
+  const e=document.createElement("div");
+  e.className="kw-particle";
+  e.textContent=KW_EMOJI[Math.floor(Math.random()*KW_EMOJI.length)];
+  e.style.left=Math.random()*100+"vw";
+  const dur=7+Math.random()*5;
+  e.style.animationDuration=dur+"s";
+  e.style.fontSize=(13+Math.random()*16)+"px";
+  document.body.appendChild(e);
+  setTimeout(()=>e.remove(), dur*1000+200);
+}
+setInterval(kawaiiParticle, 850);
+for(let i=0;i<5;i++) setTimeout(kawaiiParticle, i*300);
+</script>
+</body>
+</html>
