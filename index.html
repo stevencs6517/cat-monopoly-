@@ -298,8 +298,10 @@ const COST_GROWTH = 1.15;
    Leave both blank to keep the on-device local leaderboard.
    See SUPABASE_SETUP.md for the full step-by-step.
    =========================================================== */
-const SUPABASE_URL = "https://oneygmnckmphsayewtmv.supabase.co/rest/v1/";   // e.g. "https://abcdefgh.supabase.co"
+const SUPABASE_URL = "https://oneygmnckmphsayewtmv.supabase.co";   // base URL only (no /rest/v1)
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9uZXlnbW5ja21waHNheWV3dG12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNjgwNzMsImV4cCI6MjA5NTk0NDA3M30.4kXafnTgLZtCyP8PFOWTYfhTBgPqDvOQUNFbqdR60Vg";   // your project's public "anon" key
+// tolerate a trailing slash or an accidental ".../rest/v1" suffix in the URL
+const SB = (SUPABASE_URL||"").replace(/\/+$/,"").replace(/\/rest\/v1$/i,"");
 const ONLINE = !!(SUPABASE_URL && SUPABASE_KEY);
 
 /* ---------- Cat tiers (your names) + kawaii palettes ----------
@@ -643,7 +645,7 @@ function myScore(){ return Math.floor(state.totalEarned||state.lifetime||0); }
 async function fetchTopScores(){
   if(!ONLINE) return null;
   try{
-    const r=await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name,score,rebirths,time&order=score.desc&limit=25`,
+    const r=await fetch(`${SB}/rest/v1/scores?select=name,score,rebirths,time&order=score.desc&limit=25`,
       { headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY } });
     if(!r.ok) throw 0;
     const data=await r.json();
@@ -653,7 +655,7 @@ async function fetchTopScores(){
 async function fetchMyRank(score){
   if(!ONLINE) return null;
   try{
-    const r=await fetch(`${SUPABASE_URL}/rest/v1/scores?select=name&score=gt.${Math.floor(score)}`,
+    const r=await fetch(`${SB}/rest/v1/scores?select=name&score=gt.${Math.floor(score)}`,
       { headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY, Prefer:"count=exact", Range:"0-0" } });
     const cr=r.headers.get("content-range");           // e.g. "0-0/42" or "*/42"
     const total=cr ? parseInt(cr.split("/")[1],10) : 0;
@@ -663,7 +665,7 @@ async function fetchMyRank(score){
 async function submitScoreOnline(entry){
   if(!ONLINE) return false;
   try{
-    const r=await fetch(`${SUPABASE_URL}/rest/v1/scores?on_conflict=name`,
+    const r=await fetch(`${SB}/rest/v1/scores?on_conflict=name`,
       { method:"POST",
         headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY,
                   "Content-Type":"application/json", Prefer:"resolution=merge-duplicates" },
