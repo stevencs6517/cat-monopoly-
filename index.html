@@ -191,8 +191,9 @@
     animation:pulse 2.8s ease-in-out infinite;z-index:0;
   }
   .pedestal svg, .pedestal img{animation:bob 2.8s ease-in-out infinite;position:relative;z-index:1;}
-  .buy:hover:not(:disabled){animation:wiggle .45s ease-in-out;}
-  .smallbtn:hover{animation:wiggle .45s ease-in-out;}
+  .buy:not(:disabled){transition:transform .15s ease, filter .15s ease, box-shadow .1s;}
+  .buy:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.04);}
+  .smallbtn:hover{transform:translateY(-1px);}
   .tab.active{animation:pop .3s ease-out;}
   .item{transition:transform .12s ease;}
   .item:hover{transform:translateY(-2px) scale(1.012);}
