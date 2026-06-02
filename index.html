@@ -338,7 +338,9 @@ const SAVE_KEY = "catMonopolySave_v2";
 const LB_KEY   = "catMonopolyLB_v1";
 const VERSION  = 2;
 const OFFLINE_CAP_HOURS = 12;
-const COST_GROWTH = 1.15;
+const COST_GROWTH = 1.17;        // each additional cat of a tier costs more
+const CAT_SOFT_CAP = 50;         // beyond this many of ONE tier, extra cats earn far less
+const CAT_OVERCAP_EFF = 0.30;    // efficiency of each cat past the soft cap
 
 /* ===========================================================
    GLOBAL LEADERBOARD (Supabase) — paste your two values below.
@@ -375,6 +377,11 @@ const CAT_BASE = [
   {name:"Siberian Cat",   fur:"#9c8b76", inner:"#ffc8a0", eye:"#c0903a", coat:"stripes", acc:"#6e5f4c", fluffy:true, fluff:"#a8967f", extra:"scarf"},
   {name:"Russian Blue",   fur:"#8fa3b8", inner:"#c9b3d6", eye:"#8fe06b", coat:"solid", extra:"gem"},
   {name:"Tabby Cat",      fur:"#c8a06a", inner:"#ffc8a0", eye:"#9ad06b", coat:"stripes", acc:"#8a6a3e", extra:"crown"},
+  {name:"Lynx Cat",       fur:"#cdb79a", inner:"#ffd0e0", eye:"#9ad06b", coat:"spots",   acc:"#7a5f3e", ear:"big", fluffy:true, fluff:"#d8c6ad", extra:"tufts"},
+  {name:"Savannah Cat",   fur:"#e0b35a", inner:"#ffc8a0", eye:"#d4a24a", coat:"spots",   acc:"#5a3f1e", ear:"big", extra:"star"},
+  {name:"Caracal Cat",    fur:"#d99a5a", inner:"#ffc8a0", eye:"#c0903a", coat:"solid",   acc:"#7a4a1a", ear:"big", extra:"tufts"},
+  {name:"Celestial Cat",  fur:"#b6a3e8", inner:"#ffd0e0", eye:"#fff0b0", coat:"solid",   acc:"#9a7bd0", fluffy:true, fluff:"#cdbef2", extra:"sparkle"},
+  {name:"Golden God Cat", fur:"#ffce5c", inner:"#fff0b8", eye:"#7a5630", coat:"solid",   acc:"#f5b32e", fluffy:true, fluff:"#ffe08a", extra:"crown"},
 ];
 
 // generate balanced cost/production for all tiers
@@ -383,24 +390,24 @@ function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/
 const CAT_DEFS = CAT_BASE.map((c,i)=>({
   ...c, id:i,
   slug: slugify(c.name),
-  baseCost: sig(15*Math.pow(7,i),3),
-  baseProd: sig(0.1*Math.pow(5.2,i),2),
+  baseCost: sig(40*Math.pow(8.5,i),3),   // way higher base + steeper per-tier scaling
+  baseProd: sig(0.08*Math.pow(4.8,i),2), // less power per cat — income grows slower than cost
 }));
 
 /* ---------- Upgrades / modifiers ---------- */
 const UPGRADE_DEFS = [
-  { id:"catnip", name:"Catnip Stash",      emoji:"🌿", cost:1000,   mult:2, desc:"x2 all cat income" },
-  { id:"collar", name:"Golden Collar",     emoji:"⭐", cost:30000,  mult:2, desc:"x2 all cat income" },
-  { id:"food",   name:"Premium Cat Food",  emoji:"🍣", cost:600000, mult:2, desc:"x2 all cat income" },
-  { id:"tower",  name:"Luxury Cat Tower",  emoji:"🏰", cost:1.2e7,  mult:3, desc:"x3 all cat income" },
-  { id:"laser",  name:"Laser Pointer Co",  emoji:"🔴", cost:3e8,    mult:3, desc:"x3 all cat income" },
-  { id:"spa",    name:"Kitty Spa Resort",  emoji:"🛁", cost:8e9,    mult:4, desc:"x4 all cat income" },
-  { id:"fund",   name:"Feline Hedge Fund", emoji:"📈", cost:2e11,   mult:4, desc:"x4 all cat income" },
-  { id:"island", name:"Private Cat Island",emoji:"🏝️", cost:6e12,   mult:5, desc:"x5 all cat income" },
-  { id:"bank",   name:"Cat Central Bank",  emoji:"🏛️", cost:2e14,   mult:5, desc:"x5 all cat income" },
-  { id:"glove1", name:"Petting Glove",     emoji:"🧤", cost:5000,   clickMult:5,  desc:"x5 tap income" },
-  { id:"glove2", name:"Massage Mitt",      emoji:"💆", cost:5e6,    clickMult:10, desc:"x10 tap income" },
-  { id:"glove3", name:"Royal Paw Scepter", emoji:"👑", cost:5e9,    clickMult:20, desc:"x20 tap income" },
+  { id:"catnip", name:"Catnip Stash",      emoji:"🌿", cost:8000,    mult:2,   desc:"x2 all cat income" },
+  { id:"collar", name:"Golden Collar",     emoji:"⭐", cost:3e5,     mult:2,   desc:"x2 all cat income" },
+  { id:"food",   name:"Premium Cat Food",  emoji:"🍣", cost:8e6,     mult:2,   desc:"x2 all cat income" },
+  { id:"tower",  name:"Luxury Cat Tower",  emoji:"🏰", cost:2.5e8,   mult:2,   desc:"x2 all cat income" },
+  { id:"laser",  name:"Laser Pointer Co",  emoji:"🔴", cost:8e9,     mult:2.5, desc:"x2.5 all cat income" },
+  { id:"spa",    name:"Kitty Spa Resort",  emoji:"🛁", cost:3e11,    mult:2.5, desc:"x2.5 all cat income" },
+  { id:"fund",   name:"Feline Hedge Fund", emoji:"📈", cost:1e13,    mult:3,   desc:"x3 all cat income" },
+  { id:"island", name:"Private Cat Island",emoji:"🏝️", cost:5e14,    mult:3,   desc:"x3 all cat income" },
+  { id:"bank",   name:"Cat Central Bank",  emoji:"🏛️", cost:2e16,    mult:3,   desc:"x3 all cat income" },
+  { id:"glove1", name:"Petting Glove",     emoji:"🧤", cost:4e4,     clickMult:3, desc:"x3 tap income" },
+  { id:"glove2", name:"Massage Mitt",      emoji:"💆", cost:6e7,     clickMult:5, desc:"x5 tap income" },
+  { id:"glove3", name:"Royal Paw Scepter", emoji:"👑", cost:8e10,    clickMult:8, desc:"x8 tap income" },
 ];
 
 /* ---------- Estates (Monopoly board) — cash money-sink for permanent income % ---------- */
@@ -413,23 +420,23 @@ const PROP_GROUPS = {
   blue:  {name:"Royal Boardwalk", color:"#6c8cff"},
 };
 const PROPERTY_DEFS = [
-  {g:"brown",  name:"Litterbox Lane",  cost:5e3,  bonus:0.02},
-  {g:"brown",  name:"Hairball Alley",  cost:8e3,  bonus:0.02},
-  {g:"cyan",   name:"Catnip Avenue",   cost:5e4,  bonus:0.03},
-  {g:"cyan",   name:"Yarn Boulevard",  cost:8e4,  bonus:0.03},
-  {g:"cyan",   name:"Paw Place",       cost:1.1e5,bonus:0.03},
-  {g:"pink",   name:"Purrfect Plaza",  cost:6e5,  bonus:0.04},
-  {g:"pink",   name:"Meow Manor",      cost:9e5,  bonus:0.04},
-  {g:"pink",   name:"Tabby Terrace",   cost:1.3e6,bonus:0.04},
-  {g:"orange", name:"Scratch Street",  cost:7e6,  bonus:0.05},
-  {g:"orange", name:"Sunbeam Square",  cost:1e7,  bonus:0.05},
-  {g:"green",  name:"Diamond Den",     cost:7e7,  bonus:0.07},
-  {g:"green",  name:"Royal Catwalk",   cost:1e8,  bonus:0.07},
-  {g:"blue",   name:"Caviar Court",    cost:8e8,  bonus:0.10},
-  {g:"blue",   name:"Golden Throne",   cost:1.4e9,bonus:0.10},
+  {g:"brown",  name:"Litterbox Lane",  cost:4e4,  bonus:0.012},
+  {g:"brown",  name:"Hairball Alley",  cost:7e4,  bonus:0.012},
+  {g:"cyan",   name:"Catnip Avenue",   cost:5e5,  bonus:0.018},
+  {g:"cyan",   name:"Yarn Boulevard",  cost:8e5,  bonus:0.018},
+  {g:"cyan",   name:"Paw Place",       cost:1.2e6,bonus:0.018},
+  {g:"pink",   name:"Purrfect Plaza",  cost:7e6,  bonus:0.024},
+  {g:"pink",   name:"Meow Manor",      cost:1.1e7,bonus:0.024},
+  {g:"pink",   name:"Tabby Terrace",   cost:1.6e7,bonus:0.024},
+  {g:"orange", name:"Scratch Street",  cost:9e7,  bonus:0.03},
+  {g:"orange", name:"Sunbeam Square",  cost:1.4e8,bonus:0.03},
+  {g:"green",  name:"Diamond Den",     cost:9e8,  bonus:0.04},
+  {g:"green",  name:"Royal Catwalk",   cost:1.4e9,bonus:0.04},
+  {g:"blue",   name:"Caviar Court",    cost:1.1e10,bonus:0.06},
+  {g:"blue",   name:"Golden Throne",   cost:2e10, bonus:0.06},
 ];
 const PROP_MAX_LVL = 5;             // 1 = owned, 2-4 = houses, 5 = hotel
-const PROP_SET_BONUS = 0.15;        // completing a whole color group
+const PROP_SET_BONUS = 0.08;        // completing a whole color group
 
 /* ---------- State ---------- */
 function newState(){
@@ -612,15 +619,20 @@ const ACHIEVEMENTS=[
   {id:"cats25",emoji:"🐈",name:"A Little Clowder",desc:"Own 25 cats",bonus:.03,cond:()=>totalCats()>=25},
   {id:"cats100",emoji:"😺",name:"Crazy Cat Home",desc:"Own 100 cats",bonus:.05,cond:()=>totalCats()>=100},
   {id:"cats500",emoji:"🏚️",name:"Cat Hoarder",desc:"Own 500 cats",bonus:.08,cond:()=>totalCats()>=500},
+  {id:"cats1500",emoji:"🌇",name:"Cat Metropolis",desc:"Own 1,500 cats",bonus:.12,cond:()=>totalCats()>=1500},
   {id:"rich1",emoji:"💵",name:"Pocket Money",desc:"Earn $10K all-time",bonus:.02,cond:()=>state.totalEarned>=1e4},
   {id:"rich2",emoji:"💰",name:"Fat Stacks",desc:"Earn $10M all-time",bonus:.04,cond:()=>state.totalEarned>=1e7},
   {id:"rich3",emoji:"🤑",name:"Cat Tycoon",desc:"Earn $1B all-time",bonus:.06,cond:()=>state.totalEarned>=1e9},
   {id:"rich4",emoji:"🏦",name:"Feline Fortune",desc:"Earn $1T all-time",bonus:.10,cond:()=>state.totalEarned>=1e12},
+  {id:"rich5",emoji:"💎",name:"Quadrillionaire",desc:"Earn $1Qa all-time",bonus:.12,cond:()=>state.totalEarned>=1e15},
+  {id:"rich6",emoji:"🌌",name:"Cosmic Capital",desc:"Earn $1Qi all-time",bonus:.15,cond:()=>state.totalEarned>=1e18},
+  {id:"rich7",emoji:"🪙",name:"Purr-illionaire",desc:"Earn $1Sx all-time",bonus:.20,cond:()=>state.totalEarned>=1e21},
   {id:"reb1",emoji:"✨",name:"Reborn",desc:"Rebirth once",bonus:.05,cond:()=>state.rebirths>=1},
   {id:"reb5",emoji:"🌀",name:"Nine Lives",desc:"Rebirth 5 times",bonus:.08,cond:()=>state.rebirths>=5},
   {id:"reb15",emoji:"♾️",name:"Eternal Kitty",desc:"Rebirth 15 times",bonus:.12,cond:()=>state.rebirths>=15},
-  {id:"dexhalf",emoji:"📖",name:"Collector",desc:"Discover 9 breeds",bonus:.05,cond:()=>dexCount()>=9},
-  {id:"dexfull",emoji:"👑",name:"Gotta Pet 'Em All",desc:"Discover all 18 breeds",bonus:.15,cond:()=>dexCount()>=CAT_DEFS.length},
+  {id:"reb40",emoji:"🌠",name:"Immortal Clowder",desc:"Rebirth 40 times",bonus:.18,cond:()=>state.rebirths>=40},
+  {id:"dexhalf",emoji:"📖",name:"Collector",desc:"Discover 12 breeds",bonus:.05,cond:()=>dexCount()>=12},
+  {id:"dexfull",emoji:"👑",name:"Gotta Pet 'Em All",desc:"Discover all "+CAT_BASE.length+" breeds",bonus:.15,cond:()=>dexCount()>=CAT_DEFS.length},
   {id:"golden",emoji:"🌟",name:"Lucky!",desc:"Catch a Golden Cat",bonus:.05,cond:()=>state.goldenCaught>=1},
   {id:"golden25",emoji:"🍀",name:"Fortune Feline",desc:"Catch 25 Golden Cats",bonus:.08,cond:()=>state.goldenCaught>=25},
   {id:"pets100",emoji:"👆",name:"Pat Pat Pat",desc:"Pet your cat 100 times",bonus:.03,cond:()=>state.pets>=100},
@@ -638,15 +650,15 @@ const SKILLS=[
 function totalCats(){ let n=0; for(let i=0;i<CAT_DEFS.length;i++) n+=state.cats[i]; return n; }
 function dexCount(){ return (state.discovered||[]).filter(Boolean).length; }
 function availableMice(){ return (state.goldenMice||0)-(state.spentMice||0); }
-function rebirthMultiplier(){ return 1 + state.goldenMice*0.02; }
+function rebirthMultiplier(){ return 1 + state.goldenMice*0.015; }
 function achievementMult(){ let m=1; for(const a of ACHIEVEMENTS){ if(state.achievements[a.id]) m+=a.bonus; } return m; }
 function dexMult(){ return 1 + dexCount()*0.02; }
-function skillIdleMult(){ return 1 + 0.12*(state.skills.idle||0); }
-function skillTapMult(){ return 1 + 0.30*(state.skills.tap||0); }
-function skillCostFactor(){ return Math.pow(0.97, state.skills.cost||0); }
+function skillIdleMult(){ return 1 + 0.08*(state.skills.idle||0); }
+function skillTapMult(){ return 1 + 0.20*(state.skills.tap||0); }
+function skillCostFactor(){ return Math.pow(0.98, state.skills.cost||0); }
 function offlineCapHours(){ return OFFLINE_CAP_HOURS + 2*(state.skills.offline||0); }
-function miceSkillBonus(){ return 1 + 0.15*(state.skills.mice||0); }
-function propCost(i){ const lvl=state.properties[i]||0; return PROPERTY_DEFS[i].cost*Math.pow(2.4,lvl); }
+function miceSkillBonus(){ return 1 + 0.10*(state.skills.mice||0); }
+function propCost(i){ const lvl=state.properties[i]||0; return PROPERTY_DEFS[i].cost*Math.pow(2.8,lvl); }
 function groupComplete(g){ return PROPERTY_DEFS.every((p,i)=> p.g!==g || (state.properties[i]||0)>=1); }
 function propertyMult(){
   let m=1;
@@ -660,9 +672,14 @@ function globalUpgradeMult(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.mult&&
 function clickMultiplier(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.clickMult&&state.upgrades[u.id]) m*=u.clickMult; } return m; }
 // combined passive income multiplier (everything except each cat's base rate)
 function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*propertyMult()*goldenBuffMult(); }
-function catProduction(i){ return state.cats[i]*CAT_DEFS[i].baseProd; }
+// soft cap: the first CAT_SOFT_CAP of a tier earn full rate; every extra one earns far less,
+// so hoarding one cheap cat can't run the economy away.
+function effectiveCount(n){ return n<=CAT_SOFT_CAP ? n : CAT_SOFT_CAP + (n-CAT_SOFT_CAP)*CAT_OVERCAP_EFF; }
+function catProduction(i){ return effectiveCount(state.cats[i])*CAT_DEFS[i].baseProd; }
 function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*incomeMult(); }
-function clickValue(){ return (1+incomePerSec()*0.10)*clickMultiplier()*skillTapMult(); }
+// tap income is independent of how many cats you own — it only scales with tap upgrades, the
+// Tap Power skill, and prestige (a small flat boost per rebirth).
+function clickValue(){ return (1 + (state.rebirths||0)) * clickMultiplier() * skillTapMult(); }
 function catCost(i,owned){ return CAT_DEFS[i].baseCost*Math.pow(COST_GROWTH,owned)*skillCostFactor(); }
 function catUnlocked(i){ return i===0 || state.cats[i-1]>=1; }
 function highestOwned(){ let h=0; for(let i=0;i<CAT_DEFS.length;i++) if(state.cats[i]>0) h=i; return h; }
@@ -749,7 +766,7 @@ function renderUpgrades(){
   $("panel-upgrades").innerHTML=html;
 }
 
-function miceFromRebirth(){ if(state.lifetime<1e6) return 0; return Math.floor(Math.pow(state.lifetime/1e6,0.5)*miceSkillBonus()); }
+function miceFromRebirth(){ if(state.lifetime<5e6) return 0; return Math.floor(Math.pow(state.lifetime/5e6,0.45)*miceSkillBonus()); }
 function renderRebirth(){
   const gain=miceFromRebirth();
   const newMult=1+(state.goldenMice+gain)*0.02;
@@ -760,7 +777,7 @@ function renderRebirth(){
     <p class="sub">Rebirths completed: <b>${state.rebirths}</b></p>
     <div class="big">+${fmt(gain)} 🐭</div>
     <p class="sub">on rebirth → x${newMult.toFixed(2)} total income</p>
-    <p class="sub">${gain>0?"Ready to rebirth! ♡":"Reach "+money(1e6)+" lifetime earned to gain mice (you have "+money(state.lifetime)+")."}</p>
+    <p class="sub">${gain>0?"Ready to rebirth! ♡":"Reach "+money(5e6)+" lifetime earned to gain mice (you have "+money(state.lifetime)+")."}</p>
     <button class="buy alt" id="doRebirth" ${gain>0?"":"disabled"} style="font-size:16px;padding:13px 24px;margin-top:6px;">✨ REBIRTH for ${fmt(gain)} 🐭</button>
   </div>
   ${skillTreeHTML()}`;
@@ -912,7 +929,7 @@ function claimDaily(){
   const today=new Date().toDateString();
   if(state.lastDaily===today) return;
   state.lastDaily=today;
-  frenzy={mult:3, until:Date.now()+60000}; updateFrenzyBanner();
+  frenzy={mult:2, until:Date.now()+60000}; updateFrenzyBanner();
   const lump=Math.max(incomePerSec()*300, state.money*0.05, 100);
   state.money+=lump; state.lifetime+=lump; state.totalEarned+=lump;
   toast("🎁 Daily: +"+money(lump)+" & x3 for 60s!");
@@ -999,8 +1016,8 @@ function updateFrenzyBanner(){
 }
 function goldenReward(){
   if(Math.random()<0.55){
-    frenzy={mult:7, until:Date.now()+30000}; updateFrenzyBanner();
-    toast("🌟 FRENZY! x7 income for 30s!");
+    frenzy={mult:5, until:Date.now()+30000}; updateFrenzyBanner();
+    toast("🌟 FRENZY! x5 income for 30s!");
   } else {
     const lump=Math.max(incomePerSec()*900, state.money*0.12, 50);
     state.money+=lump; state.lifetime+=lump; state.totalEarned+=lump;
