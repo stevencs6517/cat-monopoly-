@@ -25,7 +25,10 @@
     --danger:#ff7b9c;
     --line:#f3d9ea;
   }
-  *{box-sizing:border-box;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  /* mobile: stop double-tap-to-zoom & 300ms delay so you can tap fast */
+  button, .pedestal, .tab, .buy, .smallbtn, .buyamt, .goldencat{touch-action:manipulation;}
+  .pedestal{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
   body{
     margin:0;
     font-family:"Quicksand","Segoe UI",sans-serif;
