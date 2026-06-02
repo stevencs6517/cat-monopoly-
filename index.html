@@ -205,6 +205,24 @@
   ::-webkit-scrollbar-thumb{background:#ffb6d5;border-radius:12px;border:3px solid #ffe3f3;}
   ::-webkit-scrollbar-thumb:hover{background:#ff9ec7;}
   ::-webkit-scrollbar-track{background:#ffeef7;}
+
+  /* golden cat */
+  .goldencat{position:fixed;z-index:55;cursor:pointer;filter:drop-shadow(0 0 10px rgba(255,206,92,.9));
+    animation:gcbob 1s ease-in-out infinite;}
+  @keyframes gcbob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-10px) rotate(4deg)}}
+  /* frenzy banner */
+  #frenzyBanner{display:none;position:sticky;top:0;z-index:40;text-align:center;
+    margin:0 auto 4px;max-width:520px;padding:8px 16px;border-radius:0 0 18px 18px;
+    background:linear-gradient(90deg,#ffd166,#ff7ac6,#ffd166);background-size:200% auto;
+    color:#7a3a00;font-weight:800;font-family:"Baloo 2";box-shadow:0 4px 16px rgba(255,122,198,.4);
+    animation:shimmer 2s linear infinite;}
+  /* catdex grid */
+  .dexgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px;}
+  .dexcell{background:var(--panel2);border:2px solid #fbe6f3;border-radius:16px;padding:8px 4px;text-align:center;}
+  .dexcell.undiscovered{opacity:.55;filter:grayscale(.5);}
+  .dexcell .dexicon{display:flex;justify-content:center;}
+  .dexcell .dexname{font-size:11px;font-weight:700;margin-top:4px;color:var(--ink);}
+  .dexcell.undiscovered .dexname{color:var(--ink2);}
 </style>
 </head>
 <body>
@@ -213,6 +231,7 @@
   <h1>🐱 Cat Monopoly 🎀</h1>
   <div class="tag">♡ build your fluffy little empire ♡ &nbsp;(=^･ω･^=)</div>
 </header>
+<div id="frenzyBanner"></div>
 
 <div class="wrap">
   <div>
@@ -238,8 +257,10 @@
   <div class="card">
     <div class="tabs">
       <div class="tab active" data-tab="cats">🐈 Cats</div>
+      <div class="tab" data-tab="catdex">📖 Catdex</div>
       <div class="tab" data-tab="upgrades">⬆️ Upgrades</div>
       <div class="tab" data-tab="rebirth">✨ Rebirth</div>
+      <div class="tab" data-tab="goals">🏅 Goals</div>
       <div class="tab" data-tab="ranks">🏆 Ranks</div>
     </div>
     <div id="buyAmtRow" style="margin-bottom:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
@@ -250,8 +271,10 @@
       <button class="smallbtn buyamt" data-amt="max">MAX</button>
     </div>
     <div id="panel-cats"></div>
+    <div id="panel-catdex" style="display:none;"></div>
     <div id="panel-upgrades" style="display:none;"></div>
     <div id="panel-rebirth" style="display:none;"></div>
+    <div id="panel-goals" style="display:none;"></div>
     <div id="panel-ranks" style="display:none;"></div>
   </div>
 </div>
@@ -360,6 +383,9 @@ function newState(){
   return {
     version:VERSION, money:0, lifetime:0, totalEarned:0,
     cats:CAT_DEFS.map(()=>0), upgrades:{},
+    discovered:CAT_DEFS.map(()=>false),
+    achievements:{}, skills:{idle:0,tap:0,cost:0,offline:0,mice:0}, spentMice:0,
+    pets:0, goldenCaught:0, lastDaily:"",
     goldenMice:0, rebirths:0, timePlayed:0,
     name:"", lastSave:Date.now(),
   };
@@ -526,14 +552,56 @@ function catVisual(c, size){
 }
 function catImgFail(img,id,size){ img.outerHTML = catSVG(CAT_DEFS[id], size); }
 
+/* ---------- Feature data (achievements + skill tree) ---------- */
+const ACHIEVEMENTS=[
+  {id:"firstcat",emoji:"🐱",name:"First Friend",desc:"Buy your first cat",bonus:.02,cond:()=>totalCats()>=1},
+  {id:"cats25",emoji:"🐈",name:"A Little Clowder",desc:"Own 25 cats",bonus:.03,cond:()=>totalCats()>=25},
+  {id:"cats100",emoji:"😺",name:"Crazy Cat Home",desc:"Own 100 cats",bonus:.05,cond:()=>totalCats()>=100},
+  {id:"cats500",emoji:"🏚️",name:"Cat Hoarder",desc:"Own 500 cats",bonus:.08,cond:()=>totalCats()>=500},
+  {id:"rich1",emoji:"💵",name:"Pocket Money",desc:"Earn $10K all-time",bonus:.02,cond:()=>state.totalEarned>=1e4},
+  {id:"rich2",emoji:"💰",name:"Fat Stacks",desc:"Earn $10M all-time",bonus:.04,cond:()=>state.totalEarned>=1e7},
+  {id:"rich3",emoji:"🤑",name:"Cat Tycoon",desc:"Earn $1B all-time",bonus:.06,cond:()=>state.totalEarned>=1e9},
+  {id:"rich4",emoji:"🏦",name:"Feline Fortune",desc:"Earn $1T all-time",bonus:.10,cond:()=>state.totalEarned>=1e12},
+  {id:"reb1",emoji:"✨",name:"Reborn",desc:"Rebirth once",bonus:.05,cond:()=>state.rebirths>=1},
+  {id:"reb5",emoji:"🌀",name:"Nine Lives",desc:"Rebirth 5 times",bonus:.08,cond:()=>state.rebirths>=5},
+  {id:"reb15",emoji:"♾️",name:"Eternal Kitty",desc:"Rebirth 15 times",bonus:.12,cond:()=>state.rebirths>=15},
+  {id:"dexhalf",emoji:"📖",name:"Collector",desc:"Discover 9 breeds",bonus:.05,cond:()=>dexCount()>=9},
+  {id:"dexfull",emoji:"👑",name:"Gotta Pet 'Em All",desc:"Discover all 18 breeds",bonus:.15,cond:()=>dexCount()>=CAT_DEFS.length},
+  {id:"golden",emoji:"🌟",name:"Lucky!",desc:"Catch a Golden Cat",bonus:.05,cond:()=>state.goldenCaught>=1},
+  {id:"golden25",emoji:"🍀",name:"Fortune Feline",desc:"Catch 25 Golden Cats",bonus:.08,cond:()=>state.goldenCaught>=25},
+  {id:"pets100",emoji:"👆",name:"Pat Pat Pat",desc:"Pet your cat 100 times",bonus:.03,cond:()=>state.pets>=100},
+  {id:"pets1000",emoji:"🙌",name:"Master Petter",desc:"Pet your cat 1000 times",bonus:.06,cond:()=>state.pets>=1000},
+];
+const SKILLS=[
+  {id:"idle",emoji:"🐾",name:"Idle Mastery",desc:"+12% passive income per rank",max:10,cost:r=>r+1},
+  {id:"tap",emoji:"👆",name:"Tap Power",desc:"+30% tap income per rank",max:10,cost:r=>r+1},
+  {id:"cost",emoji:"💸",name:"Bargain Whiskers",desc:"Cats 3% cheaper per rank",max:8,cost:r=>2*(r+1)},
+  {id:"offline",emoji:"🌙",name:"Night Owl",desc:"+2h offline cap per rank",max:6,cost:r=>2*(r+1)},
+  {id:"mice",emoji:"🐭",name:"Mouse Tycoon",desc:"+15% Golden Mice gained per rank",max:8,cost:r=>3*(r+1)},
+];
+
 /* ---------- Derived ---------- */
+function totalCats(){ let n=0; for(let i=0;i<CAT_DEFS.length;i++) n+=state.cats[i]; return n; }
+function dexCount(){ return (state.discovered||[]).filter(Boolean).length; }
+function availableMice(){ return (state.goldenMice||0)-(state.spentMice||0); }
 function rebirthMultiplier(){ return 1 + state.goldenMice*0.02; }
+function achievementMult(){ let m=1; for(const a of ACHIEVEMENTS){ if(state.achievements[a.id]) m+=a.bonus; } return m; }
+function dexMult(){ return 1 + dexCount()*0.02; }
+function skillIdleMult(){ return 1 + 0.12*(state.skills.idle||0); }
+function skillTapMult(){ return 1 + 0.30*(state.skills.tap||0); }
+function skillCostFactor(){ return Math.pow(0.97, state.skills.cost||0); }
+function offlineCapHours(){ return OFFLINE_CAP_HOURS + 2*(state.skills.offline||0); }
+function miceSkillBonus(){ return 1 + 0.15*(state.skills.mice||0); }
+let frenzy={mult:1,until:0};
+function goldenBuffMult(){ return Date.now()<frenzy.until ? frenzy.mult : 1; }
 function globalUpgradeMult(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.mult&&state.upgrades[u.id]) m*=u.mult; } return m; }
 function clickMultiplier(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.clickMult&&state.upgrades[u.id]) m*=u.clickMult; } return m; }
+// combined passive income multiplier (everything except each cat's base rate)
+function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*goldenBuffMult(); }
 function catProduction(i){ return state.cats[i]*CAT_DEFS[i].baseProd; }
-function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*globalUpgradeMult()*rebirthMultiplier(); }
-function clickValue(){ return (1+incomePerSec()*0.10)*clickMultiplier()*rebirthMultiplier(); }
-function catCost(i,owned){ return CAT_DEFS[i].baseCost*Math.pow(COST_GROWTH,owned); }
+function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*incomeMult(); }
+function clickValue(){ return (1+incomePerSec()*0.10)*clickMultiplier()*skillTapMult(); }
+function catCost(i,owned){ return CAT_DEFS[i].baseCost*Math.pow(COST_GROWTH,owned)*skillCostFactor(); }
 function catUnlocked(i){ return i===0 || state.cats[i-1]>=1; }
 function highestOwned(){ let h=0; for(let i=0;i<CAT_DEFS.length;i++) if(state.cats[i]>0) h=i; return h; }
 function unlockedCount(){ let n=0; for(let i=0;i<CAT_DEFS.length;i++) if(catUnlocked(i)) n++; return n; }
@@ -579,12 +647,12 @@ function renderCatsFull(){
         <div class="info"><div class="name">??? Cat</div><div class="desc">Buy a ${CAT_DEFS[i-1].name} to unlock</div></div>
       </div>`; continue;
     }
-    const prodEach=c.baseProd*globalUpgradeMult()*rebirthMultiplier();
+    const prodEach=c.baseProd*incomeMult();
     html+=`<div class="item" id="catrow-${i}">
       <div class="icon">${catVisual(c,48)}</div>
       <div class="info">
         <div class="name">${c.name}</div>
-        <div class="desc">+${money(prodEach)}/sec each · <span id="catearn-${i}">${money(catProduction(i)*globalUpgradeMult()*rebirthMultiplier())}/sec</span></div>
+        <div class="desc">+${money(prodEach)}/sec each · <span id="catearn-${i}">${money(catProduction(i)*incomeMult())}/sec</span></div>
       </div>
       <div class="owned" id="catowned-${i}">${state.cats[i]}</div>
       <button class="buy" id="catbuy-${i}" data-cat="${i}"></button>
@@ -601,7 +669,7 @@ function updateCats(){
     btn.innerHTML="Buy "+(b.count===1?"":"x"+b.count)+"<br>"+money(b.cost);
     btn.disabled=!b.affordable;
     const ow=$("catowned-"+i); if(ow) ow.textContent=state.cats[i];
-    const ce=$("catearn-"+i); if(ce) ce.textContent=money(catProduction(i)*globalUpgradeMult()*rebirthMultiplier())+"/sec";
+    const ce=$("catearn-"+i); if(ce) ce.textContent=money(catProduction(i)*incomeMult())+"/sec";
   }
 }
 
@@ -619,7 +687,7 @@ function renderUpgrades(){
   $("panel-upgrades").innerHTML=html;
 }
 
-function miceFromRebirth(){ if(state.lifetime<1e6) return 0; return Math.floor(Math.pow(state.lifetime/1e6,0.5)); }
+function miceFromRebirth(){ if(state.lifetime<1e6) return 0; return Math.floor(Math.pow(state.lifetime/1e6,0.5)*miceSkillBonus()); }
 function renderRebirth(){
   const gain=miceFromRebirth();
   const newMult=1+(state.goldenMice+gain)*0.02;
@@ -632,7 +700,8 @@ function renderRebirth(){
     <p class="sub">on rebirth → x${newMult.toFixed(2)} total income</p>
     <p class="sub">${gain>0?"Ready to rebirth! ♡":"Reach "+money(1e6)+" lifetime earned to gain mice (you have "+money(state.lifetime)+")."}</p>
     <button class="buy alt" id="doRebirth" ${gain>0?"":"disabled"} style="font-size:16px;padding:13px 24px;margin-top:6px;">✨ REBIRTH for ${fmt(gain)} 🐭</button>
-  </div>`;
+  </div>
+  ${skillTreeHTML()}`;
   const b=$("doRebirth"); if(b) b.onclick=doRebirth;
 }
 
@@ -747,12 +816,130 @@ async function updateMyRank(){
 }
 function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
 
+/* ---------- Achievements + Daily (Goals tab) ---------- */
+function checkAchievements(){
+  let any=false;
+  for(const a of ACHIEVEMENTS){
+    if(!state.achievements[a.id] && a.cond()){ state.achievements[a.id]=true; any=true; toast("🏅 Achievement: "+a.name+"!"); }
+  }
+  if(any){ renderStats(); if(currentTab==="goals") renderGoals(); }
+  return any;
+}
+function renderGoals(){
+  const today=new Date().toDateString();
+  const canDaily = state.lastDaily!==today;
+  const unlocked=ACHIEVEMENTS.filter(a=>state.achievements[a.id]).length;
+  const rows=ACHIEVEMENTS.map(a=>{
+    const got=!!state.achievements[a.id];
+    return `<div class="item ${got?'':'locked'}">
+      <div class="icon" style="font-size:28px;">${got?a.emoji:'🔒'}</div>
+      <div class="info"><div class="name">${a.name} ${got?'✅':''}</div><div class="desc">${a.desc} · +${Math.round(a.bonus*100)}% income</div></div>
+    </div>`;
+  }).join("");
+  $("panel-goals").innerHTML=`
+    <div class="item" style="flex-direction:column;align-items:stretch;gap:8px;">
+      <div class="name" style="text-align:center;">🎁 Daily Reward</div>
+      <div class="desc" style="text-align:center;">Come back each day for a kitty bonus!</div>
+      <button class="buy alt" id="dailyBtn" ${canDaily?'':'disabled'}>${canDaily?"🎁 Claim today's reward":'✅ Come back tomorrow'}</button>
+    </div>
+    <div class="sub" style="text-align:center;margin:8px 0;">🏅 Achievements — ${unlocked}/${ACHIEVEMENTS.length} · <b>+${Math.round((achievementMult()-1)*100)}%</b> income</div>
+    ${rows}`;
+  const db=$("dailyBtn"); if(db) db.onclick=claimDaily;
+}
+function claimDaily(){
+  const today=new Date().toDateString();
+  if(state.lastDaily===today) return;
+  state.lastDaily=today;
+  frenzy={mult:3, until:Date.now()+60000}; updateFrenzyBanner();
+  const lump=Math.max(incomePerSec()*300, state.money*0.05, 100);
+  state.money+=lump; state.lifetime+=lump; state.totalEarned+=lump;
+  toast("🎁 Daily: +"+money(lump)+" & x3 for 60s!");
+  renderGoals(); renderStats(); save();
+}
+
+/* ---------- Catdex tab ---------- */
+function renderCatdex(){
+  const got=dexCount();
+  const cells=CAT_DEFS.map((c,i)=>{
+    const seen=state.discovered&&state.discovered[i];
+    return `<div class="dexcell ${seen?'':'undiscovered'}">
+      <div class="dexicon">${seen?catVisual(c,54):catSVG({fur:"#e7dcec",inner:"#f3e6f0",eye:"#cbb6da",coat:"solid"},54)}</div>
+      <div class="dexname">${seen?c.name:'???'}</div>
+    </div>`;
+  }).join("");
+  $("panel-catdex").innerHTML=`
+    <div class="sub" style="text-align:center;margin:0 0 4px;">📖 Collected <b>${got}/${CAT_DEFS.length}</b> · <b>+${Math.round((dexMult()-1)*100)}%</b> income</div>
+    <div class="sub" style="text-align:center;margin:0 0 12px;font-size:11px;">Each breed discovered = +2% income forever ♡</div>
+    <div class="dexgrid">${cells}</div>`;
+}
+
+/* ---------- Prestige skill tree (inside Rebirth tab) ---------- */
+function skillTreeHTML(){
+  const avail=availableMice();
+  const nodes=SKILLS.map(s=>{
+    const rank=state.skills[s.id]||0, maxed=rank>=s.max, cost=maxed?0:s.cost(rank), can=!maxed&&avail>=cost;
+    return `<div class="item">
+      <div class="icon" style="font-size:26px;">${s.emoji}</div>
+      <div class="info"><div class="name">${s.name} <span style="color:var(--lav)">Lv ${rank}/${s.max}</span></div><div class="desc">${s.desc}</div></div>
+      ${maxed?`<span class="owned" style="font-size:13px;color:var(--good)">MAX</span>`
+        :`<button class="buy" data-skill="${s.id}" ${can?'':'disabled'}>${cost} 🐭</button>`}
+    </div>`;
+  }).join("");
+  return `<hr><div class="sub" style="text-align:center;margin:0 0 8px;">🌳 Skill Tree · <b>${fmt(avail)}</b> 🐭 to invest</div>${nodes}`;
+}
+function buySkill(id){
+  const s=SKILLS.find(x=>x.id===id); if(!s) return;
+  const rank=state.skills[id]||0; if(rank>=s.max) return;
+  const cost=s.cost(rank); if(availableMice()<cost) return;
+  state.spentMice=(state.spentMice||0)+cost; state.skills[id]=rank+1;
+  toast(s.name+" → Lv "+(rank+1)+"! ✨");
+  renderRebirth(); renderStats(); if(currentTab==="cats") updateCats();
+}
+
+/* ---------- Golden Cat 🌟 ---------- */
+function updateFrenzyBanner(){
+  const el=$("frenzyBanner"); if(!el) return;
+  if(Date.now()<frenzy.until){
+    el.style.display="block";
+    el.textContent=`🌟 FRENZY! x${frenzy.mult} income — ${Math.ceil((frenzy.until-Date.now())/1000)}s`;
+  } else el.style.display="none";
+}
+function goldenReward(){
+  if(Math.random()<0.55){
+    frenzy={mult:7, until:Date.now()+30000}; updateFrenzyBanner();
+    toast("🌟 FRENZY! x7 income for 30s!");
+  } else {
+    const lump=Math.max(incomePerSec()*900, state.money*0.12, 50);
+    state.money+=lump; state.lifetime+=lump; state.totalEarned+=lump;
+    toast("🌟 Lucky cat! +"+money(lump));
+  }
+  state.goldenCaught=(state.goldenCaught||0)+1;
+  renderStats(); checkAchievements();
+}
+function spawnGoldenCat(){
+  if(document.hidden) return;
+  const el=document.createElement("div");
+  el.className="goldencat";
+  el.innerHTML=catSVG({fur:"#ffd86b",inner:"#fff0b8",eye:"#7a5630",coat:"solid",extra:"crown"},72);
+  el.style.top=(18+Math.random()*60)+"vh";
+  el.style.left="-100px";
+  document.body.appendChild(el);
+  el.animate([{left:"-100px"},{left:"100vw"}],{duration:9000,easing:"linear"}).onfinish=()=>el.remove();
+  let caught=false;
+  el.addEventListener("click",()=>{ if(caught)return; caught=true; goldenReward();
+    el.style.transition="transform .2s,opacity .2s"; el.style.transform="scale(1.6)"; el.style.opacity="0"; setTimeout(()=>el.remove(),220); });
+  setTimeout(()=>{ if(!caught) el.remove(); }, 9300);
+}
+function scheduleGoldenCat(){ setTimeout(()=>{ spawnGoldenCat(); scheduleGoldenCat(); }, 55000+Math.random()*45000); }
+
 function renderAll(){
   renderStats();
   if(currentTab==="cats") renderCatsFull();
   else if(currentTab==="upgrades") renderUpgrades();
   else if(currentTab==="rebirth") renderRebirth();
   else if(currentTab==="ranks") renderRanks();
+  else if(currentTab==="goals") renderGoals();
+  else if(currentTab==="catdex") renderCatdex();
 }
 
 /* ---------- Actions ---------- */
@@ -760,8 +947,9 @@ function buyCat(i){
   if(!catUnlocked(i)) return;
   const b=catBulk(i); if(!b.affordable) return;
   state.money-=b.cost; state.cats[i]+=b.count;
+  if(state.discovered && !state.discovered[i]) state.discovered[i]=true;
   if(unlockedCount()!==lastUnlocked) renderCatsFull(); else updateCats();
-  updateMascot(); renderStats();
+  updateMascot(); renderStats(); checkAchievements();
 }
 function buyUpgrade(id){
   const u=UPGRADE_DEFS.find(x=>x.id===id);
@@ -775,23 +963,27 @@ function doRebirth(){
   state.goldenMice+=gain; state.rebirths+=1;
   state.money=0; state.lifetime=0; state.cats=CAT_DEFS.map(()=>0); state.upgrades={};
   toast("✨ Reborn! +"+fmt(gain)+" 🐭");
+  checkAchievements();
   currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); save();
 }
 function petCat(ev){
-  const v=clickValue(); state.money+=v; state.lifetime+=v; state.totalEarned+=v;
+  const v=clickValue(); state.money+=v; state.lifetime+=v; state.totalEarned+=v; state.pets=(state.pets||0)+1;
   spawnFloat(ev,"+"+money(v)); renderStats();
   if(currentTab==="cats") updateCats();
+  if(state.pets%25===0) checkAchievements();
 }
 
 /* ---------- Loop ---------- */
-let lastTick=Date.now();
+let lastTick=Date.now(), tickN=0;
 function tick(){
   const now=Date.now(); const dt=(now-lastTick)/1000; lastTick=now;
   const earned=incomePerSec()*dt;
   state.money+=earned; state.lifetime+=earned; state.totalEarned+=earned; state.timePlayed+=dt;
   renderStats();
+  updateFrenzyBanner();
   if(currentTab==="cats") updateCats();
   else if(currentTab==="upgrades") renderUpgrades();
+  if((++tickN)%20===0) checkAchievements();   // ~every 2s
 }
 
 /* ---------- Save/Load ---------- */
@@ -812,15 +1004,27 @@ function applyLoadedState(s){
   if(typeof state.upgrades!=="object"||!state.upgrades) state.upgrades={};
   if(typeof state.timePlayed!=="number") state.timePlayed=0;
   if(typeof state.totalEarned!=="number" || state.totalEarned < state.lifetime) state.totalEarned=state.lifetime||0;
+  if(!Array.isArray(state.discovered)||state.discovered.length!==CAT_DEFS.length){
+    state.discovered=CAT_DEFS.map(()=>false);
+  }
+  for(let i=0;i<CAT_DEFS.length;i++){ if(state.cats[i]>0) state.discovered[i]=true; }   // back-fill from owned cats
+  if(typeof state.achievements!=="object"||!state.achievements) state.achievements={};
+  if(typeof state.skills!=="object"||!state.skills) state.skills={};
+  ["idle","tap","cost","offline","mice"].forEach(k=>{ if(typeof state.skills[k]!=="number") state.skills[k]=0; });
+  if(typeof state.spentMice!=="number") state.spentMice=0;
+  if(typeof state.pets!=="number") state.pets=0;
+  if(typeof state.goldenCaught!=="number") state.goldenCaught=0;
+  if(typeof state.lastDaily!=="string") state.lastDaily="";
 }
 function applyOffline(){
   const now=Date.now(); let elapsed=(now-(state.lastSave||now))/1000;
   if(elapsed<5) return;
-  const capped=Math.min(elapsed,OFFLINE_CAP_HOURS*3600);
+  const capHours=offlineCapHours();
+  const capped=Math.min(elapsed,capHours*3600);
   const earned=incomePerSec()*capped; if(earned<=0) return;
   state.money+=earned; state.lifetime+=earned; state.totalEarned+=earned;
   $("offlineEarned").textContent=money(earned);
-  $("offlineTime").textContent="Away for "+fmtTime(elapsed)+(elapsed>capped?" (capped at "+OFFLINE_CAP_HOURS+"h)":"");
+  $("offlineTime").textContent="Away for "+fmtTime(elapsed)+(elapsed>capped?" (capped at "+capHours+"h)":"");
   $("welcomeModal").classList.add("show");
 }
 function fmtTime(sec){
@@ -839,10 +1043,9 @@ function spawnFloat(ev,txt){ const f=document.createElement("div"); f.className=
   f.style.left=x+"px"; f.style.top=y+"px"; document.body.appendChild(f); setTimeout(()=>f.remove(),1000); }
 function setActiveTab(){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===currentTab));
-  $("panel-cats").style.display=currentTab==="cats"?"":"none";
-  $("panel-upgrades").style.display=currentTab==="upgrades"?"":"none";
-  $("panel-rebirth").style.display=currentTab==="rebirth"?"":"none";
-  $("panel-ranks").style.display=currentTab==="ranks"?"":"none";
+  ["cats","upgrades","rebirth","ranks","goals","catdex"].forEach(p=>{
+    const el=$("panel-"+p); if(el) el.style.display=currentTab===p?"":"none";
+  });
   $("buyAmtRow").style.display=currentTab==="cats"?"flex":"none";
 }
 
@@ -855,6 +1058,7 @@ document.querySelectorAll(".buyamt").forEach(b=>b.addEventListener("click",()=>{
 }));
 $("panel-cats").addEventListener("click",e=>{ const btn=e.target.closest("[data-cat]"); if(btn) buyCat(parseInt(btn.dataset.cat)); });
 $("panel-upgrades").addEventListener("click",e=>{ const btn=e.target.closest("[data-up]"); if(btn) buyUpgrade(btn.dataset.up); });
+$("panel-rebirth").addEventListener("click",e=>{ const btn=e.target.closest("[data-skill]"); if(btn) buySkill(btn.dataset.skill); });
 
 $("saveBtn").addEventListener("click",()=>{ save(); toast("Game saved 💾"); });
 $("keyBtn").addEventListener("click",()=>{ save(); $("keyText").value=encode(state); $("keyModal").classList.add("show"); });
@@ -877,10 +1081,11 @@ $("closeWelcome").addEventListener("click",()=>{ $("welcomeModal").classList.rem
 window.addEventListener("beforeunload",save);
 
 /* ---------- Boot ---------- */
-load(); applyOffline(); setActiveTab(); updateMascot(); renderAll();
+load(); applyOffline(); checkAchievements(); setActiveTab(); updateMascot(); renderAll();
 lastTick=Date.now();
 setInterval(tick,100);
 setInterval(save,10000);
+scheduleGoldenCat();
 
 /* ---------- floating kawaii particles ✿ ---------- */
 const KW_EMOJI=["✨","💗","⭐","🌸","🐾","💖","🎀","⋆","🍬","☁️"];
