@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Cat Monopoly</title>
 <!-- Home-screen app / PWA -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -37,7 +37,18 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   /* mobile: stop double-tap-to-zoom & 300ms delay so you can tap fast */
+  html{touch-action:manipulation;}
   button, .pedestal, .tab, .buy, .smallbtn, .buyamt, .goldencat{touch-action:manipulation;}
+  /* no text selection / iOS "Copy · Look Up" callout while tapping — applies everywhere… */
+  html, body{
+    -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
+  /* …but keep real text fields selectable so the Save-Key copy/paste still works */
+  input, textarea{
+    -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text;
+    -webkit-touch-callout:default;
+  }
   .pedestal{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
   body{
     margin:0;
@@ -219,6 +230,12 @@
   ::-webkit-scrollbar-thumb{background:#ffb6d5;border-radius:12px;border:3px solid #ffe3f3;}
   ::-webkit-scrollbar-thumb:hover{background:#ff9ec7;}
   ::-webkit-scrollbar-track{background:#ffeef7;}
+
+  /* mobile: hide the scrollbar entirely (scrolling still works) — cleaner aesthetic */
+  @media(max-width:800px){
+    *::-webkit-scrollbar{width:0;height:0;display:none;}
+    html, body{scrollbar-width:none;-ms-overflow-style:none;}
+  }
 
   /* golden cat */
   .goldencat{position:fixed;z-index:55;cursor:pointer;filter:drop-shadow(0 0 10px rgba(255,206,92,.9));
@@ -1429,6 +1446,15 @@ $("resetBtn").addEventListener("click",()=>{
 });
 $("closeWelcome").addEventListener("click",()=>{ $("welcomeModal").classList.remove("show"); renderAll(); });
 window.addEventListener("beforeunload",save);
+
+/* ---------- Mobile: block pinch-zoom (iOS Safari ignores user-scalable) ----------
+   Double-tap zoom is already handled by `touch-action: manipulation`, which keeps
+   fast taps working — so we only need to stop multi-finger pinch gestures here. */
+["gesturestart","gesturechange","gestureend"].forEach(ev=>
+  document.addEventListener(ev, e=>e.preventDefault(), {passive:false}));
+// pinch on Android / trackpad pinch (ctrl+wheel) — never cancels single-finger taps
+document.addEventListener("touchmove", e=>{ if(e.touches&&e.touches.length>1) e.preventDefault(); }, {passive:false});
+document.addEventListener("wheel", e=>{ if(e.ctrlKey) e.preventDefault(); }, {passive:false});
 
 /* ---------- "Play on mobile" / Add-to-Home-Screen tip ---------- */
 const MOBILE_TIP_KEY="catMonopolyMobileTip_v1";
