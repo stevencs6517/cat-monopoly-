@@ -2,8 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Cat Monopoly</title>
+<!-- Home-screen app / PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#ff9ec7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cat Monopoly">
+<meta name="description" content="Build your fluffy little cat empire ♡ — a kawaii idle clicker.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
@@ -272,6 +282,7 @@
       <div class="footer-btns">
         <button class="smallbtn" id="saveBtn">💾 Save</button>
         <button class="smallbtn" id="keyBtn">🔑 Key</button>
+        <button class="smallbtn" id="mobileBtn">📱 Install</button>
         <button class="smallbtn danger" id="resetBtn">⚠️ Reset</button>
       </div>
     </div>
@@ -329,6 +340,18 @@
   </div>
 </div>
 
+<div class="overlay" id="mobileModal">
+  <div class="modal" style="text-align:center;">
+    <img src="apple-touch-icon.png" alt="Cat Monopoly" width="86" height="86"
+      style="width:86px;height:86px;border-radius:22px;box-shadow:0 8px 20px rgba(255,111,174,.4);margin:0 auto 6px;display:block;object-fit:cover;">
+    <h2 style="text-align:center;margin:4px 0 8px;">📱 Best on Mobile!</h2>
+    <p style="font-weight:600;margin:0 0 10px;">Cat Monopoly is way more fun on your phone — tap fast, play anywhere, and your kitties keep earning while you're away. ♡</p>
+    <p class="sub" style="margin:0 0 10px;font-weight:700;">Add it to your home screen to play it like a real app — fullscreen &amp; one tap to open:</p>
+    <div id="installSteps" class="sub" style="text-align:left;background:var(--panel2);border:2px solid #fbe6f3;border-radius:16px;padding:12px 14px;line-height:1.9;font-size:13px;"></div>
+    <div class="row"><button class="smallbtn" id="closeMobile" style="flex:1;">Got it ♡</button></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -336,9 +359,9 @@
 /* =====================================================================
    CAT MONOPOLY — kawaii idle game (single file)
    ===================================================================== */
-const SAVE_KEY = "catMonopolySave_v2";
-const LB_KEY   = "catMonopolyLB_v1";
-const VERSION  = 2;
+const SAVE_KEY = "catMonopolySave_v3";   // bumped to v3 -> wipes everyone's old save on next load (fresh start for the rebalanced economy)
+const LB_KEY   = "catMonopolyLB_v2";     // bumped -> clears the local (offline) leaderboard too
+const VERSION  = 3;
 const OFFLINE_CAP_HOURS = 12;
 const COST_GROWTH = 1.17;        // each additional cat of a tier costs more
 const CAT_SOFT_CAP = 50;         // beyond this many of ONE tier, extra cats earn far less
@@ -447,13 +470,13 @@ const PROP_SET_BONUS = 0.08;        // completing a whole color group
    base = bonus from the first copy · dupe = bonus per extra copy · cap = base*DUPE_CAP_MULT */
 const DUPE_CAP_MULT = 3;            // a single talisman can reach at most 3x its first-copy bonus
 const TALISMAN_RARITIES = [
-  {id:"common",    name:"Common",    color:"#9fb0c0", emoji:"⚪", base:0.01, dupe:0.0025},
-  {id:"uncommon",  name:"Uncommon",  color:"#5fc98a", emoji:"🟢", base:0.02, dupe:0.005},
-  {id:"rare",      name:"Rare",      color:"#5aa9ff", emoji:"🔵", base:0.04, dupe:0.01},
-  {id:"epic",      name:"Epic",      color:"#b06bff", emoji:"🟣", base:0.08, dupe:0.02},
-  {id:"legendary", name:"Legendary", color:"#ffb02e", emoji:"🟠", base:0.15, dupe:0.03},
-  {id:"mythic",    name:"Mythic",    color:"#ff5d8f", emoji:"🔴", base:0.25, dupe:0.05},
-  {id:"godly",     name:"Godly",     color:"#ffd84d", emoji:"🌟", base:0.50, dupe:0.10},
+  {id:"common",    name:"Common",    color:"#9fb0c0", emoji:"⚪", base:0.005,  dupe:0.00125},
+  {id:"uncommon",  name:"Uncommon",  color:"#5fc98a", emoji:"🟢", base:0.01,   dupe:0.0025},
+  {id:"rare",      name:"Rare",      color:"#5aa9ff", emoji:"🔵", base:0.02,   dupe:0.005},
+  {id:"epic",      name:"Epic",      color:"#b06bff", emoji:"🟣", base:0.04,   dupe:0.01},
+  {id:"legendary", name:"Legendary", color:"#ffb02e", emoji:"🟠", base:0.075,  dupe:0.015},
+  {id:"mythic",    name:"Mythic",    color:"#ff5d8f", emoji:"🔴", base:0.125,  dupe:0.025},
+  {id:"godly",     name:"Godly",     color:"#ffd84d", emoji:"🌟", base:0.25,   dupe:0.05},
 ];
 const RARITY_ORDER = TALISMAN_RARITIES.map(r=>r.id);
 const TAL_RARITY = {}; TALISMAN_RARITIES.forEach(r=>TAL_RARITY[r.id]=r);
@@ -491,11 +514,11 @@ const TALISMANS = [
 /* Banners: higher tiers cost much more but shift odds toward rarer talismans.
    Each odds table sums to 1. Godly odds climb 1e-5 -> 2e-4 -> 3e-3 across banners. */
 const BANNERS = [
-  {id:"regular", name:"Regular Roll", emoji:"🎰", costMult:1,  pity:100,
+  {id:"regular", name:"Regular Roll", emoji:"🎰", costMult:1,  pity:1000,
     odds:{common:0.55, uncommon:0.28, rare:0.12, epic:0.04, legendary:0.0095, mythic:0.00049, godly:0.00001}},
-  {id:"rare", name:"Rare Roll", emoji:"✨", costMult:6, pity:80,
+  {id:"rare", name:"Rare Roll", emoji:"✨", costMult:10, pity:600,
     odds:{uncommon:0.50, rare:0.33, epic:0.13, legendary:0.035, mythic:0.0048, godly:0.0002}},
-  {id:"super", name:"Super Rare Roll", emoji:"🌟", costMult:30, pity:50,
+  {id:"super", name:"Super Rare Roll", emoji:"🌟", costMult:60, pity:300,
     odds:{rare:0.55, epic:0.30, legendary:0.12, mythic:0.027, godly:0.003}},
 ];
 const BANNER_BY_ID = {}; BANNERS.forEach(b=>BANNER_BY_ID[b.id]=b);
@@ -777,13 +800,19 @@ function catBulk(i){
 
 /* ---------- Gacha pricing & rolling ----------
    Cost is anchored to the player's progression so it stays accessible early and
-   becomes a real coin sink late — the ultra-rich can't dump a fortune into millions
-   of cheap rolls. A single regular roll costs the LARGER of:
-     · a small floor (so the very start isn't free),
-     · ~30 seconds of current income (scales with present power), or
-     · a sliver of all-time earnings (scales with how far you've ever progressed). */
+   becomes a brutal coin sink late — the ultra-rich can't dump a fortune into
+   millions of cheap rolls. A single regular roll costs the LARGER of:
+     · a floor (so the very start isn't free),
+     · ~2 minutes of current income (scales with present power), or
+     · a chunk of all-time earnings (scales super-linearly with progression, so the
+       further you've gone, the dramatically more expensive every roll becomes). */
 function gachaUnit(){
-  return Math.max(50, incomePerSec()*30, (state.totalEarned||0)*0.0003);
+  const te = state.totalEarned||0;
+  // super-linear in all-time earnings: 1% of lifetime earned, raised to the 1.05 power.
+  // At 1Qa earned a regular roll is ~56T (~18 rolls per fortune); the cost-per-fortune
+  // keeps shrinking as you climb, so unlocking the whole set is a long, deliberate grind.
+  const progression = te>0 ? 0.01*Math.pow(te,1.05) : 0;
+  return Math.max(1000, incomePerSec()*120, progression);
 }
 function rollCost(bannerId){ return Math.ceil(gachaUnit()*BANNER_BY_ID[bannerId].costMult); }
 function pickRarity(odds){
@@ -1401,8 +1430,53 @@ $("resetBtn").addEventListener("click",()=>{
 $("closeWelcome").addEventListener("click",()=>{ $("welcomeModal").classList.remove("show"); renderAll(); });
 window.addEventListener("beforeunload",save);
 
+/* ---------- "Play on mobile" / Add-to-Home-Screen tip ---------- */
+const MOBILE_TIP_KEY="catMonopolyMobileTip_v1";
+function isStandalone(){
+  return window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone===true;   // iOS Safari
+}
+function installInstructions(){
+  const ua=navigator.userAgent||"";
+  const isiOS=/iphone|ipad|ipod/i.test(ua) || (navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  const isAndroid=/android/i.test(ua);
+  if(isiOS) return "<b>On iPhone / iPad (Safari):</b><br>"
+    +"1️⃣ Tap the <b>Share</b> button <span style='font-size:15px;'>⬆️</span> at the bottom.<br>"
+    +"2️⃣ Scroll down and tap <b>“Add to Home Screen”</b>.<br>"
+    +"3️⃣ Tap <b>Add</b> — now Cat Monopoly lives on your home screen! 🎉";
+  if(isAndroid) return "<b>On Android (Chrome):</b><br>"
+    +"1️⃣ Tap the <b>⋮</b> menu (top-right).<br>"
+    +"2️⃣ Tap <b>“Add to Home screen”</b> / <b>“Install app”</b>.<br>"
+    +"3️⃣ Confirm — now it opens like a real app! 🎉";
+  return "<b>You're on desktop 💻 — it's even better on your phone!</b><br>"
+    +"1️⃣ Open this page in your phone's browser.<br>"
+    +"2️⃣ <b>iPhone:</b> Share ⬆️ → “Add to Home Screen”.<br>"
+    +"&nbsp;&nbsp;&nbsp;&nbsp;<b>Android:</b> ⋮ menu → “Add to Home screen”.<br>"
+    +"3️⃣ Launch it fullscreen, like an app ♡";
+}
+function showMobileModal(force){
+  if(!force){
+    if(isStandalone()) return;                              // already installed
+    if(localStorage.getItem(MOBILE_TIP_KEY)) return;        // already seen
+  }
+  $("installSteps").innerHTML=installInstructions();
+  $("mobileModal").classList.add("show");
+}
+function dismissMobileModal(){ $("mobileModal").classList.remove("show"); try{ localStorage.setItem(MOBILE_TIP_KEY,"1"); }catch(e){} }
+$("closeMobile").addEventListener("click",dismissMobileModal);
+$("mobileBtn").addEventListener("click",()=>showMobileModal(true));
+function maybeShowMobileTip(){
+  // don't stack on top of the offline "welcome back" modal — wait until it's closed
+  if($("welcomeModal").classList.contains("show")){
+    $("closeWelcome").addEventListener("click",()=>setTimeout(()=>showMobileModal(false),300),{once:true});
+  } else {
+    setTimeout(()=>showMobileModal(false),500);
+  }
+}
+
 /* ---------- Boot ---------- */
 load(); applyOffline(); checkAchievements(); setActiveTab(); updateMascot(); renderAll();
+maybeShowMobileTip();
 lastTick=Date.now();
 setInterval(tick,100);
 setInterval(save,10000);
