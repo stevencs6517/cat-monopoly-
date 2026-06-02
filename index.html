@@ -223,6 +223,25 @@
   .dexcell .dexicon{display:flex;justify-content:center;}
   .dexcell .dexname{font-size:11px;font-weight:700;margin-top:4px;color:var(--ink);}
   .dexcell.undiscovered .dexname{color:var(--ink2);}
+
+  /* estates / property groups */
+  .propgroup{border:2px solid var(--gc,#f0dcea);border-radius:18px;padding:8px 8px 2px;margin-bottom:12px;
+    background:color-mix(in srgb, var(--gc,#fff) 9%, #fff);}
+  .propgrouphead{font-family:"Baloo 2";font-weight:800;color:var(--gc,#7a5a86);font-size:14px;
+    padding:2px 6px 8px;border-bottom:2px dashed var(--gc,#f0dcea);margin-bottom:8px;}
+  .propgroup .item{background:#fff;}
+
+  /* leaderboard top-3 flair */
+  .lbrow.lb1{background:linear-gradient(100deg,#fff7da,#ffe7a0);border-color:#ffce5c;
+    box-shadow:0 6px 18px rgba(255,206,92,.5);transform:scale(1.015);}
+  .lbrow.lb1 .rank{font-size:24px;animation:bob 1.7s ease-in-out infinite;}
+  .lbrow.lb1 .who b{color:#cf8a00;}
+  .lbrow.lb1 .val{color:#e0980f;font-size:16px;}
+  .lbrow.lb2{background:linear-gradient(100deg,#f6f8fb,#dde5ee);border-color:#bcc8d6;}
+  .lbrow.lb2 .rank{font-size:21px;}
+  .lbrow.lb3{background:linear-gradient(100deg,#fbe8d6,#f2cfae);border-color:#d9a878;}
+  .lbrow.lb3 .rank{font-size:21px;}
+  .lbrow.lb1.me,.lbrow.lb2.me,.lbrow.lb3.me{outline:2px solid var(--pink);}
 </style>
 </head>
 <body>
@@ -257,6 +276,7 @@
   <div class="card">
     <div class="tabs">
       <div class="tab active" data-tab="cats">🐈 Cats</div>
+      <div class="tab" data-tab="property">🏘️ Estates</div>
       <div class="tab" data-tab="catdex">📖 Catdex</div>
       <div class="tab" data-tab="upgrades">⬆️ Upgrades</div>
       <div class="tab" data-tab="rebirth">✨ Rebirth</div>
@@ -271,6 +291,7 @@
       <button class="smallbtn buyamt" data-amt="max">MAX</button>
     </div>
     <div id="panel-cats"></div>
+    <div id="panel-property" style="display:none;"></div>
     <div id="panel-catdex" style="display:none;"></div>
     <div id="panel-upgrades" style="display:none;"></div>
     <div id="panel-rebirth" style="display:none;"></div>
@@ -378,12 +399,41 @@ const UPGRADE_DEFS = [
   { id:"glove3", name:"Royal Paw Scepter", emoji:"👑", cost:5e9,    clickMult:20, desc:"x20 tap income" },
 ];
 
+/* ---------- Estates (Monopoly board) — cash money-sink for permanent income % ---------- */
+const PROP_GROUPS = {
+  brown: {name:"Litter District", color:"#b07b53"},
+  cyan:  {name:"Yarn Quarter",    color:"#5cc7dd"},
+  pink:  {name:"Purr Heights",    color:"#ff8fc0"},
+  orange:{name:"Sunbeam Row",     color:"#ff9e4a"},
+  green: {name:"Velvet Estates",  color:"#5fc98a"},
+  blue:  {name:"Royal Boardwalk", color:"#6c8cff"},
+};
+const PROPERTY_DEFS = [
+  {g:"brown",  name:"Litterbox Lane",  cost:5e3,  bonus:0.02},
+  {g:"brown",  name:"Hairball Alley",  cost:8e3,  bonus:0.02},
+  {g:"cyan",   name:"Catnip Avenue",   cost:5e4,  bonus:0.03},
+  {g:"cyan",   name:"Yarn Boulevard",  cost:8e4,  bonus:0.03},
+  {g:"cyan",   name:"Paw Place",       cost:1.1e5,bonus:0.03},
+  {g:"pink",   name:"Purrfect Plaza",  cost:6e5,  bonus:0.04},
+  {g:"pink",   name:"Meow Manor",      cost:9e5,  bonus:0.04},
+  {g:"pink",   name:"Tabby Terrace",   cost:1.3e6,bonus:0.04},
+  {g:"orange", name:"Scratch Street",  cost:7e6,  bonus:0.05},
+  {g:"orange", name:"Sunbeam Square",  cost:1e7,  bonus:0.05},
+  {g:"green",  name:"Diamond Den",     cost:7e7,  bonus:0.07},
+  {g:"green",  name:"Royal Catwalk",   cost:1e8,  bonus:0.07},
+  {g:"blue",   name:"Caviar Court",    cost:8e8,  bonus:0.10},
+  {g:"blue",   name:"Golden Throne",   cost:1.4e9,bonus:0.10},
+];
+const PROP_MAX_LVL = 5;             // 1 = owned, 2-4 = houses, 5 = hotel
+const PROP_SET_BONUS = 0.15;        // completing a whole color group
+
 /* ---------- State ---------- */
 function newState(){
   return {
     version:VERSION, money:0, lifetime:0, totalEarned:0,
     cats:CAT_DEFS.map(()=>0), upgrades:{},
     discovered:CAT_DEFS.map(()=>false),
+    properties:PROPERTY_DEFS.map(()=>0),
     achievements:{}, skills:{idle:0,tap:0,cost:0,offline:0,mice:0}, spentMice:0,
     pets:0, goldenCaught:0, lastDaily:"",
     goldenMice:0, rebirths:0, timePlayed:0,
@@ -592,12 +642,20 @@ function skillTapMult(){ return 1 + 0.30*(state.skills.tap||0); }
 function skillCostFactor(){ return Math.pow(0.97, state.skills.cost||0); }
 function offlineCapHours(){ return OFFLINE_CAP_HOURS + 2*(state.skills.offline||0); }
 function miceSkillBonus(){ return 1 + 0.15*(state.skills.mice||0); }
+function propCost(i){ const lvl=state.properties[i]||0; return PROPERTY_DEFS[i].cost*Math.pow(2.4,lvl); }
+function groupComplete(g){ return PROPERTY_DEFS.every((p,i)=> p.g!==g || (state.properties[i]||0)>=1); }
+function propertyMult(){
+  let m=1;
+  PROPERTY_DEFS.forEach((p,i)=>{ m += (state.properties[i]||0)*p.bonus; });
+  for(const g in PROP_GROUPS){ if(groupComplete(g)) m += PROP_SET_BONUS; }
+  return m;
+}
 let frenzy={mult:1,until:0};
 function goldenBuffMult(){ return Date.now()<frenzy.until ? frenzy.mult : 1; }
 function globalUpgradeMult(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.mult&&state.upgrades[u.id]) m*=u.mult; } return m; }
 function clickMultiplier(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.clickMult&&state.upgrades[u.id]) m*=u.clickMult; } return m; }
 // combined passive income multiplier (everything except each cat's base rate)
-function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*goldenBuffMult(); }
+function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*propertyMult()*goldenBuffMult(); }
 function catProduction(i){ return state.cats[i]*CAT_DEFS[i].baseProd; }
 function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*incomeMult(); }
 function clickValue(){ return (1+incomePerSec()*0.10)*clickMultiplier()*skillTapMult(); }
@@ -767,9 +825,9 @@ function lbRows(arr){
   const medal=["🥇","🥈","🥉"];
   if(!arr || !arr.length) return `<p class="sub" style="text-align:center;">No scores yet — be the first! 🎀</p>`;
   return arr.map((e,i)=>`
-    <div class="lbrow ${e.name===state.name?'me':''}">
+    <div class="lbrow ${i<3?'lb'+(i+1):''} ${e.name===state.name?'me':''}">
       <div class="rank">${medal[i]||("#"+(i+1))}</div>
-      <div class="who"><b>${escapeHtml(e.name)}</b><div class="meta">✨ ${e.rebirths} rebirths · ⏱ ${fmtTime(e.time)}</div></div>
+      <div class="who"><b>${i===0?'👑 ':''}${escapeHtml(e.name)}</b><div class="meta">✨ ${e.rebirths} rebirths · ⏱ ${fmtTime(e.time)}</div></div>
       <div class="val">${money(e.lifetime)}</div>
     </div>`).join("");
 }
@@ -873,6 +931,37 @@ function renderCatdex(){
     <div class="dexgrid">${cells}</div>`;
 }
 
+/* ---------- Estates tab (Monopoly money-sink) ---------- */
+function propLevelIcon(lvl){ if(lvl>=PROP_MAX_LVL) return "🏨"; return "🏠".repeat(lvl); }
+function renderProperty(){
+  let html=`<div class="sub" style="text-align:center;margin:0 0 4px;">🏘️ Estate bonus: <b>+${Math.round((propertyMult()-1)*100)}%</b> income</div>
+    <div class="sub" style="text-align:center;margin:0 0 12px;font-size:11px;">Spend your fortune to buy property & build 🏠🏠🏠🏨. Complete a color set for +${Math.round(PROP_SET_BONUS*100)}%!</div>`;
+  for(const g in PROP_GROUPS){
+    const grp=PROP_GROUPS[g], done=groupComplete(g);
+    html+=`<div class="propgroup" style="--gc:${grp.color}">
+      <div class="propgrouphead">${grp.name} ${done?`<span style="color:var(--good)">✅ Set +${Math.round(PROP_SET_BONUS*100)}%</span>`:""}</div>`;
+    PROPERTY_DEFS.forEach((p,i)=>{ if(p.g!==g) return;
+      const lvl=state.properties[i]||0, maxed=lvl>=PROP_MAX_LVL, cost=propCost(i), can=!maxed&&state.money>=cost;
+      html+=`<div class="item">
+        <div class="icon" style="font-size:24px;">${lvl>0?(lvl>=PROP_MAX_LVL?"🏨":"🏠"):"🏞️"}</div>
+        <div class="info"><div class="name">${p.name}</div>
+          <div class="desc">${lvl>0?propLevelIcon(lvl)+" · ":""}+${Math.round(p.bonus*100)}%/lvl · Lv ${lvl}/${PROP_MAX_LVL}</div></div>
+        ${maxed?`<span class="owned" style="font-size:13px;color:var(--good)">MAX</span>`
+          :`<button class="buy" data-prop="${i}" ${can?"":"disabled"}>${lvl===0?"Buy":"Build"}<br>${money(cost)}</button>`}
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  $("panel-property").innerHTML=html;
+}
+function buyProperty(i){
+  const lvl=state.properties[i]||0; if(lvl>=PROP_MAX_LVL) return;
+  const cost=propCost(i); if(state.money<cost) return;
+  state.money-=cost; state.properties[i]=lvl+1;
+  toast(PROPERTY_DEFS[i].name+(lvl===0?" purchased! 🏠":" upgraded! 🏠"));
+  renderProperty(); renderStats(); if(currentTab==="cats") updateCats();
+}
+
 /* ---------- Prestige skill tree (inside Rebirth tab) ---------- */
 function skillTreeHTML(){
   const avail=availableMice();
@@ -940,6 +1029,7 @@ function renderAll(){
   else if(currentTab==="ranks") renderRanks();
   else if(currentTab==="goals") renderGoals();
   else if(currentTab==="catdex") renderCatdex();
+  else if(currentTab==="property") renderProperty();
 }
 
 /* ---------- Actions ---------- */
@@ -983,6 +1073,7 @@ function tick(){
   updateFrenzyBanner();
   if(currentTab==="cats") updateCats();
   else if(currentTab==="upgrades") renderUpgrades();
+  else if(currentTab==="property") renderProperty();
   if((++tickN)%20===0) checkAchievements();   // ~every 2s
 }
 
@@ -1008,6 +1099,11 @@ function applyLoadedState(s){
     state.discovered=CAT_DEFS.map(()=>false);
   }
   for(let i=0;i<CAT_DEFS.length;i++){ if(state.cats[i]>0) state.discovered[i]=true; }   // back-fill from owned cats
+  if(!Array.isArray(state.properties)||state.properties.length!==PROPERTY_DEFS.length){
+    const p=PROPERTY_DEFS.map(()=>0);
+    if(Array.isArray(s.properties)) s.properties.forEach((v,i)=>{ if(i<p.length)p[i]=v||0; });
+    state.properties=p;
+  }
   if(typeof state.achievements!=="object"||!state.achievements) state.achievements={};
   if(typeof state.skills!=="object"||!state.skills) state.skills={};
   ["idle","tap","cost","offline","mice"].forEach(k=>{ if(typeof state.skills[k]!=="number") state.skills[k]=0; });
@@ -1043,7 +1139,7 @@ function spawnFloat(ev,txt){ const f=document.createElement("div"); f.className=
   f.style.left=x+"px"; f.style.top=y+"px"; document.body.appendChild(f); setTimeout(()=>f.remove(),1000); }
 function setActiveTab(){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===currentTab));
-  ["cats","upgrades","rebirth","ranks","goals","catdex"].forEach(p=>{
+  ["cats","property","upgrades","rebirth","ranks","goals","catdex"].forEach(p=>{
     const el=$("panel-"+p); if(el) el.style.display=currentTab===p?"":"none";
   });
   $("buyAmtRow").style.display=currentTab==="cats"?"flex":"none";
@@ -1059,6 +1155,7 @@ document.querySelectorAll(".buyamt").forEach(b=>b.addEventListener("click",()=>{
 $("panel-cats").addEventListener("click",e=>{ const btn=e.target.closest("[data-cat]"); if(btn) buyCat(parseInt(btn.dataset.cat)); });
 $("panel-upgrades").addEventListener("click",e=>{ const btn=e.target.closest("[data-up]"); if(btn) buyUpgrade(btn.dataset.up); });
 $("panel-rebirth").addEventListener("click",e=>{ const btn=e.target.closest("[data-skill]"); if(btn) buySkill(btn.dataset.skill); });
+$("panel-property").addEventListener("click",e=>{ const btn=e.target.closest("[data-prop]"); if(btn) buyProperty(parseInt(btn.dataset.prop)); });
 
 $("saveBtn").addEventListener("click",()=>{ save(); toast("Game saved 💾"); });
 $("keyBtn").addEventListener("click",()=>{ save(); $("keyText").value=encode(state); $("keyModal").classList.add("show"); });
