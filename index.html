@@ -283,6 +283,7 @@
       <div class="tab" data-tab="property">🏘️ Estates</div>
       <div class="tab" data-tab="catdex">📖 Catdex</div>
       <div class="tab" data-tab="upgrades">⬆️ Upgrades</div>
+      <div class="tab" data-tab="gacha">🎰 Gacha</div>
       <div class="tab" data-tab="rebirth">✨ Rebirth</div>
       <div class="tab" data-tab="goals">🏅 Goals</div>
       <div class="tab" data-tab="ranks">🏆 Ranks</div>
@@ -298,6 +299,7 @@
     <div id="panel-property" style="display:none;"></div>
     <div id="panel-catdex" style="display:none;"></div>
     <div id="panel-upgrades" style="display:none;"></div>
+    <div id="panel-gacha" style="display:none;"></div>
     <div id="panel-rebirth" style="display:none;"></div>
     <div id="panel-goals" style="display:none;"></div>
     <div id="panel-ranks" style="display:none;"></div>
@@ -438,6 +440,67 @@ const PROPERTY_DEFS = [
 const PROP_MAX_LVL = 5;             // 1 = owned, 2-4 = houses, 5 = hotel
 const PROP_SET_BONUS = 0.08;        // completing a whole color group
 
+/* ---------- Talisman Gacha (massive coin sink) ----------
+   Rarities grow exponentially rarer. Each talisman gives a small additive income
+   boost; duplicates level it up with diminishing returns and a hard cap so the
+   collection stays "worthy" without ever becoming overpowered.
+   base = bonus from the first copy · dupe = bonus per extra copy · cap = base*DUPE_CAP_MULT */
+const DUPE_CAP_MULT = 3;            // a single talisman can reach at most 3x its first-copy bonus
+const TALISMAN_RARITIES = [
+  {id:"common",    name:"Common",    color:"#9fb0c0", emoji:"⚪", base:0.01, dupe:0.0025},
+  {id:"uncommon",  name:"Uncommon",  color:"#5fc98a", emoji:"🟢", base:0.02, dupe:0.005},
+  {id:"rare",      name:"Rare",      color:"#5aa9ff", emoji:"🔵", base:0.04, dupe:0.01},
+  {id:"epic",      name:"Epic",      color:"#b06bff", emoji:"🟣", base:0.08, dupe:0.02},
+  {id:"legendary", name:"Legendary", color:"#ffb02e", emoji:"🟠", base:0.15, dupe:0.03},
+  {id:"mythic",    name:"Mythic",    color:"#ff5d8f", emoji:"🔴", base:0.25, dupe:0.05},
+  {id:"godly",     name:"Godly",     color:"#ffd84d", emoji:"🌟", base:0.50, dupe:0.10},
+];
+const RARITY_ORDER = TALISMAN_RARITIES.map(r=>r.id);
+const TAL_RARITY = {}; TALISMAN_RARITIES.forEach(r=>TAL_RARITY[r.id]=r);
+const LEGENDARY_IDX = RARITY_ORDER.indexOf("legendary");   // pity guarantees this tier or better
+
+const TALISMANS = [
+  // common (4)
+  {id:"t_yarn",    r:"common",    name:"Yarn Charm",        emoji:"🧶"},
+  {id:"t_paw",     r:"common",    name:"Lucky Paw",         emoji:"🐾"},
+  {id:"t_bell",    r:"common",    name:"Jingle Bell",       emoji:"🔔"},
+  {id:"t_feather", r:"common",    name:"Feather Token",     emoji:"🪶"},
+  // uncommon (4)
+  {id:"t_fish",    r:"uncommon",  name:"Silver Sardine",    emoji:"🐟"},
+  {id:"t_milk",    r:"uncommon",  name:"Cream Saucer",      emoji:"🥛"},
+  {id:"t_mouse",   r:"uncommon",  name:"Toy Mouse",         emoji:"🐭"},
+  {id:"t_clover",  r:"uncommon",  name:"Clover Tag",        emoji:"🍀"},
+  // rare (3)
+  {id:"t_ruby",    r:"rare",      name:"Ruby Collar",       emoji:"❤️"},
+  {id:"t_nip",     r:"rare",      name:"Catnip Crystal",    emoji:"🌿"},
+  {id:"t_moon",    r:"rare",      name:"Moonstone Charm",   emoji:"🌙"},
+  // epic (3)
+  {id:"t_crown",   r:"epic",      name:"Velvet Crown",      emoji:"👑"},
+  {id:"t_star",    r:"epic",      name:"Shooting Star",     emoji:"💫"},
+  {id:"t_gem",     r:"epic",      name:"Prism Gem",         emoji:"💎"},
+  // legendary (2)
+  {id:"t_phoenix", r:"legendary", name:"Phoenix Feather",   emoji:"🔥"},
+  {id:"t_galaxy",  r:"legendary", name:"Galaxy Orb",        emoji:"🌌"},
+  // mythic (2)
+  {id:"t_chrono",  r:"mythic",    name:"Chrono Whisker",    emoji:"⏳"},
+  {id:"t_rainbow", r:"mythic",    name:"Rainbow Heart",     emoji:"🌈"},
+  // godly (1)
+  {id:"t_deity",   r:"godly",     name:"Bastet's Blessing", emoji:"🐈‍⬛"},
+];
+
+/* Banners: higher tiers cost much more but shift odds toward rarer talismans.
+   Each odds table sums to 1. Godly odds climb 1e-5 -> 2e-4 -> 3e-3 across banners. */
+const BANNERS = [
+  {id:"regular", name:"Regular Roll", emoji:"🎰", costMult:1,  pity:100,
+    odds:{common:0.55, uncommon:0.28, rare:0.12, epic:0.04, legendary:0.0095, mythic:0.00049, godly:0.00001}},
+  {id:"rare", name:"Rare Roll", emoji:"✨", costMult:6, pity:80,
+    odds:{uncommon:0.50, rare:0.33, epic:0.13, legendary:0.035, mythic:0.0048, godly:0.0002}},
+  {id:"super", name:"Super Rare Roll", emoji:"🌟", costMult:30, pity:50,
+    odds:{rare:0.55, epic:0.30, legendary:0.12, mythic:0.027, godly:0.003}},
+];
+const BANNER_BY_ID = {}; BANNERS.forEach(b=>BANNER_BY_ID[b.id]=b);
+const ROLL_COUNTS = [1,10,50,100];
+
 /* ---------- State ---------- */
 function newState(){
   return {
@@ -448,6 +511,7 @@ function newState(){
     achievements:{}, skills:{idle:0,tap:0,cost:0,offline:0,mice:0}, spentMice:0,
     pets:0, goldenCaught:0, lastDaily:"",
     goldenMice:0, rebirths:0, timePlayed:0,
+    talismans:{}, gacha:{pity:0, rolls:0},
     name:"", lastSave:Date.now(),
   };
 }
@@ -637,6 +701,11 @@ const ACHIEVEMENTS=[
   {id:"golden25",emoji:"🍀",name:"Fortune Feline",desc:"Catch 25 Golden Cats",bonus:.08,cond:()=>state.goldenCaught>=25},
   {id:"pets100",emoji:"👆",name:"Pat Pat Pat",desc:"Pet your cat 100 times",bonus:.03,cond:()=>state.pets>=100},
   {id:"pets1000",emoji:"🙌",name:"Master Petter",desc:"Pet your cat 1000 times",bonus:.06,cond:()=>state.pets>=1000},
+  {id:"talfirst",emoji:"📿",name:"Charmed",desc:"Roll your first talisman",bonus:.03,cond:()=>TALISMANS.some(t=>(state.talismans&&state.talismans[t.id])>0)},
+  {id:"tallegend",emoji:"🔥",name:"Legendary Luck",desc:"Own a Legendary+ talisman",bonus:.06,cond:()=>TALISMANS.some(t=>(state.talismans&&state.talismans[t.id])>0&&RARITY_ORDER.indexOf(t.r)>=LEGENDARY_IDX)},
+  {id:"talgodly",emoji:"🌟",name:"Touched by Bastet",desc:"Pull a Godly talisman",bonus:.10,cond:()=>TALISMANS.some(t=>t.r==="godly"&&(state.talismans&&state.talismans[t.id])>0)},
+  {id:"talfull",emoji:"🏆",name:"Talisman Master",desc:"Collect every talisman",bonus:.15,cond:()=>TALISMANS.every(t=>(state.talismans&&state.talismans[t.id])>0)},
+  {id:"highroller",emoji:"🎰",name:"High Roller",desc:"Roll the gacha 1,000 times",bonus:.08,cond:()=>(state.gacha&&state.gacha.rolls)>=1000},
 ];
 const SKILLS=[
   {id:"idle",emoji:"🐾",name:"Idle Mastery",desc:"+12% passive income per rank",max:10,cost:r=>r+1},
@@ -670,8 +739,17 @@ let frenzy={mult:1,until:0};
 function goldenBuffMult(){ return Date.now()<frenzy.until ? frenzy.mult : 1; }
 function globalUpgradeMult(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.mult&&state.upgrades[u.id]) m*=u.mult; } return m; }
 function clickMultiplier(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.clickMult&&state.upgrades[u.id]) m*=u.clickMult; } return m; }
+// talismans: each owned talisman adds a small bonus; duplicates add a diminishing amount,
+// capped at DUPE_CAP_MULT x the first-copy value so the collection never gets overpowered.
+function talismanBonus(t){
+  const copies=(state.talismans&&state.talismans[t.id])||0; if(copies<=0) return 0;
+  const R=TAL_RARITY[t.r];
+  const raw=R.base+(copies-1)*R.dupe;
+  return Math.min(raw, R.base*DUPE_CAP_MULT);
+}
+function talismanMult(){ let s=0; for(const t of TALISMANS) s+=talismanBonus(t); return 1+s; }
 // combined passive income multiplier (everything except each cat's base rate)
-function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*propertyMult()*goldenBuffMult(); }
+function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*propertyMult()*goldenBuffMult()*talismanMult(); }
 // soft cap: the first CAT_SOFT_CAP of a tier earn full rate; every extra one earns far less,
 // so hoarding one cheap cat can't run the economy away.
 function effectiveCount(n){ return n<=CAT_SOFT_CAP ? n : CAT_SOFT_CAP + (n-CAT_SOFT_CAP)*CAT_OVERCAP_EFF; }
@@ -695,6 +773,67 @@ function catBulk(i){
   }
   let cost=0; for(let k=0;k<buyAmount;k++) cost+=catCost(i,owned+k);
   return {count:buyAmount, cost, affordable:state.money>=cost};
+}
+
+/* ---------- Gacha pricing & rolling ----------
+   Cost is anchored to the player's progression so it stays accessible early and
+   becomes a real coin sink late — the ultra-rich can't dump a fortune into millions
+   of cheap rolls. A single regular roll costs the LARGER of:
+     · a small floor (so the very start isn't free),
+     · ~30 seconds of current income (scales with present power), or
+     · a sliver of all-time earnings (scales with how far you've ever progressed). */
+function gachaUnit(){
+  return Math.max(50, incomePerSec()*30, (state.totalEarned||0)*0.0003);
+}
+function rollCost(bannerId){ return Math.ceil(gachaUnit()*BANNER_BY_ID[bannerId].costMult); }
+function pickRarity(odds){
+  const r=Math.random(); let acc=0;
+  for(const k of RARITY_ORDER){ if(odds[k]==null) continue; acc+=odds[k]; if(r<acc) return k; }
+  // numeric safety net: return the rarest tier present on this banner
+  for(let i=RARITY_ORDER.length-1;i>=0;i--){ if(odds[RARITY_ORDER[i]]!=null) return RARITY_ORDER[i]; }
+  return "common";
+}
+function pickHighRarity(odds){ // legendary-or-better, weighted by this banner's odds (for pity)
+  let tot=0; for(let i=LEGENDARY_IDX;i<RARITY_ORDER.length;i++){ const k=RARITY_ORDER[i]; if(odds[k]) tot+=odds[k]; }
+  let r=Math.random()*tot, acc=0;
+  for(let i=LEGENDARY_IDX;i<RARITY_ORDER.length;i++){ const k=RARITY_ORDER[i]; if(!odds[k]) continue; acc+=odds[k]; if(r<acc) return k; }
+  return "legendary";
+}
+function randomTalismanOfRarity(r){
+  const pool=TALISMANS.filter(t=>t.r===r);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function singleRoll(banner){
+  state.gacha.pity=(state.gacha.pity||0)+1;
+  let rarity=pickRarity(banner.odds);
+  if(state.gacha.pity>=banner.pity) rarity=pickHighRarity(banner.odds);  // pity guarantee
+  if(RARITY_ORDER.indexOf(rarity)>=LEGENDARY_IDX) state.gacha.pity=0;     // reset on legendary+
+  return rarity;
+}
+function doRoll(bannerId, count){
+  const banner=BANNER_BY_ID[bannerId]; if(!banner) return;
+  const per=rollCost(bannerId), total=per*count;
+  if(state.money<total){ toast("Need "+money(total)+" for "+count+"× "+banner.name); return; }
+  state.money-=total;
+  if(!state.talismans) state.talismans={};
+  const tally={}; let bestIdx=-1, bestTal=null;
+  for(let n=0;n<count;n++){
+    const rarity=singleRoll(banner);
+    const t=randomTalismanOfRarity(rarity);
+    state.talismans[t.id]=(state.talismans[t.id]||0)+1;
+    tally[rarity]=(tally[rarity]||0)+1;
+    const ri=RARITY_ORDER.indexOf(rarity);
+    if(ri>bestIdx){ bestIdx=ri; bestTal=t; }
+  }
+  state.gacha.rolls=(state.gacha.rolls||0)+count;
+  if(bestIdx>=LEGENDARY_IDX){
+    const R=TAL_RARITY[RARITY_ORDER[bestIdx]];
+    toast(R.emoji+" "+R.name.toUpperCase()+"! "+bestTal.emoji+" "+bestTal.name);
+  } else {
+    const summary=RARITY_ORDER.filter(r=>tally[r]).map(r=>tally[r]+"× "+TAL_RARITY[r].emoji).join("  ");
+    toast(banner.emoji+" "+count+" roll"+(count>1?"s":"")+": "+summary);
+  }
+  checkAchievements(); renderStats(); if(currentTab==="gacha") renderGacha(); save();
 }
 
 /* ---------- Render ---------- */
@@ -764,6 +903,63 @@ function renderUpgrades(){
     </div>`;
   }
   $("panel-upgrades").innerHTML=html;
+}
+
+/* ---------- Gacha tab (Talismans) ---------- */
+function fmtPct(p){
+  const v=p*100;
+  if(v>=1)      return (Math.round(v*10)/10)+"%";
+  if(v>=0.01)   return (Math.round(v*100)/100)+"%";
+  if(v>=0.0001) return v.toFixed(4)+"%";
+  return v.toExponential(1)+"%";
+}
+function renderGacha(){
+  const totalBonus=Math.round((talismanMult()-1)*100);
+  const owned=TALISMANS.filter(t=>(state.talismans&&state.talismans[t.id])>0).length;
+  let html=`<div class="sub" style="text-align:center;margin:0 0 4px;">🎰 Talisman bonus: <b>+${totalBonus}%</b> income · ${owned}/${TALISMANS.length} collected</div>
+    <div class="sub" style="text-align:center;margin:0 0 10px;font-size:11px;">Roll for lucky talismans! Costs scale with your power, so they stay meaningful all game. ♡</div>`;
+
+  // banners
+  for(const b of BANNERS){
+    const per=rollCost(b.id);
+    const oddsStr=RARITY_ORDER.filter(r=>b.odds[r]!=null)
+      .map(r=>`<span style="color:${TAL_RARITY[r].color};font-weight:700;">${TAL_RARITY[r].emoji}${fmtPct(b.odds[r])}</span>`).join(" · ");
+    const pity=state.gacha.pity||0, toPity=Math.max(0,b.pity-pity);
+    let btns="";
+    for(const c of ROLL_COUNTS){
+      const cost=per*c, can=state.money>=cost;
+      btns+=`<button class="buy" data-roll="${b.id}" data-count="${c}" ${can?"":"disabled"} style="flex:1;min-width:70px;">x${c}<br>${money(cost)}</button>`;
+    }
+    html+=`<div class="propgroup" style="--gc:${TAL_RARITY['legendary'].color};">
+      <div class="propgrouphead" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>${b.emoji} ${b.name}</span><span style="font-size:11px;color:var(--ink2);">${money(per)} / roll</span></div>
+      <div class="sub" style="margin:0 0 8px;font-size:11px;line-height:1.7;">${oddsStr}</div>
+      <div class="sub" style="margin:0 0 8px;font-size:11px;">🎟️ Pity: ${pity}/${b.pity} — guaranteed ${TAL_RARITY['legendary'].emoji}Legendary+ in <b>${toPity}</b> roll${toPity===1?"":"s"}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">${btns}</div>
+    </div>`;
+  }
+
+  // collection grouped by rarity
+  html+=`<div class="sub" style="text-align:center;margin:14px 0 8px;font-weight:700;">📿 Talisman Collection</div>`;
+  for(const R of TALISMAN_RARITIES){
+    const list=TALISMANS.filter(t=>t.r===R.id);
+    const cells=list.map(t=>{
+      const copies=(state.talismans&&state.talismans[t.id])||0;
+      const has=copies>0;
+      const bonus=Math.round(talismanBonus(t)*1000)/10;  // one decimal %
+      const capped=has && (R.base+(copies-1)*R.dupe) >= R.base*DUPE_CAP_MULT;
+      return `<div class="dexcell ${has?'':'undiscovered'}" style="${has?`border-color:${R.color};`:''}">
+        <div class="dexicon" style="font-size:26px;">${has?t.emoji:'❔'}</div>
+        <div class="dexname">${has?t.name:'???'}</div>
+        ${has?`<div class="sub" style="margin:2px 0 0;font-size:10px;">x${copies} · +${bonus}%${capped?' ⛛':''}</div>`:`<div class="sub" style="margin:2px 0 0;font-size:10px;">not found</div>`}
+      </div>`;
+    }).join("");
+    html+=`<div style="margin-bottom:6px;">
+      <div class="sub" style="margin:0 0 4px;color:${R.color};font-weight:700;">${R.emoji} ${R.name} <span style="color:var(--ink2);font-weight:600;">· +${Math.round(R.base*100*10)/10}% each (max +${Math.round(R.base*DUPE_CAP_MULT*100*10)/10}%)</span></div>
+      <div class="dexgrid">${cells}</div>
+    </div>`;
+  }
+  $("panel-gacha").innerHTML=html;
 }
 
 function miceFromRebirth(){ if(state.lifetime<5e6) return 0; return Math.floor(Math.pow(state.lifetime/5e6,0.45)*miceSkillBonus()); }
@@ -1051,6 +1247,7 @@ function renderAll(){
   else if(currentTab==="goals") renderGoals();
   else if(currentTab==="catdex") renderCatdex();
   else if(currentTab==="property") renderProperty();
+  else if(currentTab==="gacha") renderGacha();
 }
 
 /* ---------- Actions ---------- */
@@ -1095,6 +1292,7 @@ function tick(){
   if(currentTab==="cats") updateCats();
   else if(currentTab==="upgrades") renderUpgrades();
   else if(currentTab==="property") renderProperty();
+  else if(currentTab==="gacha" && tickN%10===0) renderGacha();  // refresh costs ~every 1s
   if((++tickN)%20===0) checkAchievements();   // ~every 2s
 }
 
@@ -1132,6 +1330,10 @@ function applyLoadedState(s){
   if(typeof state.pets!=="number") state.pets=0;
   if(typeof state.goldenCaught!=="number") state.goldenCaught=0;
   if(typeof state.lastDaily!=="string") state.lastDaily="";
+  if(typeof state.talismans!=="object"||!state.talismans) state.talismans={};
+  if(typeof state.gacha!=="object"||!state.gacha) state.gacha={pity:0,rolls:0};
+  if(typeof state.gacha.pity!=="number") state.gacha.pity=0;
+  if(typeof state.gacha.rolls!=="number") state.gacha.rolls=0;
 }
 function applyOffline(){
   const now=Date.now(); let elapsed=(now-(state.lastSave||now))/1000;
@@ -1160,7 +1362,7 @@ function spawnFloat(ev,txt){ const f=document.createElement("div"); f.className=
   f.style.left=x+"px"; f.style.top=y+"px"; document.body.appendChild(f); setTimeout(()=>f.remove(),1000); }
 function setActiveTab(){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===currentTab));
-  ["cats","property","upgrades","rebirth","ranks","goals","catdex"].forEach(p=>{
+  ["cats","property","upgrades","gacha","rebirth","ranks","goals","catdex"].forEach(p=>{
     const el=$("panel-"+p); if(el) el.style.display=currentTab===p?"":"none";
   });
   $("buyAmtRow").style.display=currentTab==="cats"?"flex":"none";
@@ -1177,6 +1379,7 @@ $("panel-cats").addEventListener("click",e=>{ const btn=e.target.closest("[data-
 $("panel-upgrades").addEventListener("click",e=>{ const btn=e.target.closest("[data-up]"); if(btn) buyUpgrade(btn.dataset.up); });
 $("panel-rebirth").addEventListener("click",e=>{ const btn=e.target.closest("[data-skill]"); if(btn) buySkill(btn.dataset.skill); });
 $("panel-property").addEventListener("click",e=>{ const btn=e.target.closest("[data-prop]"); if(btn) buyProperty(parseInt(btn.dataset.prop)); });
+$("panel-gacha").addEventListener("click",e=>{ const btn=e.target.closest("[data-roll]"); if(btn) doRoll(btn.dataset.roll, parseInt(btn.dataset.count)); });
 
 $("saveBtn").addEventListener("click",()=>{ save(); toast("Game saved 💾"); });
 $("keyBtn").addEventListener("click",()=>{ save(); $("keyText").value=encode(state); $("keyModal").classList.add("show"); });
