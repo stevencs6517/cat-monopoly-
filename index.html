@@ -177,6 +177,19 @@
   .modal .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
   .modal .row .smallbtn{flex:1;}
 
+  /* home-screen install tutorial steps */
+  .tut-plat{font-weight:800;color:var(--pink-d);font-size:14px;margin:0 0 8px;text-align:center;}
+  .tut-step{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #fbe6f3;
+    border-radius:14px;padding:9px 11px;margin-bottom:8px;text-align:left;}
+  .tut-step:last-child{margin-bottom:0;}
+  .tut-num{flex:0 0 26px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-family:"Baloo 2";font-weight:800;font-size:14px;color:#fff;
+    background:linear-gradient(180deg,var(--pink),var(--pink-d));box-shadow:0 2px 6px rgba(255,111,174,.4);}
+  .tut-txt{flex:1;font-size:13px;font-weight:600;color:var(--ink);line-height:1.35;}
+  .tut-txt b{color:var(--ink);}
+  .tut-ico{font-size:18px;flex:0 0 auto;}
+  .ios-share{display:inline-flex;vertical-align:-3px;}
+
   #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
     background:#fff;border:2px solid var(--pink);color:var(--ink);padding:10px 20px;
     border-radius:30px;font-size:14px;font-weight:700;opacity:0;transition:opacity .3s;
@@ -364,7 +377,7 @@
     <h2 style="text-align:center;margin:4px 0 8px;">📱 Best on Mobile!</h2>
     <p style="font-weight:600;margin:0 0 10px;">Cat Monopoly is way more fun on your phone — tap fast, play anywhere, and your kitties keep earning while you're away. ♡</p>
     <p class="sub" style="margin:0 0 10px;font-weight:700;">Add it to your home screen to play it like a real app — fullscreen &amp; one tap to open:</p>
-    <div id="installSteps" class="sub" style="text-align:left;background:var(--panel2);border:2px solid #fbe6f3;border-radius:16px;padding:12px 14px;line-height:1.9;font-size:13px;"></div>
+    <div id="installSteps" style="text-align:left;"></div>
     <div class="row"><button class="smallbtn" id="closeMobile" style="flex:1;">Got it ♡</button></div>
   </div>
 </div>
@@ -1476,23 +1489,24 @@ function isStandalone(){
   return window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches
     || window.navigator.standalone===true;   // iOS Safari
 }
+const IOS_SHARE_ICO=`<svg class="ios-share" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a8dff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>`;
+function tutStep(n,txt,ico){ return `<div class="tut-step"><div class="tut-num">${n}</div><div class="tut-txt">${txt}</div>${ico?`<div class="tut-ico">${ico}</div>`:""}</div>`; }
 function installInstructions(){
   const ua=navigator.userAgent||"";
   const isiOS=/iphone|ipad|ipod/i.test(ua) || (navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
   const isAndroid=/android/i.test(ua);
-  if(isiOS) return "<b>On iPhone / iPad (Safari):</b><br>"
-    +"1️⃣ Tap the <b>Share</b> button <span style='font-size:15px;'>⬆️</span> at the bottom.<br>"
-    +"2️⃣ Scroll down and tap <b>“Add to Home Screen”</b>.<br>"
-    +"3️⃣ Tap <b>Add</b> — now Cat Monopoly lives on your home screen! 🎉";
-  if(isAndroid) return "<b>On Android (Chrome):</b><br>"
-    +"1️⃣ Tap the <b>⋮</b> menu (top-right).<br>"
-    +"2️⃣ Tap <b>“Add to Home screen”</b> / <b>“Install app”</b>.<br>"
-    +"3️⃣ Confirm — now it opens like a real app! 🎉";
-  return "<b>You're on desktop 💻 — it's even better on your phone!</b><br>"
-    +"1️⃣ Open this page in your phone's browser.<br>"
-    +"2️⃣ <b>iPhone:</b> Share ⬆️ → “Add to Home Screen”.<br>"
-    +"&nbsp;&nbsp;&nbsp;&nbsp;<b>Android:</b> ⋮ menu → “Add to Home screen”.<br>"
-    +"3️⃣ Launch it fullscreen, like an app ♡";
+  if(isiOS) return `<div class="tut-plat">On iPhone / iPad (Safari)</div>`
+    + tutStep(1,`Tap the <b>Share</b> button at the bottom of Safari`, IOS_SHARE_ICO)
+    + tutStep(2,`Scroll down &amp; tap <b>“Add to Home Screen”</b>`, "➕")
+    + tutStep(3,`Tap <b>Add</b> — Cat Monopoly is on your home screen!`, "🎉");
+  if(isAndroid) return `<div class="tut-plat">On Android (Chrome)</div>`
+    + tutStep(1,`Tap the <b>⋮</b> menu, top-right`, "⋮")
+    + tutStep(2,`Tap <b>“Add to Home screen”</b> / <b>“Install app”</b>`, "➕")
+    + tutStep(3,`Confirm — now it opens like a real app!`, "🎉");
+  return `<div class="tut-plat">You're on desktop 💻 — it's even better on your phone!</div>`
+    + tutStep(1,`Open this page in your phone's browser`, "📲")
+    + tutStep(2,`<b>iPhone:</b> Share ${IOS_SHARE_ICO} → “Add to Home Screen”.<br><b>Android:</b> ⋮ menu → “Add to Home screen”.`, "")
+    + tutStep(3,`Launch it fullscreen, just like an app ♡`, "🎉");
 }
 function showMobileModal(force){
   if(!force){
