@@ -1320,7 +1320,21 @@ function doRebirth(){
   checkAchievements();
   currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); save();
 }
+/* Anti-autoclicker: only pay out up to MAX_TAPS_PER_SEC taps in any rolling 1s
+   window. A fast human taps ~10/sec; a 1ms autoclicker does ~1000/sec — those
+   extra taps simply don't pay, so the exploit can't outpace a real player. */
+const MAX_TAPS_PER_SEC = 14;
+let _tapTimes = [];
+let _lastTapWarn = 0;
 function petCat(ev){
+  const now = Date.now();
+  while(_tapTimes.length && now - _tapTimes[0] > 1000) _tapTimes.shift();
+  if(_tapTimes.length >= MAX_TAPS_PER_SEC){
+    // rate-limited — ignore this tap (no money, no progress)
+    if(now - _lastTapWarn > 2500){ _lastTapWarn = now; toast("😼 Tapping too fast! (max "+MAX_TAPS_PER_SEC+"/sec)"); }
+    return;
+  }
+  _tapTimes.push(now);
   const v=clickValue(); state.money+=v; state.lifetime+=v; state.totalEarned+=v; state.pets=(state.pets||0)+1;
   spawnFloat(ev,"+"+money(v)); renderStats();
   if(currentTab==="cats") updateCats();
