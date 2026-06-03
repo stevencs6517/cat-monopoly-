@@ -35,6 +35,34 @@
     --danger:#ff7b9c;
     --line:#f3d9ea;
   }
+  
+  /* ===== 🌙 Dark Mode Overrides ===== */
+  body.dark-theme {
+    --bg1: #1a1025;
+    --bg2: #241836;
+    --bg3: #181e29;
+    --panel: #22172b;
+    --panel2: #2c1e38;
+    --ink: #e0d5eb;
+    --ink2: #a996c0;
+    --pink: #ff6fae;
+    --pink-d: #ff3b8b;
+    --lav: #b69ce8;
+    --gold: #f5b32e;
+    --gold-d: #ffce5c;
+    --line: #412d52;
+  }
+  body.dark-theme .card, body.dark-theme .modal {
+    border-color: var(--line);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4), inset 0 0 0 4px #2c1e38;
+  }
+  body.dark-theme .smallbtn { background: var(--panel2); border-color: var(--line); color: var(--ink); }
+  body.dark-theme .smallbtn.active { background: var(--pink); border-color: var(--pink-d); color: #fff; }
+  body.dark-theme input.nameinput, body.dark-theme textarea { background: var(--panel2); border-color: var(--line); color: var(--ink); }
+  body.dark-theme .item, body.dark-theme .tut-step { border-color: var(--line); }
+  body.dark-theme .mult-badge { background: var(--panel2); border-color: var(--line); }
+  body.dark-theme header h1 { text-shadow: 0 2px 0 var(--panel2), 0 4px 14px rgba(255,111,174,.35); }
+
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   /* mobile: stop double-tap-to-zoom & 300ms delay so you can tap fast */
   html{touch-action:manipulation;}
@@ -417,6 +445,7 @@
 <div class="overlay" id="settingsModal">
   <div class="modal">
     <h2 style="text-align:center;margin:4px 0 10px;">⚙️ Settings</h2>
+    <div class="setrow"><span>🌙 Dark Mode</span><button class="smallbtn" id="toggleTheme">Off</button></div>
     <div class="setrow"><span>🔊 Sound &amp; haptics</span><button class="smallbtn" id="toggleSound">On ✅</button></div>
     <div class="setrow"><span>🎐 Animations</span><button class="smallbtn" id="toggleMotion">On ✅</button></div>
     <div class="sub" style="margin:12px 0 6px;font-weight:800;text-align:center;">📊 Your Stats</div>
@@ -613,7 +642,7 @@ function newState(){
     pets:0, bestCombo:0, goldenCaught:0, lastDaily:"", dailyStreak:0,
     goldenMice:0, rebirths:0, timePlayed:0,
     talismans:{}, gacha:{pity:0, rolls:0},
-    comboRewards:{}, prefs:{sound:true, motion:true},
+    comboRewards:{}, prefs:{sound:true, motion:true, dark:false},
     name:"", lastSave:Date.now(),
   };
 }
@@ -1171,9 +1200,9 @@ async function fetchMyRank(score){
   try{
     const r=await fetch(`${SB}/rest/v1/scores?select=name&score=gt.${Math.floor(score)}`,
       { headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY, Prefer:"count=exact", Range:"0-0" } });
-    const cr=r.headers.get("content-range");           // e.g. "0-0/42" or "*/42"
+    const cr=r.headers.get("content-range");            // e.g. "0-0/42" or "*/42"
     const total=cr ? parseInt(cr.split("/")[1],10) : 0;
-    return (isNaN(total)?0:total)+1;                   // players above me + 1
+    return (isNaN(total)?0:total)+1;                    // players above me + 1
   }catch(e){ return null; }
 }
 async function submitScoreOnline(entry){
@@ -1622,9 +1651,12 @@ function applyLoadedState(s){
   if(typeof state.lastDaily!=="string") state.lastDaily="";
   if(typeof state.dailyStreak!=="number") state.dailyStreak=0;
   if(typeof state.comboRewards!=="object"||!state.comboRewards) state.comboRewards={};
-  if(typeof state.prefs!=="object"||!state.prefs) state.prefs={sound:true,motion:true};
+  
+  if(typeof state.prefs!=="object"||!state.prefs) state.prefs={sound:true,motion:true,dark:false};
   if(typeof state.prefs.sound!=="boolean") state.prefs.sound=true;
   if(typeof state.prefs.motion!=="boolean") state.prefs.motion=true;
+  if(typeof state.prefs.dark!=="boolean") state.prefs.dark=false;
+
   if(typeof state.talismans!=="object"||!state.talismans) state.talismans={};
   if(typeof state.gacha!=="object"||!state.gacha) state.gacha={pity:0,rolls:0};
   if(typeof state.gacha.pity!=="number") state.gacha.pity=0;
@@ -1678,7 +1710,10 @@ function sfx(name,arg){
     case "daily":  [587,740,880,1175].forEach((f,i)=>beep(f,0.16,"sine",0.11,i*0.07)); haptic(30); break;
   }
 }
-function applyPrefs(){ document.body.classList.toggle("reduce-motion", !(state.prefs && state.prefs.motion)); }
+function applyPrefs(){ 
+  document.body.classList.toggle("reduce-motion", !(state.prefs && state.prefs.motion)); 
+  document.body.classList.toggle("dark-theme", !!(state.prefs && state.prefs.dark));
+}
 
 /* ---------- Temporary tap buff (rare "Golden Paw" powerup) ---------- */
 let _tapBuffUntil=0, _tapBuffMult=1;
@@ -1764,6 +1799,7 @@ function renderStatsBox(){
     `💎 Lifetime earned: <b>${money(state.lifetime)}</b>`;
 }
 function openSettings(){
+  $("toggleTheme").textContent="🌙 "+toggleTxt(state.prefs.dark);
   $("toggleSound").textContent="🔊 "+toggleTxt(state.prefs.sound);
   $("toggleMotion").textContent="🎐 "+toggleTxt(state.prefs.motion);
   renderStatsBox();
@@ -1771,6 +1807,14 @@ function openSettings(){
 }
 $("settingsBtn").addEventListener("click",openSettings);
 $("closeSettings").addEventListener("click",()=>$("settingsModal").classList.remove("show"));
+
+$("toggleTheme").addEventListener("click",()=>{ 
+  state.prefs.dark = !state.prefs.dark;
+  $("toggleTheme").textContent="🌙 "+toggleTxt(state.prefs.dark); 
+  applyPrefs(); 
+  save(); 
+});
+
 $("toggleSound").addEventListener("click",()=>{ state.prefs.sound=!state.prefs.sound;
   $("toggleSound").textContent="🔊 "+toggleTxt(state.prefs.sound); if(state.prefs.sound) sfx("buy"); save(); });
 $("toggleMotion").addEventListener("click",()=>{ state.prefs.motion=!state.prefs.motion;
@@ -1821,7 +1865,7 @@ function installInstructions(){
 }
 function showMobileModal(force){
   if(!force){
-    if(isStandalone()) return;                              // already installed
+    if(isStandalone()) return;                                      // already installed
     if(localStorage.getItem(MOBILE_TIP_KEY)) return;        // already seen
   }
   $("installSteps").innerHTML=installInstructions();
