@@ -262,6 +262,9 @@
   .goldencat{position:fixed;z-index:55;cursor:pointer;filter:drop-shadow(0 0 10px rgba(255,206,92,.9));
     animation:gcbob 1s ease-in-out infinite;}
   @keyframes gcbob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-10px) rotate(4deg)}}
+  /* cat pulses while the Auto-Paw powerup is auto-tapping */
+  .pedestal.auto-active{animation:autopaw .26s ease-in-out infinite;}
+  @keyframes autopaw{0%,100%{transform:scale(1)}50%{transform:scale(.92)}}
   /* frenzy banner */
   #frenzyBanner{display:none;position:sticky;top:0;z-index:40;text-align:center;
     margin:0 auto 4px;max-width:520px;padding:8px 16px;border-radius:0 0 18px 18px;
@@ -294,6 +297,12 @@
   .lbrow.lb3{background:linear-gradient(100deg,#fbe8d6,#f2cfae);border-color:#d9a878;}
   .lbrow.lb3 .rank{font-size:21px;}
   .lbrow.lb1.me,.lbrow.lb2.me,.lbrow.lb3.me{outline:2px solid var(--pink);}
+  /* settings */
+  .setrow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0;font-weight:700;color:var(--ink);}
+  .setrow .smallbtn{min-width:84px;}
+  /* reduced-motion: kill decorative CSS animations (golden-cat movement uses JS, stays on) */
+  body.reduce-motion *{animation:none !important;}
+  body.reduce-motion .kw-particle,body.reduce-motion .sparkles{display:none !important;}
 </style>
 </head>
 <body>
@@ -317,6 +326,7 @@
         <div class="combo-bar" id="comboBar"><div class="combo-fill" id="comboFill"></div></div>
       </div>
       <div class="sub" id="lifetime">Lifetime earned: $0</div>
+      <div class="sub" id="offlineRate" style="font-size:11px;color:var(--ink2);margin-top:2px;"></div>
       <div>
         <span class="mult-badge" id="rebirthMult">Prestige x1.00</span>
         <span class="mult-badge" id="timeBadge">⏱ 0m</span>
@@ -324,6 +334,7 @@
       <div class="footer-btns">
         <button class="smallbtn" id="saveBtn">💾 Save</button>
         <button class="smallbtn" id="keyBtn">🔑 Key</button>
+        <button class="smallbtn" id="settingsBtn">⚙️ Settings</button>
         <button class="smallbtn" id="mobileBtn">📱 Install</button>
         <button class="smallbtn danger" id="resetBtn">⚠️ Reset</button>
       </div>
@@ -400,6 +411,22 @@
     <p class="sub" style="margin:0 0 10px;font-weight:700;">A few fixes to make Cat Monopoly smoother ♡</p>
     <div id="updateList" style="text-align:left;"></div>
     <div class="row"><button class="smallbtn" id="closeUpdate" style="flex:1;">Yay! ♡</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="settingsModal">
+  <div class="modal">
+    <h2 style="text-align:center;margin:4px 0 10px;">⚙️ Settings</h2>
+    <div class="setrow"><span>🔊 Sound &amp; haptics</span><button class="smallbtn" id="toggleSound">On ✅</button></div>
+    <div class="setrow"><span>🎐 Animations</span><button class="smallbtn" id="toggleMotion">On ✅</button></div>
+    <div class="sub" style="margin:12px 0 6px;font-weight:800;text-align:center;">📊 Your Stats</div>
+    <div id="statsBox" style="font-size:13px;line-height:1.85;"></div>
+    <div class="sub" style="margin:12px 0 4px;font-weight:800;text-align:center;">💾 Backup</div>
+    <p class="sub" style="margin:0 0 8px;font-size:11px;text-align:center;">An automatic backup is kept every few minutes (and right before a reset) in case something goes wrong.</p>
+    <div class="row">
+      <button class="smallbtn" id="restoreBackup" style="flex:1;">♻️ Restore backup</button>
+      <button class="smallbtn" id="closeSettings" style="flex:1;">Close</button>
+    </div>
   </div>
 </div>
 
@@ -583,9 +610,10 @@ function newState(){
     discovered:CAT_DEFS.map(()=>false),
     properties:PROPERTY_DEFS.map(()=>0),
     achievements:{}, skills:{idle:0,tap:0,cost:0,offline:0,mice:0}, spentMice:0,
-    pets:0, bestCombo:0, goldenCaught:0, lastDaily:"",
+    pets:0, bestCombo:0, goldenCaught:0, lastDaily:"", dailyStreak:0,
     goldenMice:0, rebirths:0, timePlayed:0,
     talismans:{}, gacha:{pity:0, rolls:0},
+    comboRewards:{}, prefs:{sound:true, motion:true},
     name:"", lastSave:Date.now(),
   };
 }
@@ -788,7 +816,7 @@ const ACHIEVEMENTS=[
   {id:"highroller",emoji:"🎰",name:"High Roller",desc:"Roll the gacha 1,000 times",bonus:.08,cond:()=>(state.gacha&&state.gacha.rolls)>=1000},
 ];
 const SKILLS=[
-  {id:"idle",emoji:"🐾",name:"Idle Mastery",desc:"+12% passive income per rank",max:10,cost:r=>r+1},
+  {id:"idle",emoji:"🐾",name:"Idle Mastery",desc:"+8% passive income per rank",max:10,cost:r=>r+1},
   {id:"tap",emoji:"👆",name:"Tap Power",desc:"+20% tap income & stronger late-game taps per rank",max:10,cost:r=>r+1},
   {id:"cost",emoji:"💸",name:"Bargain Whiskers",desc:"Cats 3% cheaper per rank",max:8,cost:r=>2*(r+1)},
   {id:"offline",emoji:"🌙",name:"Night Owl",desc:"+2h offline cap per rank",max:6,cost:r=>2*(r+1)},
@@ -858,7 +886,7 @@ function tapBaseValue(){
   const share = tapShare() * incomePerSec();
   return Math.max(flat, share);
 }
-function clickValue(){ return tapBaseValue() * comboMult(); }
+function clickValue(){ return tapBaseValue() * comboMult() * tapBuffMult(); }
 function catCost(i,owned){ return CAT_DEFS[i].baseCost*Math.pow(COST_GROWTH,owned)*skillCostFactor(); }
 function catUnlocked(i){ return i===0 || state.cats[i-1]>=1; }
 function highestOwned(){ let h=0; for(let i=0;i<CAT_DEFS.length;i++) if(state.cats[i]>0) h=i; return h; }
@@ -935,10 +963,10 @@ function doRoll(bannerId, count){
   state.gacha.rolls=(state.gacha.rolls||0)+count;
   if(bestIdx>=LEGENDARY_IDX){
     const R=TAL_RARITY[RARITY_ORDER[bestIdx]];
-    toast(R.emoji+" "+R.name.toUpperCase()+"! "+bestTal.emoji+" "+bestTal.name);
+    toast(R.emoji+" "+R.name.toUpperCase()+"! "+bestTal.emoji+" "+bestTal.name); sfx("rare");
   } else {
     const summary=RARITY_ORDER.filter(r=>tally[r]).map(r=>tally[r]+"× "+TAL_RARITY[r].emoji).join("  ");
-    toast(banner.emoji+" "+count+" roll"+(count>1?"s":"")+": "+summary);
+    toast(banner.emoji+" "+count+" roll"+(count>1?"s":"")+": "+summary); sfx("buy");
   }
   checkAchievements(); renderStats(); if(currentTab==="gacha") renderGacha(); save();
 }
@@ -951,6 +979,7 @@ function renderStats(){
   $("persec").textContent=money(incomePerSec())+" / sec";
   $("clickval").textContent=money(tapBaseValue());
   $("lifetime").textContent="Lifetime earned: "+money(state.lifetime);
+  const ofr=$("offlineRate"); if(ofr) ofr.textContent="💤 While away: ~"+money(incomePerSec()*3600)+"/hr (up to "+offlineCapHours()+"h)";
   $("rebirthMult").textContent="Prestige x"+rebirthMultiplier().toFixed(2)+(state.goldenMice>0?"  ("+fmt(state.goldenMice)+" 🐭)":"");
   $("timeBadge").textContent="⏱ "+fmtTime(state.timePlayed);
 }
@@ -1262,7 +1291,8 @@ function renderGoals(){
   $("panel-goals").innerHTML=`
     <div class="item" style="flex-direction:column;align-items:stretch;gap:8px;">
       <div class="name" style="text-align:center;">🎁 Daily Reward</div>
-      <div class="desc" style="text-align:center;">Come back each day for a kitty bonus!</div>
+      <div class="desc" style="text-align:center;">Come back each day — your streak grows the reward (up to ×7)!</div>
+      <div class="sub" style="text-align:center;margin:0;font-weight:700;">🔥 Current streak: ${state.dailyStreak||0} day${(state.dailyStreak||0)===1?"":"s"}</div>
       <button class="buy alt" id="dailyBtn" ${canDaily?'':'disabled'}>${canDaily?"🎁 Claim today's reward":'✅ Come back tomorrow'}</button>
     </div>
     <div class="sub" id="goalsSummary" style="text-align:center;margin:8px 0;">${goalsSummaryHtml()}</div>
@@ -1277,11 +1307,16 @@ function updateGoalsAchievements(){
 function claimDaily(){
   const today=new Date().toDateString();
   if(state.lastDaily===today) return;
+  // streak: +1 if last claim was yesterday, otherwise it resets to 1
+  const yesterday=new Date(Date.now()-86400000).toDateString();
+  state.dailyStreak = (state.lastDaily===yesterday) ? (state.dailyStreak||0)+1 : 1;
   state.lastDaily=today;
-  frenzy={mult:2, until:Date.now()+60000}; updateFrenzyBanner();
-  const lump=Math.max(incomePerSec()*300, state.money*0.05, 100);
+  const streak=state.dailyStreak;
+  const lumpMult=Math.min(7,streak);                       // reward grows up to a 7-day streak
+  frenzy={mult:2+Math.min(3,Math.floor(streak/2)), until:Date.now()+60000}; updateFrenzyBanner();
+  const lump=Math.max(incomePerSec()*300, state.money*0.05, 100)*lumpMult;
   state.money+=lump; state.lifetime+=lump; state.totalEarned+=lump;
-  toast("🎁 Daily: +"+money(lump)+" & x3 for 60s!");
+  toast(`🎁 Daily streak ${streak}🔥 — +${money(lump)}!`); sfx("daily");
   renderGoals(); renderStats(); save();
 }
 
@@ -1338,7 +1373,7 @@ function buyProperty(i){
   const lvl=state.properties[i]||0; if(lvl>=PROP_MAX_LVL) return;
   const cost=propCost(i); if(state.money<cost) return;
   state.money-=cost; state.properties[i]=lvl+1;
-  toast(PROPERTY_DEFS[i].name+(lvl===0?" purchased! 🏠":" upgraded! 🏠"));
+  toast(PROPERTY_DEFS[i].name+(lvl===0?" purchased! 🏠":" upgraded! 🏠")); sfx("buy");
   renderProperty(); renderStats(); if(currentTab==="cats") updateCats();
 }
 
@@ -1368,19 +1403,67 @@ function buySkill(id){
 /* ---------- Golden Cat 🌟 ---------- */
 function updateFrenzyBanner(){
   const el=$("frenzyBanner"); if(!el) return;
-  if(Date.now()<frenzy.until){
-    el.style.display="block";
-    el.textContent=`🌟 FRENZY! x${frenzy.mult} income — ${Math.ceil((frenzy.until-Date.now())/1000)}s`;
-  } else el.style.display="none";
+  const now=Date.now(), parts=[];
+  if(now<frenzy.until) parts.push(`🌟 FRENZY x${frenzy.mult} — ${Math.ceil((frenzy.until-now)/1000)}s`);
+  if(now<_autoClick.until) parts.push(`🐾 AUTO-PAW — ${Math.ceil((_autoClick.until-now)/1000)}s`);
+  if(now<_tapBuffUntil) parts.push(`✨ x${_tapBuffMult} TAPS — ${Math.ceil((_tapBuffUntil-now)/1000)}s`);
+  if(parts.length){ el.style.display="block"; el.innerHTML=parts.join(" &nbsp;·&nbsp; "); }
+  else el.style.display="none";
 }
+
+/* ---------- Auto-Paw powerup: a hands-free auto-tapper for a short burst ----------
+   Fires on a 10ms interval, but every tap goes through the rate-limited petCat() path, so it
+   pays at most MAX_TAPS_PER_SEC like any human — it just taps perfectly and builds your Pounce
+   Combo for you. Strong for active/tap builds, but bounded (can't out-earn a real tapper). */
+let _autoClick = { until:0, iv:null };
+function startAutoClick(ms){
+  _autoClick.until = Math.max(_autoClick.until, Date.now()+ms);   // extend if re-caught
+  const c=$("clickCat"); if(c) c.classList.add("auto-active");
+  if(!_autoClick.iv){
+    _autoClick.iv = setInterval(()=>{
+      if(Date.now() >= _autoClick.until){ stopAutoClick(); return; }
+      autoTap();
+    }, 10);
+  }
+  updateFrenzyBanner();
+}
+function stopAutoClick(){
+  if(_autoClick.iv){ clearInterval(_autoClick.iv); _autoClick.iv=null; }
+  _autoClick.until=0;
+  const c=$("clickCat"); if(c) c.classList.remove("auto-active");
+  updateFrenzyBanner();
+}
+let _ccRect=null, _ccRectAt=0;
+function autoTap(){
+  const now=Date.now();
+  // cache the cat's position (getBoundingClientRect forces layout) — refresh ~2x/sec, not 100x
+  if(!_ccRect || now-_ccRectAt>500){
+    const el=$("clickCat");
+    _ccRect = el ? el.getBoundingClientRect() : {left:innerWidth/2-30, top:200, width:60, height:60};
+    _ccRectAt=now;
+  }
+  const r=_ccRect;
+  // jitter the float position within the cat so the +$ numbers fan out nicely
+  petCat({ clientX:r.left+r.width*(0.32+Math.random()*0.36), clientY:r.top+r.height*(0.3+Math.random()*0.4) }, true);
+}
+
 function goldenReward(){
-  if(Math.random()<0.55){
+  const r=Math.random();
+  if(r<0.45){
     frenzy={mult:5, until:Date.now()+30000}; updateFrenzyBanner();
-    toast("🌟 FRENZY! x5 income for 30s!");
+    toast("🌟 FRENZY! x5 income for 30s!"); sfx("golden");
+  } else if(r<0.70){
+    if(Math.random()<0.15){   // rare upgraded variant
+      startAutoClick(45000); _tapBuffUntil=Date.now()+45000; _tapBuffMult=2; updateFrenzyBanner();
+      toast("✨ GOLDEN PAW! 45s auto-tap + x2 tap value!"); sfx("rare");
+    } else {
+      startAutoClick(30000);
+      toast("🐾 AUTO-PAW! Your cat auto-taps for 30s!"); sfx("golden");
+    }
   } else {
     const lump=Math.max(incomePerSec()*900, state.money*0.12, 50);
     state.money+=lump; state.lifetime+=lump; state.totalEarned+=lump;
-    toast("🌟 Lucky cat! +"+money(lump));
+    toast("🌟 Lucky cat! +"+money(lump)); sfx("golden");
   }
   state.goldenCaught=(state.goldenCaught||0)+1;
   renderStats(); checkAchievements();
@@ -1424,13 +1507,13 @@ function buyCat(i){
   state.money-=b.cost; state.cats[i]+=b.count;
   if(state.discovered && !state.discovered[i]) state.discovered[i]=true;
   if(unlockedCount()!==lastUnlocked) renderCatsFull(); else updateCats();
-  updateMascot(); renderStats(); checkAchievements();
+  updateMascot(); renderStats(); checkAchievements(); sfx("buy");
 }
 function buyUpgrade(id){
   const u=UPGRADE_DEFS.find(x=>x.id===id);
   if(!u||state.upgrades[id]||state.money<u.cost) return;
   state.money-=u.cost; state.upgrades[id]=true;
-  toast(u.name+" purchased! ♡"); renderUpgrades(); renderStats();
+  toast(u.name+" purchased! ♡"); renderUpgrades(); renderStats(); sfx("buy");
 }
 function doRebirth(){
   const gain=miceFromRebirth(); if(gain<=0) return;
@@ -1447,12 +1530,13 @@ function doRebirth(){
 const MAX_TAPS_PER_SEC = 14;
 let _tapTimes = [];
 let _lastTapWarn = 0;
-function petCat(ev){
+function petCat(ev, auto){
   const now = Date.now();
   while(_tapTimes.length && now - _tapTimes[0] > 1000) _tapTimes.shift();
   if(_tapTimes.length >= MAX_TAPS_PER_SEC){
-    // rate-limited — ignore this tap (no money, no progress)
-    if(now - _lastTapWarn > 2500){ _lastTapWarn = now; toast("😼 Tapping too fast! (max "+MAX_TAPS_PER_SEC+"/sec)"); }
+    // rate-limited — ignore this tap (no money, no progress). The Auto-Paw powerup runs through
+    // this same cap, so it can never out-earn a human; just don't nag the player about it.
+    if(!auto && now - _lastTapWarn > 2500){ _lastTapWarn = now; toast("😼 Tapping too fast! (max "+MAX_TAPS_PER_SEC+"/sec)"); }
     return;
   }
   _tapTimes.push(now);
@@ -1460,8 +1544,9 @@ function petCat(ev){
   _combo = (now-_comboLast <= COMBO_WINDOW) ? _combo+1 : 1;
   _comboLast = now;
   if(_combo > (state.bestCombo||0)) state.bestCombo=_combo;
+  checkComboMilestone(_combo);
   const v=clickValue(); state.money+=v; state.lifetime+=v; state.totalEarned+=v; state.pets=(state.pets||0)+1;
-  spawnFloat(ev,"+"+money(v),_combo); renderStats(); updateComboUI(true);
+  spawnFloat(ev,"+"+money(v),_combo); sfx("tap",_combo); renderStats(); updateComboUI(true);
   if(currentTab==="cats") updateCats();
   if(state.pets%25===0) checkAchievements();
 }
@@ -1499,9 +1584,11 @@ function tick(){
 }
 
 /* ---------- Save/Load ---------- */
+const BACKUP_KEY = SAVE_KEY+"_bak";
 function encode(s){ return btoa(unescape(encodeURIComponent(JSON.stringify(s)))); }
 function decode(str){ return JSON.parse(decodeURIComponent(escape(atob(str.trim())))); }
 function save(){ state.lastSave=Date.now(); try{ localStorage.setItem(SAVE_KEY,encode(state)); }catch(e){} }
+function backup(){ try{ localStorage.setItem(BACKUP_KEY,encode(state)); }catch(e){} }
 function load(){
   const raw=localStorage.getItem(SAVE_KEY); if(!raw) return false;
   try{ applyLoadedState(decode(raw)); return true; }catch(e){ return false; }
@@ -1533,6 +1620,11 @@ function applyLoadedState(s){
   if(typeof state.pets!=="number") state.pets=0;
   if(typeof state.goldenCaught!=="number") state.goldenCaught=0;
   if(typeof state.lastDaily!=="string") state.lastDaily="";
+  if(typeof state.dailyStreak!=="number") state.dailyStreak=0;
+  if(typeof state.comboRewards!=="object"||!state.comboRewards) state.comboRewards={};
+  if(typeof state.prefs!=="object"||!state.prefs) state.prefs={sound:true,motion:true};
+  if(typeof state.prefs.sound!=="boolean") state.prefs.sound=true;
+  if(typeof state.prefs.motion!=="boolean") state.prefs.motion=true;
   if(typeof state.talismans!=="object"||!state.talismans) state.talismans={};
   if(typeof state.gacha!=="object"||!state.gacha) state.gacha={pity:0,rolls:0};
   if(typeof state.gacha.pity!=="number") state.gacha.pity=0;
@@ -1555,6 +1647,55 @@ function fmtTime(sec){
   if(h>0) return `${h}h ${m}m`;
   if(m>0) return `${m}m ${s}s`;
   return `${s}s`;
+}
+
+/* ---------- Sound + haptics (WebAudio synth — no asset files) ---------- */
+let _actx=null, _lastTapSfx=0;
+function actx(){ if(!_actx){ try{ _actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ _actx=null; } } return _actx; }
+function soundOn(){ return !!(state.prefs && state.prefs.sound); }
+function beep(freq,dur,type,gain,when){
+  if(!soundOn()) return;
+  const ac=actx(); if(!ac) return;
+  if(ac.state==="suspended") ac.resume();
+  const t=ac.currentTime+(when||0);
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type=type||"sine"; o.frequency.setValueAtTime(freq,t);
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(gain||0.1,t+0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+dur+0.03);
+}
+function haptic(p){ if(soundOn() && navigator.vibrate){ try{ navigator.vibrate(p); }catch(e){} } }
+function sfx(name,arg){
+  if(!soundOn()) return;
+  switch(name){
+    case "tap": { const now=performance.now(); if(now-_lastTapSfx<70) return; _lastTapSfx=now;
+      beep(520+Math.min(arg||1,COMBO_MAX)*10, 0.06, "triangle", 0.05); break; }
+    case "buy":    beep(330,0.08,"sine",0.11); beep(495,0.09,"sine",0.09,0.05); break;
+    case "golden": [660,880,1175].forEach((f,i)=>beep(f,0.18,"sine",0.12,i*0.08)); haptic(40); break;
+    case "rare":   [784,988,1319,1568].forEach((f,i)=>beep(f,0.22,"triangle",0.13,i*0.09)); haptic([25,40,55]); break;
+    case "combo":  [523,659,784,1047].forEach((f,i)=>beep(f,0.14,"square",0.06,i*0.05)); haptic(25); break;
+    case "daily":  [587,740,880,1175].forEach((f,i)=>beep(f,0.16,"sine",0.11,i*0.07)); haptic(30); break;
+  }
+}
+function applyPrefs(){ document.body.classList.toggle("reduce-motion", !(state.prefs && state.prefs.motion)); }
+
+/* ---------- Temporary tap buff (rare "Golden Paw" powerup) ---------- */
+let _tapBuffUntil=0, _tapBuffMult=1;
+function tapBuffMult(){ return Date.now()<_tapBuffUntil ? _tapBuffMult : 1; }
+
+/* ---------- Combo milestones: one-time-ever rewards for big streaks ---------- */
+const COMBO_MILESTONES=[25,50,100];
+function checkComboMilestone(c){
+  if(!state.comboRewards) state.comboRewards={};
+  for(const m of COMBO_MILESTONES){
+    if(c>=m && !state.comboRewards[m]){
+      state.comboRewards[m]=true;
+      const reward=Math.max(incomePerSec()*60*(m/25), state.money*0.05*(m/25), 200*m);
+      state.money+=reward; state.lifetime+=reward; state.totalEarned+=reward;
+      toast(`🔥 ${m} COMBO! +${money(reward)}`); sfx("combo");
+    }
+  }
 }
 
 /* ---------- UI helpers ---------- */
@@ -1600,9 +1741,48 @@ $("loadKey").addEventListener("click",()=>{
 });
 $("resetBtn").addEventListener("click",()=>{
   if(!confirm("Hard reset EVERYTHING including prestige? Cannot be undone.")) return;
-  state=newState(); save(); currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); toast("Game reset");
+  backup();   // stash the pre-reset game so an accidental reset can be undone via Settings → Restore
+  const prefs=state.prefs;
+  state=newState(); state.prefs=prefs;   // keep sound/motion preferences across a reset
+  save(); currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); toast("Game reset");
 });
 $("closeWelcome").addEventListener("click",()=>{ $("welcomeModal").classList.remove("show"); renderAll(); });
+
+/* ---------- Settings panel ---------- */
+function toggleTxt(on){ return on?"On ✅":"Off"; }
+function renderStatsBox(){
+  const talCount=TALISMANS.filter(t=>(state.talismans&&state.talismans[t.id])>0).length;
+  $("statsBox").innerHTML=
+    `👆 Lifetime taps: <b>${fmt(state.pets||0)}</b><br>`+
+    `🔥 Best combo: <b>${state.bestCombo||0}</b><br>`+
+    `🌟 Golden cats caught: <b>${fmt(state.goldenCaught||0)}</b><br>`+
+    `😺 Cats owned: <b>${fmt(totalCats())}</b> · 📖 ${dexCount()}/${CAT_DEFS.length} breeds<br>`+
+    `📿 Talismans: <b>${talCount}/${TALISMANS.length}</b><br>`+
+    `✨ Rebirths: <b>${state.rebirths||0}</b> · 🐭 ${fmt(state.goldenMice||0)}<br>`+
+    `🎁 Daily streak: <b>${state.dailyStreak||0}</b> day${(state.dailyStreak||0)===1?"":"s"}<br>`+
+    `⏱ Time played: <b>${fmtTime(state.timePlayed||0)}</b><br>`+
+    `💎 Lifetime earned: <b>${money(state.lifetime)}</b>`;
+}
+function openSettings(){
+  $("toggleSound").textContent="🔊 "+toggleTxt(state.prefs.sound);
+  $("toggleMotion").textContent="🎐 "+toggleTxt(state.prefs.motion);
+  renderStatsBox();
+  $("settingsModal").classList.add("show");
+}
+$("settingsBtn").addEventListener("click",openSettings);
+$("closeSettings").addEventListener("click",()=>$("settingsModal").classList.remove("show"));
+$("toggleSound").addEventListener("click",()=>{ state.prefs.sound=!state.prefs.sound;
+  $("toggleSound").textContent="🔊 "+toggleTxt(state.prefs.sound); if(state.prefs.sound) sfx("buy"); save(); });
+$("toggleMotion").addEventListener("click",()=>{ state.prefs.motion=!state.prefs.motion;
+  $("toggleMotion").textContent="🎐 "+toggleTxt(state.prefs.motion); applyPrefs(); save(); });
+$("restoreBackup").addEventListener("click",()=>{
+  const bak=localStorage.getItem(BACKUP_KEY);
+  if(!bak){ toast("No backup saved yet"); return; }
+  if(!confirm("Restore your most recent automatic backup? This replaces your current game.")) return;
+  try{ applyLoadedState(decode(bak)); save(); $("settingsModal").classList.remove("show");
+    currentTab="cats"; setActiveTab(); updateMascot(); applyPrefs(); renderAll(); toast("Backup restored! 😺");
+  }catch(e){ toast("Backup was unreadable ❌"); }
+});
 window.addEventListener("beforeunload",save);
 
 /* ---------- Mobile: block pinch-zoom (iOS Safari ignores user-scalable) ----------
@@ -1661,12 +1841,13 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-03c";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-03e";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
-  "⚡ <b>Way snappier menus!</b> Switching between tabs is now instant — they no longer rebuild from scratch (and we stopped loading missing images on every render). No more delay when you spam-tap around. ♡",
-  "🌟 <b>Golden kitties are easier to catch</b> — they now register the moment you press, with a bigger tap area, so catches don't slip through anymore.",
-  "🔥 <b>NEW — Pounce Combos!</b> Chain quick taps to build a <b>combo</b> (up to <b>×2.5</b> tap value); taps now scale with your income so they stay useful all game. Watch the meter under your cat!",
-  "🐛 Fixed unresponsive taps on the Upgrades, Estates &amp; Gacha menus — every tap lands now."
+  "🔊 <b>Sound &amp; haptics!</b> Taps, purchases, golden cats and combos now have juicy feedback. Toggle it (and animations) in the new <b>⚙️ Settings</b> panel.",
+  "🎁 <b>Daily streaks:</b> log in on consecutive days and your daily reward grows — up to ×7!",
+  "🔥 <b>Combo milestones:</b> hitting a 25 / 50 / 100 tap combo now pays a one-time bonus.",
+  "✨ <b>Golden Paw:</b> a rare super version of Auto-Paw — 45s of auto-tapping AND double tap value.",
+  "💾 <b>Auto-backups &amp; stats:</b> Settings keeps a safety backup (restore anytime) and shows your lifetime stats. Plus an at-a-glance offline earning rate."
 ];
 function maybeShowUpdateLog(){
   try{ if(localStorage.getItem(UPDATE_LOG_KEY)===UPDATE_VERSION) return false; }catch(e){}
@@ -1691,17 +1872,19 @@ function showBootPopups(){
 }
 
 /* ---------- Boot ---------- */
-load(); applyOffline(); checkAchievements(); setActiveTab(); updateMascot(); renderAll();
+load(); applyPrefs(); applyOffline(); checkAchievements(); setActiveTab(); updateMascot(); renderAll();
 showBootPopups();
 lastTick=Date.now();
 setInterval(tick,100);
 setInterval(save,10000);
+setInterval(backup,300000);   // automatic safety backup every 5 minutes
 scheduleGoldenCat();
 
 /* ---------- floating kawaii particles ✿ ---------- */
 const KW_EMOJI=["✨","💗","⭐","🌸","🐾","💖","🎀","⋆","🍬","☁️"];
 function kawaiiParticle(){
   if(document.hidden) return;
+  if(!(state.prefs && state.prefs.motion)) return;   // respect the reduced-motion setting
   const e=document.createElement("div");
   e.className="kw-particle";
   e.textContent=KW_EMOJI[Math.floor(Math.random()*KW_EMOJI.length)];
