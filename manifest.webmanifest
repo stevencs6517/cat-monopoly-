@@ -1,21 +1,19 @@
 {
   "name": "Cat Monopoly",
-  "short_name": "CatMono",
+  "short_name": "Cat Monopoly",
   "description": "Build your fluffy little cat empire ♡ — a kawaii idle clicker.",
-  "start_url": "./index.html",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#ffe3f3",
   "theme_color": "#ff9ec7",
   "icons": [
     {
       "src": "apple-touch-icon.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "apple-touch-icon.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
