@@ -104,6 +104,14 @@
   .pedestal svg{filter:drop-shadow(0 6px 8px rgba(182,156,232,.35));z-index:1;}
   .topcat{font-weight:700;color:var(--pink-d);font-size:14px;margin-top:-4px;}
   .clickhint{color:var(--ink2);font-size:12px;font-weight:600;}
+  .combo-wrap{height:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;margin:2px 0 0;}
+  .combo-label{font-weight:800;font-size:14px;color:var(--gold-d);opacity:0;transform:scale(.8);transition:opacity .15s,transform .15s;white-space:nowrap;}
+  .combo-label.on{opacity:1;transform:scale(1);}
+  .combo-label.bump{animation:comboPop .18s ease-out;}
+  @keyframes comboPop{0%{transform:scale(1)}50%{transform:scale(1.22)}100%{transform:scale(1)}}
+  .combo-bar{width:148px;height:7px;border-radius:6px;background:#f0e3f7;overflow:hidden;opacity:0;transition:opacity .15s;}
+  .combo-bar.on{opacity:1;}
+  .combo-fill{height:100%;width:100%;border-radius:6px;background:linear-gradient(90deg,var(--pink),var(--gold));transition:width .12s linear;}
 
   .mult-badge{
     display:inline-block;background:#f6ecff;border:2px solid #e3d3ff;
@@ -304,6 +312,10 @@
       <button class="pedestal" id="clickCat"><span id="mascot"></span></button>
       <div class="topcat" id="topcat">Stray Kitten</div>
       <div class="clickhint">tap your cat for <span id="clickval">$1</span> ♡</div>
+      <div class="combo-wrap">
+        <div class="combo-label" id="comboLabel"></div>
+        <div class="combo-bar" id="comboBar"><div class="combo-fill" id="comboFill"></div></div>
+      </div>
       <div class="sub" id="lifetime">Lifetime earned: $0</div>
       <div>
         <span class="mult-badge" id="rebirthMult">Prestige x1.00</span>
@@ -571,7 +583,7 @@ function newState(){
     discovered:CAT_DEFS.map(()=>false),
     properties:PROPERTY_DEFS.map(()=>0),
     achievements:{}, skills:{idle:0,tap:0,cost:0,offline:0,mice:0}, spentMice:0,
-    pets:0, goldenCaught:0, lastDaily:"",
+    pets:0, bestCombo:0, goldenCaught:0, lastDaily:"",
     goldenMice:0, rebirths:0, timePlayed:0,
     talismans:{}, gacha:{pity:0, rolls:0},
     name:"", lastSave:Date.now(),
@@ -763,6 +775,8 @@ const ACHIEVEMENTS=[
   {id:"golden25",emoji:"🍀",name:"Fortune Feline",desc:"Catch 25 Golden Cats",bonus:.08,cond:()=>state.goldenCaught>=25},
   {id:"pets100",emoji:"👆",name:"Pat Pat Pat",desc:"Pet your cat 100 times",bonus:.03,cond:()=>state.pets>=100},
   {id:"pets1000",emoji:"🙌",name:"Master Petter",desc:"Pet your cat 1000 times",bonus:.06,cond:()=>state.pets>=1000},
+  {id:"combo25",emoji:"🔥",name:"On a Roll",desc:"Reach a 25 tap combo",bonus:.04,cond:()=>(state.bestCombo||0)>=25},
+  {id:"combo50",emoji:"⚡",name:"Pounce Master",desc:"Reach a 50 tap combo",bonus:.07,cond:()=>(state.bestCombo||0)>=50},
   {id:"talfirst",emoji:"📿",name:"Charmed",desc:"Roll your first talisman",bonus:.03,cond:()=>TALISMANS.some(t=>(state.talismans&&state.talismans[t.id])>0)},
   {id:"tallegend",emoji:"🔥",name:"Legendary Luck",desc:"Own a Legendary+ talisman",bonus:.06,cond:()=>TALISMANS.some(t=>(state.talismans&&state.talismans[t.id])>0&&RARITY_ORDER.indexOf(t.r)>=LEGENDARY_IDX)},
   {id:"talgodly",emoji:"🌟",name:"Touched by Bastet",desc:"Pull a Godly talisman",bonus:.10,cond:()=>TALISMANS.some(t=>t.r==="godly"&&(state.talismans&&state.talismans[t.id])>0)},
@@ -771,7 +785,7 @@ const ACHIEVEMENTS=[
 ];
 const SKILLS=[
   {id:"idle",emoji:"🐾",name:"Idle Mastery",desc:"+12% passive income per rank",max:10,cost:r=>r+1},
-  {id:"tap",emoji:"👆",name:"Tap Power",desc:"+30% tap income per rank",max:10,cost:r=>r+1},
+  {id:"tap",emoji:"👆",name:"Tap Power",desc:"+20% tap income & stronger late-game taps per rank",max:10,cost:r=>r+1},
   {id:"cost",emoji:"💸",name:"Bargain Whiskers",desc:"Cats 3% cheaper per rank",max:8,cost:r=>2*(r+1)},
   {id:"offline",emoji:"🌙",name:"Night Owl",desc:"+2h offline cap per rank",max:6,cost:r=>2*(r+1)},
   {id:"mice",emoji:"🐭",name:"Mouse Tycoon",desc:"+15% Golden Mice gained per rank",max:8,cost:r=>3*(r+1)},
@@ -817,9 +831,30 @@ function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievemen
 function effectiveCount(n){ return n<=CAT_SOFT_CAP ? n : CAT_SOFT_CAP + (n-CAT_SOFT_CAP)*CAT_OVERCAP_EFF; }
 function catProduction(i){ return effectiveCount(state.cats[i])*CAT_DEFS[i].baseProd; }
 function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*incomeMult(); }
-// tap income is independent of how many cats you own — it only scales with tap upgrades, the
-// Tap Power skill, and prestige (a small flat boost per rebirth).
-function clickValue(){ return (1 + (state.rebirths||0)) * clickMultiplier() * skillTapMult(); }
+/* ---------- Tap power: "Pounce Combo" alternative playstyle ----------
+   Active tapping is its own progression lane. Each tap is worth the LARGER of:
+     · a flat amount (tap upgrades + Tap Power skill + prestige) — bootstraps early game, and
+     · a small share of your current idle income — so taps stay relevant in the late game.
+   Chaining taps quickly builds a combo that multiplies the value (up to COMBO cap). The whole
+   system is bounded by the 14-tap/sec anti-autoclicker cap, so even fully maxed an active
+   tapper roughly *doubles* their rate while present — a real alternative, never a runaway. */
+const COMBO_WINDOW = 1500;     // ms — tap again within this to keep the streak alive
+const COMBO_MAX    = 50;       // combo length where the multiplier caps
+const COMBO_STEP   = 0.03;     // +3% tap value per combo (max +150% => x2.5)
+const TAP_SHARE_BASE = 0.015;  // base: each tap is worth ~1.5% of one second of idle income
+let _combo = 0, _comboLast = 0;            // ephemeral streak (not saved)
+function tapShare(){ return TAP_SHARE_BASE + 0.0015*(state.skills.tap||0); }   // Tap Power deepens it
+function comboMult(){
+  if(Date.now()-_comboLast > COMBO_WINDOW || _combo<2) return 1;
+  return 1 + Math.min(_combo,COMBO_MAX)*COMBO_STEP;
+}
+// Base value of a single tap, *before* the combo multiplier.
+function tapBaseValue(){
+  const flat = (1 + (state.rebirths||0)) * clickMultiplier() * skillTapMult();
+  const share = tapShare() * incomePerSec();
+  return Math.max(flat, share);
+}
+function clickValue(){ return tapBaseValue() * comboMult(); }
 function catCost(i,owned){ return CAT_DEFS[i].baseCost*Math.pow(COST_GROWTH,owned)*skillCostFactor(); }
 function catUnlocked(i){ return i===0 || state.cats[i-1]>=1; }
 function highestOwned(){ let h=0; for(let i=0;i<CAT_DEFS.length;i++) if(state.cats[i]>0) h=i; return h; }
@@ -910,7 +945,7 @@ const $=id=>document.getElementById(id);
 function renderStats(){
   $("money").textContent=money(state.money);
   $("persec").textContent=money(incomePerSec())+" / sec";
-  $("clickval").textContent=money(clickValue());
+  $("clickval").textContent=money(tapBaseValue());
   $("lifetime").textContent="Lifetime earned: "+money(state.lifetime);
   $("rebirthMult").textContent="Prestige x"+rebirthMultiplier().toFixed(2)+(state.goldenMice>0?"  ("+fmt(state.goldenMice)+" 🐭)":"");
   $("timeBadge").textContent="⏱ "+fmtTime(state.timePlayed);
@@ -1401,10 +1436,30 @@ function petCat(ev){
     return;
   }
   _tapTimes.push(now);
+  // extend the combo if the previous paid tap was recent, otherwise start a fresh streak
+  _combo = (now-_comboLast <= COMBO_WINDOW) ? _combo+1 : 1;
+  _comboLast = now;
+  if(_combo > (state.bestCombo||0)) state.bestCombo=_combo;
   const v=clickValue(); state.money+=v; state.lifetime+=v; state.totalEarned+=v; state.pets=(state.pets||0)+1;
-  spawnFloat(ev,"+"+money(v)); renderStats();
+  spawnFloat(ev,"+"+money(v),_combo); renderStats(); updateComboUI(true);
   if(currentTab==="cats") updateCats();
   if(state.pets%25===0) checkAchievements();
+}
+/* Combo HUD: label + a meter that drains over COMBO_WINDOW; resets the streak when it empties.
+   Called on every tap and every tick, so it animates down even when you stop tapping. */
+function updateComboUI(bumped){
+  const lbl=$("comboLabel"); if(!lbl) return;
+  const bar=$("comboBar"), fill=$("comboFill");
+  const now=Date.now(), alive=(now-_comboLast<=COMBO_WINDOW)&&_combo>=2;
+  if(alive){
+    lbl.textContent="🔥 Combo "+_combo+"  ×"+comboMult().toFixed(2)+" tap";
+    lbl.classList.add("on"); bar.classList.add("on");
+    fill.style.width=(Math.max(0,1-(now-_comboLast)/COMBO_WINDOW)*100)+"%";
+    if(bumped){ lbl.classList.remove("bump"); void lbl.offsetWidth; lbl.classList.add("bump"); }
+  } else {
+    if(_combo!==0 && now-_comboLast>COMBO_WINDOW) _combo=0;   // streak expired
+    lbl.classList.remove("on"); bar.classList.remove("on");
+  }
 }
 
 /* ---------- Loop ---------- */
@@ -1415,6 +1470,7 @@ function tick(){
   state.money+=earned; state.lifetime+=earned; state.totalEarned+=earned; state.timePlayed+=dt;
   renderStats();
   updateFrenzyBanner();
+  updateComboUI(false);   // drain/expire the tap combo even while idle
   if(currentTab==="cats") updateCats();
   else if(currentTab==="upgrades") updateUpgrades();
   else if(currentTab==="property") updateProperty();
@@ -1438,6 +1494,7 @@ function applyLoadedState(s){
     state.cats=c;
   }
   if(typeof state.upgrades!=="object"||!state.upgrades) state.upgrades={};
+  if(typeof state.bestCombo!=="number") state.bestCombo=0;
   if(typeof state.timePlayed!=="number") state.timePlayed=0;
   if(typeof state.totalEarned!=="number" || state.totalEarned < state.lifetime) state.totalEarned=state.lifetime||0;
   if(!Array.isArray(state.discovered)||state.discovered.length!==CAT_DEFS.length){
@@ -1483,7 +1540,8 @@ function fmtTime(sec){
 /* ---------- UI helpers ---------- */
 let toastTimer;
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2200); }
-function spawnFloat(ev,txt){ const f=document.createElement("div"); f.className="float"; f.textContent=txt;
+function spawnFloat(ev,txt,combo){ const f=document.createElement("div"); f.className="float"; f.textContent=txt;
+  if(combo&&combo>=8){ f.style.fontSize=(20+Math.min(combo,COMBO_MAX)*0.3)+"px"; f.style.color="var(--gold-d)"; f.style.textShadow="0 1px 0 #fff,0 0 8px rgba(255,206,92,.7)"; }
   const x=(ev.clientX||window.innerWidth/4), y=(ev.clientY||200);
   f.style.left=x+"px"; f.style.top=y+"px"; document.body.appendChild(f); setTimeout(()=>f.remove(),1000); }
 function setActiveTab(){
@@ -1583,10 +1641,11 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-03";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-03b";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
-  "🐛 <b>Fixed laggy / unresponsive taps</b> on the <b>Upgrades</b>, <b>Estates</b> &amp; <b>Gacha</b> menus — buttons used to get rebuilt while you were tapping, so taps sometimes did nothing. Every tap lands now! ♡",
-  "🏅 Smoothed out the <b>Goals</b> tab too — claiming your daily reward won't get interrupted when an achievement pops.",
+  "🔥 <b>NEW — Pounce Combos!</b> Tapping is now its own playstyle. Chain quick taps to build a <b>combo</b> (up to <b>×2.5</b> tap value), and taps now scale with your income so they stay useful all game. Watch the combo meter under your cat! ♡",
+  "👆 <b>Tap Power</b> skill &amp; new combo achievements reward active play — without out-earning your kitties.",
+  "🐛 <b>Fixed laggy / unresponsive taps</b> on the <b>Upgrades</b>, <b>Estates</b> &amp; <b>Gacha</b> menus — every tap lands now.",
   "⚡ Menus are lighter on the game loop, so the whole game feels snappier."
 ];
 function maybeShowUpdateLog(){
