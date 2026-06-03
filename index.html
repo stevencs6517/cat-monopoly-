@@ -35,34 +35,6 @@
     --danger:#ff7b9c;
     --line:#f3d9ea;
   }
-  
-  /* ===== 🌙 Dark Mode Overrides ===== */
-  body.dark-theme {
-    --bg1: #1a1025;
-    --bg2: #241836;
-    --bg3: #181e29;
-    --panel: #22172b;
-    --panel2: #2c1e38;
-    --ink: #e0d5eb;
-    --ink2: #a996c0;
-    --pink: #ff6fae;
-    --pink-d: #ff3b8b;
-    --lav: #b69ce8;
-    --gold: #f5b32e;
-    --gold-d: #ffce5c;
-    --line: #412d52;
-  }
-  body.dark-theme .card, body.dark-theme .modal {
-    border-color: var(--line);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.4), inset 0 0 0 4px #2c1e38;
-  }
-  body.dark-theme .smallbtn { background: var(--panel2); border-color: var(--line); color: var(--ink); }
-  body.dark-theme .smallbtn.active { background: var(--pink); border-color: var(--pink-d); color: #fff; }
-  body.dark-theme input.nameinput, body.dark-theme textarea { background: var(--panel2); border-color: var(--line); color: var(--ink); }
-  body.dark-theme .item, body.dark-theme .tut-step { border-color: var(--line); }
-  body.dark-theme .mult-badge { background: var(--panel2); border-color: var(--line); }
-  body.dark-theme header h1 { text-shadow: 0 2px 0 var(--panel2), 0 4px 14px rgba(255,111,174,.35); }
-
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   /* mobile: stop double-tap-to-zoom & 300ms delay so you can tap fast */
   html{touch-action:manipulation;}
@@ -331,6 +303,34 @@
   /* reduced-motion: kill decorative CSS animations (golden-cat movement uses JS, stays on) */
   body.reduce-motion *{animation:none !important;}
   body.reduce-motion .kw-particle,body.reduce-motion .sparkles{display:none !important;}
+  /* ---------- Dark mode (overrides the palette vars + a few hardcoded light bits) ---------- */
+  body.dark{
+    --bg1:#241a30; --bg2:#1b1626; --bg3:#141d26;
+    --panel:#2a2138; --panel2:#332a45;
+    --ink:#efe6f7; --ink2:#b7a6cf; --lav:#c8b4f2; --line:#45375e;
+    background:
+      radial-gradient(circle at 15% 0%, #34244a 0%, transparent 45%),
+      radial-gradient(circle at 85% 10%, #1b2a36 0%, transparent 45%),
+      linear-gradient(160deg,var(--bg1),var(--bg2) 55%,var(--bg3));
+  }
+  body.dark h1{text-shadow:0 2px 0 rgba(0,0,0,.35),0 4px 14px rgba(255,111,174,.25);}
+  body.dark .money{text-shadow:0 2px 0 rgba(0,0,0,.4);}
+  body.dark .smallbtn{background:var(--panel2);border-color:var(--line);color:var(--ink);}
+  body.dark .card{box-shadow:0 14px 34px rgba(0,0,0,.5),inset 0 0 0 4px rgba(255,255,255,.05),0 0 0 3px rgba(255,158,199,.16);}
+  body.dark .modal{border-color:#4d3d63;}
+  body.dark textarea{background:#221a2e;color:var(--ink);border-color:var(--line);}
+  body.dark #toast{background:var(--panel2);color:var(--ink);}
+  body.dark .tut-step{background:var(--panel2);border-color:var(--line);}
+  body.dark .dexcell{border-color:var(--line);}
+  body.dark .lbrow{border-color:var(--line);}
+  body.dark .lbrow.me{background:#3b2d4b;}
+  body.dark .combo-bar{background:#3a2d4e;}
+  body.dark .mult-badge{background:var(--panel2);border-color:var(--line);color:var(--lav);}
+  body.dark input.nameinput{background:#221a2e;border-color:var(--line);}
+  body.dark hr{border-top-color:var(--line);}
+  body.dark .propgroup{background:color-mix(in srgb, var(--gc,#fff) 16%, var(--panel));}
+  body.dark .propgroup .item{background:var(--panel2);}
+  body.dark .pedestal::after{background:radial-gradient(closest-side, rgba(0,0,0,.45), transparent);}
 </style>
 </head>
 <body>
@@ -445,7 +445,7 @@
 <div class="overlay" id="settingsModal">
   <div class="modal">
     <h2 style="text-align:center;margin:4px 0 10px;">⚙️ Settings</h2>
-    <div class="setrow"><span>🌙 Dark Mode</span><button class="smallbtn" id="toggleTheme">Off</button></div>
+    <div class="setrow"><span>🌙 Dark mode</span><button class="smallbtn" id="toggleDark">Off</button></div>
     <div class="setrow"><span>🔊 Sound &amp; haptics</span><button class="smallbtn" id="toggleSound">On ✅</button></div>
     <div class="setrow"><span>🎐 Animations</span><button class="smallbtn" id="toggleMotion">On ✅</button></div>
     <div class="sub" style="margin:12px 0 6px;font-weight:800;text-align:center;">📊 Your Stats</div>
@@ -463,6 +463,17 @@
 
 <script>
 "use strict";
+/* Self-heal: an old service worker (sw.js, since removed) may still be installed in some
+   browsers and serving a stale/broken cached page. Unregister any leftover SW + clear its
+   caches, then reload once (guarded so it can't loop) so the player gets the fresh page. */
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    if(!regs.length) return;
+    Promise.all(regs.map(r=>r.unregister()))
+      .then(()=> (window.caches&&caches.keys) ? caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))) : null)
+      .then(()=>{ if(!sessionStorage.getItem("swCleaned")){ sessionStorage.setItem("swCleaned","1"); location.reload(); } });
+  }).catch(()=>{});
+}
 /* =====================================================================
    CAT MONOPOLY — kawaii idle game (single file)
    ===================================================================== */
@@ -1656,7 +1667,6 @@ function applyLoadedState(s){
   if(typeof state.prefs.sound!=="boolean") state.prefs.sound=true;
   if(typeof state.prefs.motion!=="boolean") state.prefs.motion=true;
   if(typeof state.prefs.dark!=="boolean") state.prefs.dark=false;
-
   if(typeof state.talismans!=="object"||!state.talismans) state.talismans={};
   if(typeof state.gacha!=="object"||!state.gacha) state.gacha={pity:0,rolls:0};
   if(typeof state.gacha.pity!=="number") state.gacha.pity=0;
@@ -1710,9 +1720,9 @@ function sfx(name,arg){
     case "daily":  [587,740,880,1175].forEach((f,i)=>beep(f,0.16,"sine",0.11,i*0.07)); haptic(30); break;
   }
 }
-function applyPrefs(){ 
-  document.body.classList.toggle("reduce-motion", !(state.prefs && state.prefs.motion)); 
-  document.body.classList.toggle("dark-theme", !!(state.prefs && state.prefs.dark));
+function applyPrefs(){
+  document.body.classList.toggle("reduce-motion", !(state.prefs && state.prefs.motion));
+  document.body.classList.toggle("dark", !!(state.prefs && state.prefs.dark));
 }
 
 /* ---------- Temporary tap buff (rare "Golden Paw" powerup) ---------- */
@@ -1799,7 +1809,7 @@ function renderStatsBox(){
     `💎 Lifetime earned: <b>${money(state.lifetime)}</b>`;
 }
 function openSettings(){
-  $("toggleTheme").textContent="🌙 "+toggleTxt(state.prefs.dark);
+  $("toggleDark").textContent="🌙 "+toggleTxt(state.prefs.dark);
   $("toggleSound").textContent="🔊 "+toggleTxt(state.prefs.sound);
   $("toggleMotion").textContent="🎐 "+toggleTxt(state.prefs.motion);
   renderStatsBox();
@@ -1807,14 +1817,8 @@ function openSettings(){
 }
 $("settingsBtn").addEventListener("click",openSettings);
 $("closeSettings").addEventListener("click",()=>$("settingsModal").classList.remove("show"));
-
-$("toggleTheme").addEventListener("click",()=>{ 
-  state.prefs.dark = !state.prefs.dark;
-  $("toggleTheme").textContent="🌙 "+toggleTxt(state.prefs.dark); 
-  applyPrefs(); 
-  save(); 
-});
-
+$("toggleDark").addEventListener("click",()=>{ state.prefs.dark=!state.prefs.dark;
+  $("toggleDark").textContent="🌙 "+toggleTxt(state.prefs.dark); applyPrefs(); if(state.prefs.sound) sfx("buy"); save(); });
 $("toggleSound").addEventListener("click",()=>{ state.prefs.sound=!state.prefs.sound;
   $("toggleSound").textContent="🔊 "+toggleTxt(state.prefs.sound); if(state.prefs.sound) sfx("buy"); save(); });
 $("toggleMotion").addEventListener("click",()=>{ state.prefs.motion=!state.prefs.motion;
@@ -1885,8 +1889,9 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-03e";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-03f";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
+  "🌙 <b>Dark mode!</b> Toggle it in <b>⚙️ Settings</b> — easier on the eyes at night. ♡",
   "🔊 <b>Sound &amp; haptics!</b> Taps, purchases, golden cats and combos now have juicy feedback. Toggle it (and animations) in the new <b>⚙️ Settings</b> panel.",
   "🎁 <b>Daily streaks:</b> log in on consecutive days and your daily reward grows — up to ×7!",
   "🔥 <b>Combo milestones:</b> hitting a 25 / 50 / 100 tap combo now pays a one-time bonus.",
