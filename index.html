@@ -1230,6 +1230,7 @@ async function submitScoreOnline(entry){
 
 async function submitScore(){
   const nm=($("lbName")?$("lbName").value:"").trim().slice(0,16) || "Anonymous Cat";
+  if(isOffensiveName(nm)){ toast("😼 Please pick a friendlier name!"); return; }
   state.name=nm;
   const entry={ name:nm, lifetime:myScore(), rebirths:state.rebirths, time:Math.floor(state.timePlayed) };
   // always keep a local copy (works offline / as fallback)
@@ -1254,7 +1255,7 @@ function lbRows(arr){
   return arr.map((e,i)=>`
     <div class="lbrow ${i<3?'lb'+(i+1):''} ${e.name===state.name?'me':''}">
       <div class="rank">${medal[i]||("#"+(i+1))}</div>
-      <div class="who"><b>${i===0?'👑 ':''}${escapeHtml(e.name)}</b><div class="meta">✨ ${e.rebirths} rebirths · ⏱ ${fmtTime(e.time)}</div></div>
+      <div class="who"><b>${i===0?'👑 ':''}${escapeHtml(safeName(e.name))}</b><div class="meta">✨ ${e.rebirths} rebirths · ⏱ ${fmtTime(e.time)}</div></div>
       <div class="val">${money(e.lifetime)}</div>
     </div>`).join("");
 }
@@ -1300,6 +1301,38 @@ async function updateMyRank(){
   cur.textContent = rank ? `🌍 Global rank: #${rank.toLocaleString()}` : "🌍 Global rank: —";
 }
 function escapeHtml(s){ return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+
+/* ---------- Leaderboard name moderation ----------
+   Blocks offensive / derogatory names on submit, and censors any that are already in the
+   global leaderboard when rendering (defense in depth). Names are normalised first — leetspeak
+   is folded, non-letters stripped, and long repeats collapsed — so "f.u.c.k", "fuuuck",
+   "5h1t", "n  i  g" style obfuscations are still caught. */
+const NAME_BLOCKLIST=[
+  "fuck","motherfucker","shit","bullshit","bitch","cunt","asshole","jackass","dumbass",
+  "bastard","whore","slut","skank","dickhead","cocksucker","pussy",
+  "wanker","twat","bollocks","arsehole","goddamn",
+  "faggot","tranny",
+  "nigger","nigga","coon","spic","chink","gook","kike","wetback","beaner","paki","wog",
+  "retard","retarded","spastic","mongoloid",
+  "rapist","molest","pedo","pedophile","paedo",
+  "nazi","hitler","whitepower","heil",
+  "jizz","cumshot","blowjob","handjob","horny","porn","hentai","dildo","bukkake","titties","bukake",
+  "kys","killyourself"
+];
+// each blocklisted word -> a regex where every letter may repeat (f+u+c+k+), so stretched
+// spellings like "fuuuuck" are caught without collapsing repeats (which would mangle "coon").
+const NAME_BLOCK_RE=NAME_BLOCKLIST.map(w=>new RegExp(w.split("").join("+")+"+"));
+function normName(s){
+  return (s||"").toLowerCase()
+    .replace(/[@4]/g,"a").replace(/3/g,"e").replace(/[1!|]/g,"i").replace(/0/g,"o")
+    .replace(/[$5]/g,"s").replace(/7/g,"t").replace(/9/g,"g").replace(/8/g,"b")
+    .replace(/[^a-z]/g,"");   // drop spaces, digits, punctuation -> "f.u c.k" => "fuck"
+}
+function isOffensiveName(s){
+  const n=normName(s); if(!n) return false;
+  return NAME_BLOCK_RE.some(re=>re.test(n));
+}
+function safeName(s){ return isOffensiveName(s) ? "🙀 (censored)" : s; }
 
 /* ---------- Achievements + Daily (Goals tab) ---------- */
 function checkAchievements(){
