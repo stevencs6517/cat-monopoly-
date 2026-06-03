@@ -1228,24 +1228,35 @@ async function submitScoreOnline(entry){
   }catch(e){ return false; }
 }
 
-async function submitScore(){
-  const nm=($("lbName")?$("lbName").value:"").trim().slice(0,16) || "Anonymous Cat";
-  if(isOffensiveName(nm)){ toast("😼 Please pick a friendlier name!"); return; }
-  state.name=nm;
-  const entry={ name:nm, lifetime:myScore(), rebirths:state.rebirths, time:Math.floor(state.timePlayed) };
-  // always keep a local copy (works offline / as fallback)
+function currentEntry(){ return { name:state.name, lifetime:myScore(), rebirths:state.rebirths, time:Math.floor(state.timePlayed) }; }
+function recordLocal(entry){
   let arr=loadLB();
+  const idx=arr.findIndex(e=>(e.name||"").toLowerCase()===(entry.name||"").toLowerCase());
   const local={ ...entry, date:Date.now() };
-  const idx=arr.findIndex(e=>e.name.toLowerCase()===nm.toLowerCase());
   if(idx>=0){ if(entry.lifetime>=arr[idx].lifetime) arr[idx]=local; } else arr.push(local);
   arr.sort((a,b)=>b.lifetime-a.lifetime); saveLB(arr.slice(0,25));
-  if(ONLINE){
-    const btn=$("lbSubmit"); if(btn){ btn.disabled=true; btn.textContent="Submitting…"; }
-    const ok=await submitScoreOnline(entry);
-    toast(ok ? "Submitted to global! 🌍" : "Saved locally (global unreachable) ⚠️");
-  } else {
-    toast("Score submitted! 🏆");
-  }
+}
+// Auto-publish the current run under the player's locked name. Runs on a 60s timer (so the
+// global board stays live), on boot, and right after a name is set. Silent — no toasts.
+let _publishing=false;
+async function autoPublish(){
+  if(!state.name || _publishing) return;
+  _publishing=true;
+  try{
+    const entry=currentEntry();
+    recordLocal(entry);
+    if(ONLINE) await submitScoreOnline(entry);
+    if(currentTab==="ranks") loadRanksList();   // keep the on-screen board fresh
+  } finally { _publishing=false; }
+}
+// Pick the account's name — once. Validated against the offensive-name filter, then locked in.
+function setName(){
+  const raw=($("lbName")?$("lbName").value:"").trim().slice(0,16);
+  if(!raw){ toast("Type a name first ♡"); return; }
+  if(isOffensiveName(raw)){ toast("😼 Please pick a friendlier name!"); return; }
+  state.name=raw; save();
+  toast(ONLINE ? "Joined the global leaderboard! 🌍" : "Name set! 🏆");
+  autoPublish();
   renderRanks();
 }
 
@@ -1261,20 +1272,24 @@ function lbRows(arr){
 }
 
 function renderRanks(){
+  const named = !!(state.name && state.name.trim());
   $("panel-ranks").innerHTML=`
     <div class="item" style="flex-direction:column;align-items:stretch;gap:8px;">
       <div class="sub" style="margin:0;">Your run</div>
       <div style="display:flex;justify-content:space-between;font-weight:700;">
         <span>💰 ${money(myScore())}</span><span>✨ ${state.rebirths}</span><span>⏱ ${fmtTime(state.timePlayed)}</span>
       </div>
-      ${ONLINE?`<div class="sub" id="lbRank" style="margin:2px 0;text-align:center;font-weight:800;font-size:15px;color:var(--lav);">🌍 Global rank: …</div>`:""}
-      <input class="nameinput" id="lbName" maxlength="16" placeholder="Your cat name..." value="${escapeHtml(state.name)}">
-      <button class="buy alt" id="lbSubmit">${ONLINE?"🌍 Submit to global leaderboard":"🏆 Submit my score"}</button>
+      ${ONLINE&&named?`<div class="sub" id="lbRank" style="margin:2px 0;text-align:center;font-weight:800;font-size:15px;color:var(--lav);">🌍 Global rank: …</div>`:""}
+      ${named
+        ? `<div class="sub" style="text-align:center;margin:2px 0 0;font-weight:700;">Playing as <b>${escapeHtml(state.name)}</b> 🔒</div>
+           <div class="sub" style="text-align:center;font-size:11px;margin:0;">${ONLINE?"Your score auto-updates the global board every minute ♡":"Saved on this device"}</div>`
+        : `<input class="nameinput" id="lbName" maxlength="16" placeholder="Choose your name — you only pick once!">
+           <button class="buy alt" id="lbSetName">${ONLINE?"🌍 Set name &amp; join leaderboard":"🏆 Set my name"}</button>`}
     </div>
-    <div class="sub" style="text-align:center;margin:4px 0 10px;">${ONLINE?"🌍 Global Leaderboard":"🏆 Local Leaderboard (this device)"}</div>
+    <div class="sub" style="text-align:center;margin:4px 0 10px;">${ONLINE?"🌍 Global Leaderboard · live":"🏆 Local Leaderboard (this device)"}</div>
     <div id="lbList"><p class="sub" style="text-align:center;">${ONLINE?"Loading global ranks… ⋆":""}</p></div>
     <div style="text-align:center;margin-top:10px;">${ONLINE?"":'<button class="smallbtn danger" id="lbClear">Clear leaderboard</button>'}</div>`;
-  $("lbSubmit").onclick=submitScore;
+  const setBtn=$("lbSetName"); if(setBtn) setBtn.onclick=setName;
   const clr=$("lbClear"); if(clr) clr.onclick=()=>{ if(confirm("Clear the local leaderboard?")){ saveLB([]); renderRanks(); } };
   loadRanksList();
 }
@@ -1922,8 +1937,9 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-03f";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-03g";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
+  "🌍 <b>Live leaderboard!</b> Pick your name once, then your score auto-updates the global board every minute — no more manual submitting. (Offensive names are blocked. 🙅)",
   "🌙 <b>Dark mode!</b> Toggle it in <b>⚙️ Settings</b> — easier on the eyes at night. ♡",
   "🔊 <b>Sound &amp; haptics!</b> Taps, purchases, golden cats and combos now have juicy feedback. Toggle it (and animations) in the new <b>⚙️ Settings</b> panel.",
   "🎁 <b>Daily streaks:</b> log in on consecutive days and your daily reward grows — up to ×7!",
@@ -1961,6 +1977,8 @@ setInterval(tick,100);
 setInterval(save,10000);
 setInterval(backup,300000);   // automatic safety backup every 5 minutes
 scheduleGoldenCat();
+if(state.name) autoPublish();              // refresh the board with your score on load
+setInterval(autoPublish, 60000);           // keep the global leaderboard live (every minute)
 
 /* ---------- floating kawaii particles ✿ ---------- */
 const KW_EMOJI=["✨","💗","⭐","🌸","🐾","💖","🎀","⋆","🍬","☁️"];
