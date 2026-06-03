@@ -262,6 +262,9 @@
   .goldencat{position:fixed;z-index:55;cursor:pointer;filter:drop-shadow(0 0 10px rgba(255,206,92,.9));
     animation:gcbob 1s ease-in-out infinite;}
   @keyframes gcbob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-10px) rotate(4deg)}}
+  /* cat pulses while the Auto-Paw powerup is auto-tapping */
+  .pedestal.auto-active{animation:autopaw .26s ease-in-out infinite;}
+  @keyframes autopaw{0%,100%{transform:scale(1)}50%{transform:scale(.92)}}
   /* frenzy banner */
   #frenzyBanner{display:none;position:sticky;top:0;z-index:40;text-align:center;
     margin:0 auto 4px;max-width:520px;padding:8px 16px;border-radius:0 0 18px 18px;
@@ -1368,15 +1371,57 @@ function buySkill(id){
 /* ---------- Golden Cat 🌟 ---------- */
 function updateFrenzyBanner(){
   const el=$("frenzyBanner"); if(!el) return;
-  if(Date.now()<frenzy.until){
-    el.style.display="block";
-    el.textContent=`🌟 FRENZY! x${frenzy.mult} income — ${Math.ceil((frenzy.until-Date.now())/1000)}s`;
-  } else el.style.display="none";
+  const now=Date.now(), parts=[];
+  if(now<frenzy.until) parts.push(`🌟 FRENZY x${frenzy.mult} — ${Math.ceil((frenzy.until-now)/1000)}s`);
+  if(now<_autoClick.until) parts.push(`🐾 AUTO-PAW — ${Math.ceil((_autoClick.until-now)/1000)}s`);
+  if(parts.length){ el.style.display="block"; el.innerHTML=parts.join(" &nbsp;·&nbsp; "); }
+  else el.style.display="none";
 }
+
+/* ---------- Auto-Paw powerup: a hands-free auto-tapper for a short burst ----------
+   Fires on a 10ms interval, but every tap goes through the rate-limited petCat() path, so it
+   pays at most MAX_TAPS_PER_SEC like any human — it just taps perfectly and builds your Pounce
+   Combo for you. Strong for active/tap builds, but bounded (can't out-earn a real tapper). */
+let _autoClick = { until:0, iv:null };
+function startAutoClick(ms){
+  _autoClick.until = Math.max(_autoClick.until, Date.now()+ms);   // extend if re-caught
+  const c=$("clickCat"); if(c) c.classList.add("auto-active");
+  if(!_autoClick.iv){
+    _autoClick.iv = setInterval(()=>{
+      if(Date.now() >= _autoClick.until){ stopAutoClick(); return; }
+      autoTap();
+    }, 10);
+  }
+  updateFrenzyBanner();
+}
+function stopAutoClick(){
+  if(_autoClick.iv){ clearInterval(_autoClick.iv); _autoClick.iv=null; }
+  _autoClick.until=0;
+  const c=$("clickCat"); if(c) c.classList.remove("auto-active");
+  updateFrenzyBanner();
+}
+let _ccRect=null, _ccRectAt=0;
+function autoTap(){
+  const now=Date.now();
+  // cache the cat's position (getBoundingClientRect forces layout) — refresh ~2x/sec, not 100x
+  if(!_ccRect || now-_ccRectAt>500){
+    const el=$("clickCat");
+    _ccRect = el ? el.getBoundingClientRect() : {left:innerWidth/2-30, top:200, width:60, height:60};
+    _ccRectAt=now;
+  }
+  const r=_ccRect;
+  // jitter the float position within the cat so the +$ numbers fan out nicely
+  petCat({ clientX:r.left+r.width*(0.32+Math.random()*0.36), clientY:r.top+r.height*(0.3+Math.random()*0.4) }, true);
+}
+
 function goldenReward(){
-  if(Math.random()<0.55){
+  const r=Math.random();
+  if(r<0.45){
     frenzy={mult:5, until:Date.now()+30000}; updateFrenzyBanner();
     toast("🌟 FRENZY! x5 income for 30s!");
+  } else if(r<0.70){
+    startAutoClick(30000);
+    toast("🐾 AUTO-PAW! Your cat auto-taps for 30s!");
   } else {
     const lump=Math.max(incomePerSec()*900, state.money*0.12, 50);
     state.money+=lump; state.lifetime+=lump; state.totalEarned+=lump;
@@ -1447,12 +1492,13 @@ function doRebirth(){
 const MAX_TAPS_PER_SEC = 14;
 let _tapTimes = [];
 let _lastTapWarn = 0;
-function petCat(ev){
+function petCat(ev, auto){
   const now = Date.now();
   while(_tapTimes.length && now - _tapTimes[0] > 1000) _tapTimes.shift();
   if(_tapTimes.length >= MAX_TAPS_PER_SEC){
-    // rate-limited — ignore this tap (no money, no progress)
-    if(now - _lastTapWarn > 2500){ _lastTapWarn = now; toast("😼 Tapping too fast! (max "+MAX_TAPS_PER_SEC+"/sec)"); }
+    // rate-limited — ignore this tap (no money, no progress). The Auto-Paw powerup runs through
+    // this same cap, so it can never out-earn a human; just don't nag the player about it.
+    if(!auto && now - _lastTapWarn > 2500){ _lastTapWarn = now; toast("😼 Tapping too fast! (max "+MAX_TAPS_PER_SEC+"/sec)"); }
     return;
   }
   _tapTimes.push(now);
@@ -1661,12 +1707,12 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-03c";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-03d";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
-  "⚡ <b>Way snappier menus!</b> Switching between tabs is now instant — they no longer rebuild from scratch (and we stopped loading missing images on every render). No more delay when you spam-tap around. ♡",
-  "🌟 <b>Golden kitties are easier to catch</b> — they now register the moment you press, with a bigger tap area, so catches don't slip through anymore.",
-  "🔥 <b>NEW — Pounce Combos!</b> Chain quick taps to build a <b>combo</b> (up to <b>×2.5</b> tap value); taps now scale with your income so they stay useful all game. Watch the meter under your cat!",
-  "🐛 Fixed unresponsive taps on the Upgrades, Estates &amp; Gacha menus — every tap lands now."
+  "🐾 <b>NEW Golden Cat powerup — Auto-Paw!</b> Catch a golden kitty and you might trigger 30 seconds of automatic tapping that builds your combo hands-free. ♡",
+  "⚡ <b>Way snappier menus!</b> Switching between tabs is now instant — no more delay when you spam-tap around.",
+  "🌟 <b>Golden kitties are easier to catch</b> — they register the moment you press, with a bigger tap area.",
+  "🔥 <b>Pounce Combos:</b> chain quick taps to build a <b>combo</b> (up to <b>×2.5</b> tap value); taps scale with your income so they stay useful all game."
 ];
 function maybeShowUpdateLog(){
   try{ if(localStorage.getItem(UPDATE_LOG_KEY)===UPDATE_VERSION) return false; }catch(e){}
