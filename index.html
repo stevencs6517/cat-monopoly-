@@ -360,11 +360,7 @@
         <span class="mult-badge" id="timeBadge">⏱ 0m</span>
       </div>
       <div class="footer-btns">
-        <button class="smallbtn" id="saveBtn">💾 Save</button>
-        <button class="smallbtn" id="keyBtn">🔑 Key</button>
         <button class="smallbtn" id="settingsBtn">⚙️ Settings</button>
-        <button class="smallbtn" id="mobileBtn">📱 Install</button>
-        <button class="smallbtn danger" id="resetBtn">⚠️ Reset</button>
       </div>
     </div>
   </div>
@@ -378,7 +374,7 @@
       <div class="tab" data-tab="gacha">🎰 Gacha</div>
       <div class="tab" data-tab="rebirth">✨ Rebirth</div>
       <div class="tab" data-tab="goals">🏅 Goals</div>
-      <div class="tab" data-tab="ranks">🏆 Ranks</div>
+      <div class="tab" data-tab="ranks">🏆 Leaderboard</div>
     </div>
     <div id="buyAmtRow" style="margin-bottom:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
       <span class="sub" style="margin:0;">Buy:</span>
@@ -450,10 +446,18 @@
     <div class="setrow"><span>🎐 Animations</span><button class="smallbtn" id="toggleMotion">On ✅</button></div>
     <div class="sub" style="margin:12px 0 6px;font-weight:800;text-align:center;">📊 Your Stats</div>
     <div id="statsBox" style="font-size:13px;line-height:1.85;"></div>
-    <div class="sub" style="margin:12px 0 4px;font-weight:800;text-align:center;">💾 Backup</div>
-    <p class="sub" style="margin:0 0 8px;font-size:11px;text-align:center;">An automatic backup is kept every few minutes (and right before a reset) in case something goes wrong.</p>
+    <div class="sub" style="margin:12px 0 6px;font-weight:800;text-align:center;">💾 Save &amp; Data</div>
+    <div class="row">
+      <button class="smallbtn" id="saveBtn" style="flex:1;">💾 Save</button>
+      <button class="smallbtn" id="keyBtn" style="flex:1;">🔑 Key</button>
+      <button class="smallbtn" id="mobileBtn" style="flex:1;">📱 Install</button>
+    </div>
+    <p class="sub" style="margin:8px 0;font-size:11px;text-align:center;">An automatic backup is kept every few minutes (and right before a reset) in case something goes wrong.</p>
     <div class="row">
       <button class="smallbtn" id="restoreBackup" style="flex:1;">♻️ Restore backup</button>
+      <button class="smallbtn danger" id="resetBtn" style="flex:1;">⚠️ Reset</button>
+    </div>
+    <div class="row">
       <button class="smallbtn" id="closeSettings" style="flex:1;">Close</button>
     </div>
   </div>
@@ -1241,6 +1245,9 @@ function recordLocal(entry){
 let _publishing=false;
 async function autoPublish(){
   if(!state.name || _publishing) return;
+  // a name locked in before the filter existed (e.g. a slur) must never be (re)uploaded —
+  // clear it so the player is asked to choose a fresh, clean one.
+  if(isOffensiveName(state.name)){ state.name=""; save(); if(currentTab==="ranks") renderRanks(); return; }
   _publishing=true;
   try{
     const entry=currentEntry();
@@ -1820,7 +1827,7 @@ $("panel-property").addEventListener("click",e=>{ const btn=e.target.closest("[d
 $("panel-gacha").addEventListener("click",e=>{ const btn=e.target.closest("[data-roll]"); if(btn) doRoll(btn.dataset.roll, parseInt(btn.dataset.count)); });
 
 $("saveBtn").addEventListener("click",()=>{ save(); toast("Game saved 💾"); });
-$("keyBtn").addEventListener("click",()=>{ save(); $("keyText").value=encode(state); $("keyModal").classList.add("show"); });
+$("keyBtn").addEventListener("click",()=>{ save(); $("settingsModal").classList.remove("show"); $("keyText").value=encode(state); $("keyModal").classList.add("show"); });
 $("closeKey").addEventListener("click",()=>$("keyModal").classList.remove("show"));
 $("copyKey").addEventListener("click",()=>{ const ta=$("keyText"); ta.select();
   navigator.clipboard?.writeText(ta.value).then(()=>toast("Key copied!"),()=>{ document.execCommand("copy"); toast("Key copied!"); }); });
@@ -1837,7 +1844,7 @@ $("resetBtn").addEventListener("click",()=>{
   backup();   // stash the pre-reset game so an accidental reset can be undone via Settings → Restore
   const prefs=state.prefs;
   state=newState(); state.prefs=prefs;   // keep sound/motion preferences across a reset
-  save(); currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); toast("Game reset");
+  save(); $("settingsModal").classList.remove("show"); currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); toast("Game reset");
 });
 $("closeWelcome").addEventListener("click",()=>{ $("welcomeModal").classList.remove("show"); renderAll(); });
 
@@ -1925,7 +1932,7 @@ function showMobileModal(force){
 }
 function dismissMobileModal(){ $("mobileModal").classList.remove("show"); try{ localStorage.setItem(MOBILE_TIP_KEY,"1"); }catch(e){} }
 $("closeMobile").addEventListener("click",dismissMobileModal);
-$("mobileBtn").addEventListener("click",()=>showMobileModal(true));
+$("mobileBtn").addEventListener("click",()=>{ $("settingsModal").classList.remove("show"); showMobileModal(true); });
 function maybeShowMobileTip(){
   // don't stack on top of the offline "welcome back" modal — wait until it's closed
   if($("welcomeModal").classList.contains("show")){
@@ -1977,6 +1984,8 @@ setInterval(tick,100);
 setInterval(save,10000);
 setInterval(backup,300000);   // automatic safety backup every 5 minutes
 scheduleGoldenCat();
+// retire any offensive name that was locked in before the filter existed
+if(state.name && isOffensiveName(state.name)){ state.name=""; save(); toast("Your old leaderboard name isn't allowed — please pick a new one 🙏"); }
 if(state.name) autoPublish();              // refresh the board with your score on load
 setInterval(autoPublish, 60000);           // keep the global leaderboard live (every minute)
 
