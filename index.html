@@ -740,9 +740,13 @@ function catSVG(c, size){
   </svg>`;
   return svg;
 }
-// Prefer a real PNG (images/<slug>.png); fall back to the kawaii SVG if missing.
+// We ship the kawaii SVG art, not PNGs. Rendering <img src="images/*.png"> when those files
+// don't exist fires a 404 + onerror -> SVG swap (extra reflow) for EVERY cat on EVERY render,
+// which made tab switches janky. Draw the SVG directly. Flip USE_CAT_IMAGES to true only if
+// real PNGs are added under images/.
+const USE_CAT_IMAGES = false;
 function catVisual(c, size){
-  if(c.slug){
+  if(USE_CAT_IMAGES && c.slug){
     return `<img src="images/${c.slug}.png" width="${size}" height="${size}" alt="${c.name}"
       style="width:${size}px;height:${size}px;object-fit:contain;border-radius:50%;"
       onerror="catImgFail(this,${c.id},${size})">`;
@@ -981,7 +985,17 @@ function renderCatsFull(){
   }
   p.innerHTML=html;
   updateCats();
+  _builtSig.cats=catsSig();
 }
+/* The Cats, Catdex and Gacha panels are the heaviest to build (lots of inline SVG / a big
+   grid). Rebuilding them from scratch on every tab switch is what made rapid switching feel
+   laggy. We stamp a cheap "structure signature" after each full build; on a later switch, if
+   the structure-defining data is unchanged we skip the rebuild and just refresh the dynamic
+   bits in place (counts/costs), which is effectively instant. */
+let _builtSig={};
+function catsSig(){ return unlockedCount(); }
+function catdexSig(){ return (state.discovered||[]).join(""); }
+function gachaSig(){ let s=String((state.gacha&&state.gacha.pity)||0); for(const t of TALISMANS) s+="."+((state.talismans&&state.talismans[t.id])||0); return s; }
 function updateCats(){
   for(let i=0;i<CAT_DEFS.length;i++){
     if(!catUnlocked(i)) continue;
@@ -1072,6 +1086,7 @@ function renderGacha(){
     </div>`;
   }
   $("panel-gacha").innerHTML=html;
+  _builtSig.gacha=gachaSig();
 }
 // Per-tick refresh: roll costs scale with progression, so update the cost labels and
 // affordability in place. Collection/pity only change on a roll (handled by renderGacha).
@@ -1284,6 +1299,7 @@ function renderCatdex(){
     <div class="sub" style="text-align:center;margin:0 0 4px;">📖 Collected <b>${got}/${CAT_DEFS.length}</b> · <b>+${Math.round((dexMult()-1)*100)}%</b> income</div>
     <div class="sub" style="text-align:center;margin:0 0 12px;font-size:11px;">Each breed discovered = +2% income forever ♡</div>
     <div class="dexgrid">${cells}</div>`;
+  _builtSig.catdex=catdexSig();
 }
 
 /* ---------- Estates tab (Monopoly money-sink) ---------- */
@@ -1373,13 +1389,16 @@ function spawnGoldenCat(){
   if(document.hidden) return;
   const el=document.createElement("div");
   el.className="goldencat";
+  el.style.padding="16px";   // invisible hit-area padding — easier to catch the moving cat
   el.innerHTML=catSVG({fur:"#ffd86b",inner:"#fff0b8",eye:"#7a5630",coat:"solid",extra:"crown"},72);
   el.style.top=(18+Math.random()*60)+"vh";
-  el.style.left="-100px";
+  el.style.left="-120px";
   document.body.appendChild(el);
-  el.animate([{left:"-100px"},{left:"100vw"}],{duration:9000,easing:"linear"}).onfinish=()=>el.remove();
+  el.animate([{left:"-120px"},{left:"100vw"}],{duration:9000,easing:"linear"}).onfinish=()=>el.remove();
   let caught=false;
-  el.addEventListener("click",()=>{ if(caught)return; caught=true; goldenReward();
+  // pointerdown (not click): fires the instant you press, so a catch registers even though the
+  // cat is moving — click needs press+release on the same node, which a moving target breaks.
+  el.addEventListener("pointerdown",()=>{ if(caught)return; caught=true; goldenReward();
     el.style.transition="transform .2s,opacity .2s"; el.style.transform="scale(1.6)"; el.style.opacity="0"; setTimeout(()=>el.remove(),220); });
   setTimeout(()=>{ if(!caught) el.remove(); }, 9300);
 }
@@ -1387,14 +1406,15 @@ function scheduleGoldenCat(){ setTimeout(()=>{ spawnGoldenCat(); scheduleGoldenC
 
 function renderAll(){
   renderStats();
-  if(currentTab==="cats") renderCatsFull();
+  // Heavy panels: rebuild only when their structure changed, else refresh in place (instant).
+  if(currentTab==="cats"){ if(_builtSig.cats===catsSig()) updateCats(); else renderCatsFull(); }
+  else if(currentTab==="catdex"){ if(_builtSig.catdex!==catdexSig()) renderCatdex(); }
+  else if(currentTab==="gacha"){ if(_builtSig.gacha===gachaSig()) updateGacha(); else renderGacha(); }
   else if(currentTab==="upgrades") renderUpgrades();
   else if(currentTab==="rebirth") renderRebirth();
   else if(currentTab==="ranks") renderRanks();
   else if(currentTab==="goals") renderGoals();
-  else if(currentTab==="catdex") renderCatdex();
   else if(currentTab==="property") renderProperty();
-  else if(currentTab==="gacha") renderGacha();
 }
 
 /* ---------- Actions ---------- */
@@ -1641,12 +1661,12 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-03b";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-03c";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
-  "🔥 <b>NEW — Pounce Combos!</b> Tapping is now its own playstyle. Chain quick taps to build a <b>combo</b> (up to <b>×2.5</b> tap value), and taps now scale with your income so they stay useful all game. Watch the combo meter under your cat! ♡",
-  "👆 <b>Tap Power</b> skill &amp; new combo achievements reward active play — without out-earning your kitties.",
-  "🐛 <b>Fixed laggy / unresponsive taps</b> on the <b>Upgrades</b>, <b>Estates</b> &amp; <b>Gacha</b> menus — every tap lands now.",
-  "⚡ Menus are lighter on the game loop, so the whole game feels snappier."
+  "⚡ <b>Way snappier menus!</b> Switching between tabs is now instant — they no longer rebuild from scratch (and we stopped loading missing images on every render). No more delay when you spam-tap around. ♡",
+  "🌟 <b>Golden kitties are easier to catch</b> — they now register the moment you press, with a bigger tap area, so catches don't slip through anymore.",
+  "🔥 <b>NEW — Pounce Combos!</b> Chain quick taps to build a <b>combo</b> (up to <b>×2.5</b> tap value); taps now scale with your income so they stay useful all game. Watch the meter under your cat!",
+  "🐛 Fixed unresponsive taps on the Upgrades, Estates &amp; Gacha menus — every tap lands now."
 ];
 function maybeShowUpdateLog(){
   try{ if(localStorage.getItem(UPDATE_LOG_KEY)===UPDATE_VERSION) return false; }catch(e){}
