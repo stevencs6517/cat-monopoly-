@@ -862,23 +862,27 @@ const ACHIEVEMENTS=[
 const SKILLS=[
   {id:"idle",emoji:"🐾",name:"Idle Mastery",desc:"+8% passive income per rank",max:10,cost:r=>r+1},
   {id:"tap",emoji:"👆",name:"Tap Power",desc:"+20% tap income & stronger late-game taps per rank",max:10,cost:r=>r+1},
-  {id:"cost",emoji:"💸",name:"Bargain Whiskers",desc:"Cats 3% cheaper per rank",max:8,cost:r=>2*(r+1)},
+  {id:"cost",emoji:"💸",name:"Bargain Whiskers",desc:"Cats 2% cheaper per rank",max:8,cost:r=>2*(r+1)},
   {id:"offline",emoji:"🌙",name:"Night Owl",desc:"+2h offline cap per rank",max:6,cost:r=>2*(r+1)},
-  {id:"mice",emoji:"🐭",name:"Mouse Tycoon",desc:"+15% Golden Mice gained per rank",max:8,cost:r=>3*(r+1)},
+  {id:"mice",emoji:"💎",name:"Treasure Cat",desc:"+7% all income per rank",max:8,cost:r=>3*(r+1)},
 ];
+const REBIRTH_BONUS=0.15;   // permanent income bonus per rebirth completed
 
 /* ---------- Derived ---------- */
 function totalCats(){ let n=0; for(let i=0;i<CAT_DEFS.length;i++) n+=state.cats[i]; return n; }
 function dexCount(){ return (state.discovered||[]).filter(Boolean).length; }
-function availableMice(){ return (state.goldenMice||0)-(state.spentMice||0); }
-function rebirthMultiplier(){ return 1 + state.goldenMice*0.015; }
+function availableTokens(){ return (state.goldenMice||0)-(state.spentMice||0); }
+// Prestige is now one rebirth at a time. The (n+1)-th rebirth needs this much lifetime this run.
+function rebirthThreshold(n){ return 1e6*Math.pow(5, n||0); }   // 1M, 5M, 25M, 125M, ...
+function canRebirth(){ return (state.lifetime||0) >= rebirthThreshold(state.rebirths||0); }
+function rebirthMultiplier(){ return 1 + (state.rebirths||0)*REBIRTH_BONUS; }
 function achievementMult(){ let m=1; for(const a of ACHIEVEMENTS){ if(state.achievements[a.id]) m+=a.bonus; } return m; }
 function dexMult(){ return 1 + dexCount()*0.02; }
 function skillIdleMult(){ return 1 + 0.08*(state.skills.idle||0); }
 function skillTapMult(){ return 1 + 0.20*(state.skills.tap||0); }
 function skillCostFactor(){ return Math.pow(0.98, state.skills.cost||0); }
 function offlineCapHours(){ return OFFLINE_CAP_HOURS + 2*(state.skills.offline||0); }
-function miceSkillBonus(){ return 1 + 0.10*(state.skills.mice||0); }
+function skillTreasureMult(){ return 1 + 0.07*(state.skills.mice||0); }
 function propCost(i){ const lvl=state.properties[i]||0; return PROPERTY_DEFS[i].cost*Math.pow(2.8,lvl); }
 function groupComplete(g){ return PROPERTY_DEFS.every((p,i)=> p.g!==g || (state.properties[i]||0)>=1); }
 function propertyMult(){
@@ -901,7 +905,7 @@ function talismanBonus(t){
 }
 function talismanMult(){ let s=0; for(const t of TALISMANS) s+=talismanBonus(t); return 1+s; }
 // combined passive income multiplier (everything except each cat's base rate)
-function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*propertyMult()*goldenBuffMult()*talismanMult(); }
+function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*skillTreasureMult()*propertyMult()*goldenBuffMult()*talismanMult(); }
 // soft cap: the first CAT_SOFT_CAP of a tier earn full rate; every extra one earns far less,
 // so hoarding one cheap cat can't run the economy away.
 function effectiveCount(n){ return n<=CAT_SOFT_CAP ? n : CAT_SOFT_CAP + (n-CAT_SOFT_CAP)*CAT_OVERCAP_EFF; }
@@ -1026,7 +1030,7 @@ function renderStats(){
   $("clickval").textContent=money(tapBaseValue());
   $("lifetime").textContent="Lifetime earned: "+money(state.lifetime);
   const ofr=$("offlineRate"); if(ofr) ofr.textContent="💤 While away: ~"+money(incomePerSec()*3600)+"/hr (up to "+offlineCapHours()+"h)";
-  $("rebirthMult").textContent="Prestige x"+rebirthMultiplier().toFixed(2)+(state.goldenMice>0?"  ("+fmt(state.goldenMice)+" 🐭)":"");
+  $("rebirthMult").textContent="Prestige x"+rebirthMultiplier().toFixed(2)+(availableTokens()>0?"  ("+fmt(availableTokens())+" 🐭)":"");
   $("timeBadge").textContent="⏱ "+fmtTime(state.timePlayed);
 }
 function updateMascot(){
@@ -1180,19 +1184,17 @@ function updateGacha(){
   }
 }
 
-function miceFromRebirth(){ if(state.lifetime<5e6) return 0; return Math.floor(Math.pow(state.lifetime/5e6,0.45)*miceSkillBonus()); }
 function renderRebirth(){
-  const gain=miceFromRebirth();
-  const newMult=1+(state.goldenMice+gain)*0.02;
+  const n=state.rebirths||0;
+  const thr=rebirthThreshold(n), life=state.lifetime||0, ready=canRebirth();
+  const prog=Math.min(100, Math.floor(life/thr*100));
   $("panel-rebirth").innerHTML=`<div class="rebirth-box">
-    <p style="font-weight:600;">Rebirth resets your cash, cats &amp; upgrades — but you keep <b>Golden Mice 🐭</b> forever. Each mouse gives <b>+2%</b> income permanently.</p>
-    <div class="mult-badge">Now: ${fmt(state.goldenMice)} 🐭 · x${rebirthMultiplier().toFixed(2)}</div>
+    <p style="font-weight:600;">Rebirth resets your cash, cats &amp; upgrades — but you keep your prestige bonus, 🐭 tokens, skills, estates &amp; talismans. Each rebirth gives <b>+${Math.round(REBIRTH_BONUS*100)}% income</b> forever and <b>+1 🐭 token</b> to spend on the Skill Tree.</p>
+    <div class="mult-badge">Rebirth ${n} · x${rebirthMultiplier().toFixed(2)} income · ${fmt(availableTokens())} 🐭</div>
     <hr>
-    <p class="sub">Rebirths completed: <b>${state.rebirths}</b></p>
-    <div class="big">+${fmt(gain)} 🐭</div>
-    <p class="sub">on rebirth → x${newMult.toFixed(2)} total income</p>
-    <p class="sub">${gain>0?"Ready to rebirth! ♡":"Reach "+money(5e6)+" lifetime earned to gain mice (you have "+money(state.lifetime)+")."}</p>
-    <button class="buy alt" id="doRebirth" ${gain>0?"":"disabled"} style="font-size:16px;padding:13px 24px;margin-top:6px;">✨ REBIRTH for ${fmt(gain)} 🐭</button>
+    <p class="sub">Next rebirth (#${n+1}) needs <b>${money(thr)}</b> lifetime earned this run.</p>
+    <p class="sub">${ready?"Ready to rebirth! ♡":"You're at "+money(life)+" — <b>"+prog+"%</b> of the way there."}</p>
+    <button class="buy alt" id="doRebirth" ${ready?"":"disabled"} style="font-size:16px;padding:13px 24px;margin-top:6px;">✨ REBIRTH #${n+1} → +1 🐭</button>
   </div>
   ${skillTreeHTML()}`;
   const b=$("doRebirth"); if(b) b.onclick=doRebirth;
@@ -1478,7 +1480,7 @@ function buyProperty(i){
 
 /* ---------- Prestige skill tree (inside Rebirth tab) ---------- */
 function skillTreeHTML(){
-  const avail=availableMice();
+  const avail=availableTokens();
   const nodes=SKILLS.map(s=>{
     const rank=state.skills[s.id]||0, maxed=rank>=s.max, cost=maxed?0:s.cost(rank), can=!maxed&&avail>=cost;
     return `<div class="item">
@@ -1488,12 +1490,12 @@ function skillTreeHTML(){
         :`<button class="buy" data-skill="${s.id}" ${can?'':'disabled'}>${cost} 🐭</button>`}
     </div>`;
   }).join("");
-  return `<hr><div class="sub" style="text-align:center;margin:0 0 8px;">🌳 Skill Tree · <b>${fmt(avail)}</b> 🐭 to invest</div>${nodes}`;
+  return `<hr><div class="sub" style="text-align:center;margin:0 0 8px;">🌳 Skill Tree · <b>${fmt(avail)}</b> 🐭 token${avail===1?"":"s"} to invest</div>${nodes}`;
 }
 function buySkill(id){
   const s=SKILLS.find(x=>x.id===id); if(!s) return;
   const rank=state.skills[id]||0; if(rank>=s.max) return;
-  const cost=s.cost(rank); if(availableMice()<cost) return;
+  const cost=s.cost(rank); if(availableTokens()<cost) return;
   state.spentMice=(state.spentMice||0)+cost; state.skills[id]=rank+1;
   toast(s.name+" → Lv "+(rank+1)+"! ✨");
   renderRebirth(); renderStats(); if(currentTab==="cats") updateCats();
@@ -1615,11 +1617,12 @@ function buyUpgrade(id){
   toast(u.name+" purchased! ♡"); renderUpgrades(); renderStats(); sfx("buy");
 }
 function doRebirth(){
-  const gain=miceFromRebirth(); if(gain<=0) return;
-  if(!confirm(`Rebirth for ${fmt(gain)} Golden Mice? Cash, cats & upgrades reset.`)) return;
-  state.goldenMice+=gain; state.rebirths+=1;
+  if(!canRebirth()) return;
+  const n=(state.rebirths||0)+1;
+  if(!confirm(`Rebirth #${n}? Cash, cats & upgrades reset — but you gain +${Math.round(REBIRTH_BONUS*100)}% permanent income and +1 🐭 token.`)) return;
+  state.rebirths=n; state.goldenMice=(state.goldenMice||0)+1;
   state.money=0; state.lifetime=0; state.cats=CAT_DEFS.map(()=>0); state.upgrades={};
-  toast("✨ Reborn! +"+fmt(gain)+" 🐭");
+  toast("✨ Rebirth #"+n+"! +1 🐭 token");
   checkAchievements();
   currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); save();
 }
@@ -1862,7 +1865,7 @@ function renderStatsBox(){
     `🌟 Golden cats caught: <b>${fmt(state.goldenCaught||0)}</b><br>`+
     `😺 Cats owned: <b>${fmt(totalCats())}</b> · 📖 ${dexCount()}/${CAT_DEFS.length} breeds<br>`+
     `📿 Talismans: <b>${talCount}/${TALISMANS.length}</b><br>`+
-    `✨ Rebirths: <b>${state.rebirths||0}</b> · 🐭 ${fmt(state.goldenMice||0)}<br>`+
+    `✨ Rebirths: <b>${state.rebirths||0}</b> · 🐭 ${fmt(availableTokens())} tokens<br>`+
     `🎁 Daily streak: <b>${state.dailyStreak||0}</b> day${(state.dailyStreak||0)===1?"":"s"}<br>`+
     `⏱ Time played: <b>${fmtTime(state.timePlayed||0)}</b><br>`+
     `💎 Lifetime earned: <b>${money(state.lifetime)}</b>`;
@@ -1948,8 +1951,9 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-03h";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-03i";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
+  "✨ <b>Rebirth reworked!</b> Rebirth one milestone at a time (1M → 5M → 25M …). Each rebirth gives <b>+15% income forever</b> AND <b>+1 🐭 token</b> to spend in the Skill Tree — so prestiging is finally worth it. ♡",
   "🎰 <b>Gacha is way more affordable!</b> Roll costs scale much more gently now (≈2–5× cheaper), and rolling in bulk gives a discount — up to <b>-25%</b> on x100. Way more talismans for your coins! ♡",
   "🌍 <b>Live leaderboard!</b> Pick your name once, then your score auto-updates the global board every minute — no more manual submitting. (Offensive names are blocked. 🙅)",
   "🌙 <b>Dark mode!</b> Toggle it in <b>⚙️ Settings</b> — easier on the eyes at night. ♡",
