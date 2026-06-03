@@ -949,22 +949,24 @@ function catBulk(i){
 }
 
 /* ---------- Gacha pricing & rolling ----------
-   Cost is anchored to the player's progression so it stays accessible early and
-   becomes a brutal coin sink late — the ultra-rich can't dump a fortune into
-   millions of cheap rolls. A single regular roll costs the LARGER of:
+   Cost is anchored to the player's progression so it stays accessible early and is still a
+   meaningful coin sink late (the ultra-rich can't dump a fortune into endless cheap rolls).
+   A single regular roll costs the LARGER of:
      · a floor (so the very start isn't free),
-     · ~2 minutes of current income (scales with present power), or
-     · a chunk of all-time earnings (scales super-linearly with progression, so the
-       further you've gone, the dramatically more expensive every roll becomes). */
+     · ~1 minute of current income (scales with present power), or
+     · a chunk of all-time earnings (scales gently super-linearly with progression).
+   Buying rolls in bulk (x10/x50/x100) also comes at a per-roll discount. */
 function gachaUnit(){
   const te = state.totalEarned||0;
-  // super-linear in all-time earnings: 1% of lifetime earned, raised to the 1.05 power.
-  // At 1Qa earned a regular roll is ~56T (~18 rolls per fortune); the cost-per-fortune
-  // keeps shrinking as you climb, so unlocking the whole set is a long, deliberate grind.
-  const progression = te>0 ? 0.01*Math.pow(te,1.05) : 0;
-  return Math.max(1000, incomePerSec()*120, progression);
+  // gentle super-linear in all-time earnings: 0.5% of lifetime earned, raised to the 1.03 power.
+  // At 1Qa earned a regular roll is ~14T (~70 rolls per fortune) — far more affordable than before.
+  const progression = te>0 ? 0.005*Math.pow(te,1.03) : 0;
+  return Math.max(1000, incomePerSec()*60, progression);
 }
 function rollCost(bannerId){ return Math.ceil(gachaUnit()*BANNER_BY_ID[bannerId].costMult); }
+// bulk discount: the more you roll at once, the cheaper each roll gets
+const ROLL_DISCOUNT = {1:1, 10:0.9, 50:0.82, 100:0.75};
+function batchCost(per, count){ return Math.ceil(per*count*(ROLL_DISCOUNT[count]||1)); }
 function pickRarity(odds){
   const r=Math.random(); let acc=0;
   for(const k of RARITY_ORDER){ if(odds[k]==null) continue; acc+=odds[k]; if(r<acc) return k; }
@@ -991,7 +993,7 @@ function singleRoll(banner){
 }
 function doRoll(bannerId, count){
   const banner=BANNER_BY_ID[bannerId]; if(!banner) return;
-  const per=rollCost(bannerId), total=per*count;
+  const per=rollCost(bannerId), total=batchCost(per,count);
   if(state.money<total){ toast("Need "+money(total)+" for "+count+"× "+banner.name); return; }
   state.money-=total;
   if(!state.talismans) state.talismans={};
@@ -1126,8 +1128,9 @@ function renderGacha(){
     const pity=state.gacha.pity||0, toPity=Math.max(0,b.pity-pity);
     let btns="";
     for(const c of ROLL_COUNTS){
-      const cost=per*c, can=state.money>=cost;
-      btns+=`<button class="buy" id="roll-${b.id}-${c}" data-roll="${b.id}" data-count="${c}" ${can?"":"disabled"} style="flex:1;min-width:70px;">x${c}<br>${money(cost)}</button>`;
+      const cost=batchCost(per,c), can=state.money>=cost;
+      const off=ROLL_DISCOUNT[c]<1?`<span style="font-size:9px;opacity:.85;"> -${Math.round((1-ROLL_DISCOUNT[c])*100)}%</span>`:"";
+      btns+=`<button class="buy" id="roll-${b.id}-${c}" data-roll="${b.id}" data-count="${c}" ${can?"":"disabled"} style="flex:1;min-width:70px;">x${c}${off}<br>${money(cost)}</button>`;
     }
     html+=`<div class="propgroup" style="--gc:${TAL_RARITY['legendary'].color};">
       <div class="propgrouphead" style="display:flex;justify-content:space-between;align-items:center;">
@@ -1169,8 +1172,9 @@ function updateGacha(){
     const ph=$("rollper-"+b.id); if(ph) ph.textContent=money(per)+" / roll";
     for(const c of ROLL_COUNTS){
       const btn=$("roll-"+b.id+"-"+c); if(!btn) continue;
-      const cost=per*c;
-      btn.innerHTML="x"+c+"<br>"+money(cost);
+      const cost=batchCost(per,c);
+      const off=ROLL_DISCOUNT[c]<1?`<span style="font-size:9px;opacity:.85;"> -${Math.round((1-ROLL_DISCOUNT[c])*100)}%</span>`:"";
+      btn.innerHTML="x"+c+off+"<br>"+money(cost);
       btn.disabled=state.money<cost;
     }
   }
@@ -1944,8 +1948,9 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-03g";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-03h";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
+  "🎰 <b>Gacha is way more affordable!</b> Roll costs scale much more gently now (≈2–5× cheaper), and rolling in bulk gives a discount — up to <b>-25%</b> on x100. Way more talismans for your coins! ♡",
   "🌍 <b>Live leaderboard!</b> Pick your name once, then your score auto-updates the global board every minute — no more manual submitting. (Offensive names are blocked. 🙅)",
   "🌙 <b>Dark mode!</b> Toggle it in <b>⚙️ Settings</b> — easier on the eyes at night. ♡",
   "🔊 <b>Sound &amp; haptics!</b> Taps, purchases, golden cats and combos now have juicy feedback. Toggle it (and animations) in the new <b>⚙️ Settings</b> panel.",
