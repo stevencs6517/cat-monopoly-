@@ -1,319 +1,1257 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Cat Monopoly</title>
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" href="apple-touch-icon.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#ff9ec7">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Cat Monopoly">
-<meta name="description" content="Build your fluffy little cat empire ♡ — a kawaii idle clicker.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Do They Like You? — Crush Calculator</title>
+<meta name="description" content="A careful, honest read on whether your crush likes you back." />
+<meta name="theme-color" content="#08142e" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/svg+xml" href="tools/icon.svg" />
+<link rel="apple-touch-icon" href="tools/apple-touch-icon.png" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Like You?" />
 <style>
-  :root{
-    --bg1:#ffe3f3;
-    --bg2:#e9ddff;
-    --bg3:#d8f3ff;
-    --panel:#fffafd;
-    --panel2:#fdeef7;
-    --ink:#7a5a86;
-    --ink2:#a98fbb;
-    --pink:#ff9ec7;
-    --pink-d:#ff6fae;
-    --lav:#b69ce8;
-    --gold:#ffce5c;
-    --gold-d:#f5b32e;
-    --good:#6fd6a3;
-    --danger:#ff7b9c;
-    --line:#f3d9ea;
+  :root {
+    --bg-top: #08142e;
+    --bg-bottom: #112a52;
+    --card: rgba(255, 255, 255, 0.06);
+    --card-border: rgba(255, 255, 255, 0.12);
+    --ink: #eaf2ff;
+    --muted: #93a9d1;
+    --accent: #4da6ff;
+    --accent-2: #6fd3ff;
+    --glow: rgba(77, 166, 255, 0.45);
+    --good: #36d399;
+    --warm: #ffcf6f;
+    --bad: #ff6b8a;
+  }
+
+  * { 
+    box-sizing: border-box; 
+    -webkit-tap-highlight-color: transparent; /* Fix 2: Removes mobile tap flash */
   }
   
-  /* ===== 🌙 Dark Mode Overrides ===== */
-  body.dark-theme {
-    --bg1: #1a1025;
-    --bg2: #241836;
-    --bg3: #181e29;
-    --panel: #22172b;
-    --panel2: #2c1e38;
-    --ink: #e0d5eb;
-    --ink2: #a996c0;
-    --pink: #ff6fae;
-    --pink-d: #ff3b8b;
-    --lav: #b69ce8;
-    --gold: #f5b32e;
-    --gold-d: #ffce5c;
-    --line: #412d52;
-  }
-  body.dark-theme .card, body.dark-theme .modal {
-    border-color: var(--line);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.4), inset 0 0 0 4px #2c1e38;
-  }
-  body.dark-theme .smallbtn { background: var(--panel2); border-color: var(--line); color: var(--ink); }
-  body.dark-theme .smallbtn.active { background: var(--pink); border-color: var(--pink-d); color: #fff; }
-  body.dark-theme input.nameinput, body.dark-theme textarea { background: var(--panel2); border-color: var(--line); color: var(--ink); }
-  body.dark-theme .item, body.dark-theme .tut-step { border-color: var(--line); }
-  body.dark-theme .mult-badge { background: var(--panel2); border-color: var(--line); }
-  body.dark-theme header h1 { text-shadow: 0 2px 0 var(--panel2), 0 4px 14px rgba(255,111,174,.35); }
+  html { scroll-behavior: smooth; }
 
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  /* mobile: stop double-tap-to-zoom & 300ms delay so you can tap fast */
-  html{touch-action:manipulation;}
-  button, .pedestal, .tab, .buy, .smallbtn, .buyamt, .goldencat{touch-action:manipulation;}
-  /* no text selection / iOS "Copy · Look Up" callout while tapping — applies everywhere… */
-  html, body{
-    -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;
-    -webkit-touch-callout:none;
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    padding: 0 18px 140px; overflow-x: hidden;
   }
-  /* …but keep real text fields selectable so the Save-Key copy/paste still works */
-  input, textarea{
-    -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text;
-    -webkit-touch-callout:default;
-  }
-  .pedestal{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
-  body{
-    margin:0;
-    font-family:"Quicksand","Segoe UI",sans-serif;
-    color:var(--ink);
-    min-height:100vh;
+
+  /* Fix 1: iOS background-attachment bug fix */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
     background:
-      radial-gradient(circle at 15% 0%, #fff2fb 0%, transparent 45%),
-      radial-gradient(circle at 85% 10%, #eafaff 0%, transparent 45%),
-      linear-gradient(160deg,var(--bg1),var(--bg2) 55%,var(--bg3));
-    background-attachment:fixed;
-  }
-  h1,h2,.money,.buy,.name,.tab{font-family:"Baloo 2","Quicksand",sans-serif;}
-
-  header {
-    text-align: center;
-    padding: max(20px, env(safe-area-inset-top)) 10px 6px;
-    position: relative;
-  }
-  header h1{
-    margin:0;font-size:38px;font-weight:800;letter-spacing:.5px;
-    color:var(--pink-d);
-    text-shadow:0 2px 0 #fff, 0 4px 14px rgba(255,111,174,.35);
-  }
-  header .tag{color:var(--ink2);font-size:14px;margin-top:2px;font-weight:600;}
-  .sparkles{position:absolute;inset:0;pointer-events:none;font-size:18px;opacity:.6;}
-
-  .wrap {
-    max-width: 1020px;
-    margin: 0 auto;
-    padding: 10px 14px max(70px, env(safe-area-inset-bottom));
-    display: grid;
-    grid-template-columns: 1fr 1.25fr;
-    gap: 18px;
-  }
-  @media(max-width:800px){.wrap{grid-template-columns:1fr;}}
-
-  .card{
-    background:var(--panel);
-    border:2px solid #ffd9ee;
-    border-radius:26px;
-    padding:18px;
-    box-shadow:0 12px 30px rgba(182,156,232,.25), inset 0 0 0 4px #fff;
-  }
-  .stat{text-align:center;}
-  .money{font-size:42px;font-weight:800;color:var(--gold-d);line-height:1.05;text-shadow:0 2px 0 #fff;}
-  .persec{color:var(--good);font-size:16px;margin-top:2px;font-weight:700;}
-  .sub{color:var(--ink2);font-size:13px;margin-top:6px;font-weight:600;}
-
-  .pedestal{
-    margin:12px auto 4px;width:180px;height:180px;border:none;background:none;cursor:pointer;
-    position:relative;display:flex;align-items:center;justify-content:center;
-    transition:transform .06s;
-  }
-  .pedestal::after{
-    content:"";position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
-    width:120px;height:26px;border-radius:50%;
-    background:radial-gradient(closest-side, rgba(182,156,232,.45), transparent);
-  }
-  .pedestal:active{transform:scale(.94);}
-  .pedestal svg{filter:drop-shadow(0 6px 8px rgba(182,156,232,.35));z-index:1;}
-  .topcat{font-weight:700;color:var(--pink-d);font-size:14px;margin-top:-4px;}
-  .clickhint{color:var(--ink2);font-size:12px;font-weight:600;}
-  .combo-wrap{height:34px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;margin:2px 0 0;}
-  .combo-label{font-weight:800;font-size:14px;color:var(--gold-d);opacity:0;transform:scale(.8);transition:opacity .15s,transform .15s;white-space:nowrap;}
-  .combo-label.on{opacity:1;transform:scale(1);}
-  .combo-label.bump{animation:comboPop .18s ease-out;}
-  @keyframes comboPop{0%{transform:scale(1)}50%{transform:scale(1.22)}100%{transform:scale(1)}}
-  .combo-bar{width:148px;height:7px;border-radius:6px;background:#f0e3f7;overflow:hidden;opacity:0;transition:opacity .15s;}
-  .combo-bar.on{opacity:1;}
-  .combo-fill{height:100%;width:100%;border-radius:6px;background:linear-gradient(90deg,var(--pink),var(--gold));transition:width .12s linear;}
-
-  .mult-badge{
-    display:inline-block;background:#f6ecff;border:2px solid #e3d3ff;
-    border-radius:20px;padding:5px 14px;color:var(--lav);font-weight:700;font-size:13px;margin:6px 3px 0;
+      radial-gradient(900px 600px at 50% -10%, rgba(77,166,255,0.16), transparent 60%),
+      linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
   }
 
-  .footer-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:14px;}
-  .smallbtn{
-    background:#fff;border:2px solid #f0dcea;color:var(--ink);
-    border-radius:16px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:700;
-    font-family:"Quicksand";transition:.15s;
+  /* ---------- Bubble background ---------- */
+  #bubbles { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .bubble {
+    position: absolute; bottom: -160px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), rgba(111,211,255,0.10) 60%, transparent 70%);
+    border: 1px solid rgba(255,255,255,0.10);
+    animation-name: rise; animation-timing-function: linear; animation-iteration-count: infinite;
   }
-  .smallbtn:hover{border-color:var(--pink);transform:translateY(-1px);}
-  .smallbtn.active{background:var(--pink);color:#fff;border-color:var(--pink-d);}
-  .smallbtn.danger:hover{border-color:var(--danger);color:var(--danger);}
-
-  .tabs{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap;}
-  .tab{
-    flex:1;padding:10px 6px;text-align:center;background:var(--panel2);
-    border-radius:16px;cursor:pointer;font-size:15px;font-weight:700;color:var(--ink2);
-    border:2px solid transparent;min-width:78px;transition:.15s;
-  }
-  .tab.active{color:#fff;background:linear-gradient(180deg,var(--pink),var(--pink-d));border-color:#fff;box-shadow:0 4px 12px rgba(255,111,174,.35);}
-
-  .item{
-    display:flex;align-items:center;gap:12px;background:var(--panel2);
-    border-radius:20px;padding:10px 12px;margin-bottom:10px;border:2px solid #fbe6f3;
-  }
-  .item .icon{width:54px;height:54px;flex:0 0 54px;display:flex;align-items:center;justify-content:center;}
-  .item .icon svg{filter:drop-shadow(0 2px 3px rgba(182,156,232,.3));}
-  .item .info{flex:1;min-width:0;}
-  .item .name{font-weight:700;font-size:15px;}
-  .item .desc{color:var(--ink2);font-size:12px;font-weight:600;}
-  .item .owned{font-size:24px;font-weight:800;color:var(--lav);min-width:30px;text-align:right;}
-  .buy{
-    border:none;border-radius:16px;padding:9px 12px;font-weight:800;cursor:pointer;
-    background:linear-gradient(180deg,var(--gold),var(--gold-d));color:#7a4a00;font-size:13px;
-    white-space:nowrap;text-align:center;line-height:1.15;box-shadow:0 3px 0 #e09a16;transition:.1s;
-  }
-  .buy:active{transform:translateY(2px);box-shadow:0 1px 0 #e09a16;}
-  .buy:disabled{filter:grayscale(.6) brightness(.97);opacity:.6;cursor:not-allowed;box-shadow:none;}
-  .buy.alt{background:linear-gradient(180deg,var(--pink),var(--pink-d));color:#fff;box-shadow:0 3px 0 var(--pink-d);}
-  .locked{opacity:.6;}
-
-  .rebirth-box{text-align:center;}
-  .rebirth-box .big{font-size:28px;color:var(--pink-d);font-weight:800;}
-  hr{border:none;border-top:2px dashed #f0dcea;margin:12px 0;}
-
-  /* leaderboard */
-  .lbrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:16px;background:var(--panel2);margin-bottom:7px;border:2px solid #fbe6f3;}
-  .lbrow .rank{font-size:18px;font-weight:800;width:34px;text-align:center;}
-  .lbrow .who{flex:1;min-width:0;}
-  .lbrow .who b{font-size:14px;}
-  .lbrow .who .meta{font-size:11px;color:var(--ink2);font-weight:600;}
-  .lbrow .val{font-weight:800;color:var(--gold-d);font-size:14px;}
-  .lbrow.me{border-color:var(--pink);background:#fff2fa;}
-  input.nameinput{
-    border:2px solid #f0dcea;border-radius:14px;padding:9px 12px;font-family:"Quicksand";
-    font-weight:700;color:var(--ink);font-size:14px;width:100%;
-  }
-  input.nameinput:focus{outline:none;border-color:var(--pink);}
-
-  .overlay{position:fixed;inset:0;background:rgba(122,90,134,.35);backdrop-filter:blur(3px);
-    display:none;align-items:center;justify-content:center;padding:16px;z-index:50;}
-  .overlay.show{display:flex;}
-  .modal{background:var(--panel);border:3px solid #ffd9ee;border-radius:26px;padding:24px;
-    max-width:480px;width:100%;box-shadow:0 24px 60px rgba(122,90,134,.4);text-align:left;}
-  .modal h2{margin-top:0;color:var(--pink-d);}
-  textarea{width:100%;height:110px;background:#fdf3fa;color:var(--lav);border:2px solid #f0dcea;
-    border-radius:14px;padding:10px;font-family:monospace;font-size:12px;resize:vertical;}
-  .modal .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
-  .modal .row .smallbtn{flex:1;}
-
-  /* home-screen install tutorial steps */
-  .tut-plat{font-weight:800;color:var(--pink-d);font-size:14px;margin:0 0 8px;text-align:center;}
-  .tut-step{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #fbe6f3;
-    border-radius:14px;padding:9px 11px;margin-bottom:8px;text-align:left;}
-  .tut-step:last-child{margin-bottom:0;}
-  .tut-num{flex:0 0 26px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
-    justify-content:center;font-family:"Baloo 2";font-weight:800;font-size:14px;color:#fff;
-    background:linear-gradient(180deg,var(--pink),var(--pink-d));box-shadow:0 2px 6px rgba(255,111,174,.4);}
-  .tut-txt{flex:1;font-size:13px;font-weight:600;color:var(--ink);line-height:1.35;}
-  .tut-txt b{color:var(--ink);}
-  .tut-ico{font-size:18px;flex:0 0 auto;}
-  .ios-share{display:inline-flex;vertical-align:-3px;}
-
-  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
-    background:#fff;border:2px solid var(--pink);color:var(--ink);padding:10px 20px;
-    border-radius:30px;font-size:14px;font-weight:700;opacity:0;transition:opacity .3s;
-    pointer-events:none;z-index:60;box-shadow:0 8px 20px rgba(255,111,174,.3);}
-  #toast.show{opacity:1;}
-  .float{position:absolute;pointer-events:none;color:var(--gold-d);font-weight:800;
-    animation:floatUp 1s ease-out forwards;font-size:20px;z-index:70;text-shadow:0 1px 0 #fff;}
-  @keyframes floatUp{to{transform:translateY(-55px) scale(1.1);opacity:0;}}
-
-  /* ===== ✿ extra kawaii desu ✿ ===== */
-  body::before{
-    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Ctext x='12' y='34' font-size='20' fill='%23ffd0e8'%3E%E2%99%A5%3C/text%3E%3Ctext x='56' y='74' font-size='15' fill='%23e3d4ff'%3E%E2%9C%A6%3C/text%3E%3Ctext x='60' y='28' font-size='12' fill='%23ffe3b0'%3E%E2%9C%A7%3C/text%3E%3C/svg%3E");
-    background-size:90px 90px;
-  }
-  header, .wrap{position:relative;z-index:1;}
-
-  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-  @keyframes wiggle{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
-  @keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(.92);opacity:.5}50%{transform:translate(-50%,-50%) scale(1.12);opacity:.85}}
-  @keyframes shimmer{0%{background-position:0% 50%}100%{background-position:200% 50%}}
-  @keyframes pop{0%{transform:scale(.6)}70%{transform:scale(1.12)}100%{transform:scale(1)}}
-  @keyframes rise{0%{transform:translateY(0) scale(.5) rotate(0);opacity:0}
-    12%{opacity:.85}88%{opacity:.85}100%{transform:translateY(-105vh) scale(1) rotate(25deg);opacity:0}}
-
-  header h1{animation:bob 3.2s ease-in-out infinite;}
-  .card{border-radius:30px;box-shadow:0 14px 34px rgba(255,158,199,.30), inset 0 0 0 4px #fff, 0 0 0 3px #ffe1f0;}
-  .money{
-    background:linear-gradient(90deg,#ffb14e,#ff7ac6,#b69ce8,#ffb14e);
-    background-size:250% auto;-webkit-background-clip:text;background-clip:text;
-    -webkit-text-fill-color:transparent;color:transparent;animation:shimmer 5s linear infinite;
-  }
-  .pedestal::before{
-    content:"";position:absolute;left:50%;top:46%;width:160px;height:160px;border-radius:50%;
-    background:radial-gradient(circle, rgba(255,158,199,.45), rgba(182,156,232,.18) 55%, transparent 72%);
-    animation:pulse 2.8s ease-in-out infinite;z-index:0;
-  }
-  .pedestal svg, .pedestal img{animation:bob 2.8s ease-in-out infinite;position:relative;z-index:1;}
-  .buy:not(:disabled){transition:transform .15s ease, filter .15s ease, box-shadow .1s;}
-  .buy:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.04);}
-  .smallbtn:hover{transform:translateY(-1px);}
-  .tab.active{animation:pop .3s ease-out;}
-  .item{transition:transform .12s ease;}
-  .item:hover{transform:translateY(-2px) scale(1.012);}
-  .mult-badge{box-shadow:0 3px 8px rgba(182,156,232,.25);}
-
-  .kw-particle{position:fixed;bottom:-24px;pointer-events:none;z-index:0;
-    animation:rise linear forwards;filter:drop-shadow(0 1px 2px rgba(255,158,199,.4));}
-
-  ::-webkit-scrollbar{width:13px;}
-  ::-webkit-scrollbar-thumb{background:#ffb6d5;border-radius:12px;border:3px solid #ffe3f3;}
-  ::-webkit-scrollbar-thumb:hover{background:#ff9ec7;}
-  ::-webkit-scrollbar-track{background:#ffeef7;}
-
-  /* mobile: hide the scrollbar entirely (scrolling still works) — cleaner aesthetic */
-  @media(max-width:800px){
-    *::-webkit-scrollbar{width:0;height:0;display:none;}
-    html, body{scrollbar-width:none;-ms-overflow-style:none;}
+  #bubbles.turbo .bubble { animation-duration: 2.3s !important; }
+  @keyframes rise {
+    0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+    10%  { opacity: 0.8; }
+    50%  { transform: translateY(-55vh) translateX(22px) scale(1.05); }
+    90%  { opacity: 0.7; }
+    100% { transform: translateY(-115vh) translateX(-18px) scale(1.1); opacity: 0; }
   }
 
-  /* golden cat */
-  .goldencat{position:fixed;z-index:55;cursor:pointer;filter:drop-shadow(0 0 10px rgba(255,206,92,.9));
-    animation:gcbob 1s ease-in-out infinite;}
-  @keyframes gcbob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-10px) rotate(4deg)}}
-  /* cat pulses while the Auto-Paw powerup is auto-tapping */
-  .pedestal.auto-active{animation:autopaw .26s ease-in-out infinite;}
-  @keyframes autopaw{0%,100%{transform:scale(1)}50%{transform:scale(.92)}}
-  /* frenzy banner */
-  #frenzyBanner{display:none;position:sticky;top:0;z-index:40;text-align:center;
-    margin:0 auto 4px;max-width:520px;padding:8px 16px;border-radius:0 0 18px 18px;
-    background:linear-gradient(90deg,#ffd166,#ff7ac6,#ffd166);background-size:200% auto;
-    color:#7a3a00;font-weight:800;font-family:"Baloo 2";box-shadow:0 4px 16px rgba(255,122,198,.4);
-    animation:shimmer 2s linear infinite;}
-  /* catdex grid */
-  .dexgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:10px;}
-  .dexcell{background:var(--panel2);border:2px solid #fbe6f3;border-radius:16px;padding:8px 4px;text-align:center;}
-  .dexcell.undiscovered{opacity:.55;filter:grayscale(.5);}
-  .dexcell .dexicon{display:flex;justify-content:center;}
-  .dexcell .dexname{font-size:11px;font-weight:700;margin-top:4px;color:var(--ink);}
-  .dexcell.undiscovered .dexname{color:var(--ink2);}
+  .topbar, .hero, .feed, .result, .intro { position: relative; z-index: 2; }
 
-  /* estates / property groups */
-  .propgroup{border:2px solid var(--gc,#f0dcea);border-radius:18px;padding:8px 8px 2px;margin-bottom:12px;
-    background:color
+  /* ---------- Sticky completion meter ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20; margin: 0 -18px; padding: 13px 18px;
+    background: linear-gradient(180deg, rgba(8,20,46,0.96), rgba(8,20,46,0.6));
+    backdrop-filter: blur(10px); border-bottom: 1px solid var(--card-border);
+  }
+  .topbar-inner { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+  .topbar .label { font-size: 0.76rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .live-meter { flex: 1; height: 8px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
+  .live-fill {
+    height: 100%; width: 0%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    box-shadow: 0 0 10px var(--glow); transition: width 0.5s cubic-bezier(0.16,1,0.3,1);
+  }
+  .live-num { font-weight: 700; font-size: 0.95rem; min-width: 42px; text-align: right; color: var(--muted); }
+
+  /* ---------- Hero / intro ---------- */
+  .hero { max-width: 640px; margin: 44px auto 0; text-align: center; }
+  .hero h1 {
+    margin: 0 0 10px; font-size: 2.35rem; font-weight: 800; letter-spacing: -0.02em;
+    background: linear-gradient(90deg, #cfe6ff, var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p { margin: 0; color: var(--muted); font-size: 1.05rem; }
+
+  .intro { max-width: 640px; margin: 26px auto 0; padding: 26px 24px; background: var(--card); border: 1px solid var(--card-border); border-radius: 20px; }
+  .intro .field-label { display: block; color: var(--muted); font-size: 0.9rem; margin: 0 0 10px; text-align: center; }
+  .intro input {
+    display: block; width: 100%; max-width: 320px; margin: 0 auto; padding: 13px 16px; font-size: 1.05rem; color: var(--ink); text-align: center;
+    background: rgba(255,255,255,0.06); border: 1.5px solid var(--card-border); border-radius: 12px; outline: none;
+  }
+  .intro input:focus { border-color: var(--accent); }
+  .ctx-options { display: flex; flex-direction: column; gap: 10px; margin: 0 auto; max-width: 380px; }
+  .ctx-btn {
+    appearance: none; border: 1.5px solid var(--card-border); background: rgba(255,255,255,0.04); color: var(--ink);
+    padding: 13px 16px; border-radius: 12px; font-size: 0.98rem; text-align: left; cursor: pointer; transition: 0.15s;
+  }
+  .ctx-btn:hover { border-color: var(--accent); background: rgba(77,166,255,0.12); }
+  .ctx-btn.selected { border-color: var(--accent); background: linear-gradient(90deg, rgba(77,166,255,0.28), rgba(111,211,255,0.16)); font-weight: 600; }
+  .begin-btn {
+    display: block; margin: 22px auto 0; appearance: none; border: none; cursor: pointer;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    color: #06214a; font-weight: 700; font-size: 1rem; padding: 13px 34px; border-radius: 12px;
+    box-shadow: 0 8px 22px rgba(77,166,255,0.4);
+  }
+  .begin-btn:hover { filter: brightness(1.06); }
+  .begin-btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+
+  /* ---------- History (past reads) ---------- */
+  .history { max-width: 400px; margin: 24px auto 0; padding-top: 18px; border-top: 1px solid var(--card-border); }
+  .history h3 { font-size: 0.76rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); text-align: center; margin: 0 0 12px; }
+  .hrow { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+  .hrow .hemoji { width: 20px; text-align: center; }
+  .hrow .hname { flex: 0 0 84px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hbar { flex: 1; height: 8px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
+  .hbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .hpct { width: 40px; text-align: right; font-weight: 700; color: var(--accent-2); font-size: 0.9rem; }
+  .hdel { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.05rem; line-height: 1; padding: 0 2px; }
+  .hdel:hover { color: var(--bad); }
+  .hclear { display: block; margin: 12px auto 0; background: none; border: none; color: var(--muted); font-size: 0.8rem; cursor: pointer; text-decoration: underline; }
+
+  /* ---------- Feed ---------- */
+  .feed { max-width: 640px; margin: 0 auto; }
+  .block {
+    margin: 26px 0; padding: 26px 24px; background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 22px; box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+    opacity: 0; transform: translateY(24px);
+    transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.16,1,0.3,1);
+  }
+  .block.revealed { opacity: 1; transform: translateY(0); }
+  .block.locked { opacity: 0.82; }
+  .step-num { font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .q-cat { color: var(--muted); }
+  .q-text { font-size: 1.28rem; font-weight: 700; line-height: 1.45; margin-bottom: 10px; }
+  .q-sub { color: var(--muted); font-size: 0.92rem; line-height: 1.5; margin: 0 0 18px; }
+
+  .options { display: flex; flex-direction: column; gap: 11px; }
+  .option-btn {
+    appearance: none; border: 1.5px solid var(--card-border); background: rgba(255,255,255,0.04); color: var(--ink);
+    padding: 14px 17px; border-radius: 14px; font-size: 1rem; text-align: left; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.08s;
+  }
+  .option-btn:hover { border-color: var(--accent); background: rgba(77,166,255,0.12); transform: translateY(-1px); }
+  .option-btn.unsure { font-style: italic; color: var(--muted); }
+  .option-btn.selected {
+    border-color: var(--accent); font-style: normal; color: var(--ink);
+    background: linear-gradient(90deg, rgba(77,166,255,0.28), rgba(111,211,255,0.16));
+    box-shadow: 0 0 0 1px var(--accent) inset, 0 0 18px rgba(77,166,255,0.25); font-weight: 600;
+  }
+
+  /* ---------- Analyzing overlay ---------- */
+  #analyzing {
+    position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(8,20,46,0.74); backdrop-filter: blur(7px); transition: opacity 0.4s ease; text-align: center; padding: 20px;
+  }
+  .analyzing-text { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; }
+  .analyzing-text .dots::after { content: ""; animation: dots 1.2s steps(1,end) infinite; }
+  @keyframes dots { 0%{content:""} 25%{content:"."} 50%{content:".."} 75%{content:"..."} 100%{content:""} }
+  .analyzing-sub { color: var(--muted); margin-top: 8px; font-size: 0.98rem; }
+
+  /* ---------- Result ---------- */
+  .result {
+    margin: 40px auto 0; max-width: 640px; padding: 34px 28px; background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 24px; box-shadow: 0 22px 50px rgba(0,0,0,0.4);
+    opacity: 0; transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16,1,0.3,1);
+  }
+  .result.revealed { opacity: 1; transform: translateY(0); }
+  .result-head { text-align: center; }
+  .score-num {
+    font-size: 4.6rem; font-weight: 800; line-height: 1; margin: 4px 0 6px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .conf { color: var(--muted); font-size: 0.95rem; margin: 0 0 4px; }
+  .result-meter { height: 14px; max-width: 440px; margin: 14px auto 8px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
+  .result-fill { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); box-shadow: 0 0 14px rgba(77,166,255,0.4); }
+  .verdict { font-size: 1.5rem; font-weight: 700; margin: 8px 0 0; }
+  .read { color: #cdddf6; line-height: 1.75; margin: 14px 0; font-size: 1.04rem; text-align: left; }
+  .read.soft { color: var(--warm); }
+  .read .nm { color: var(--accent-2); font-weight: 700; }
+
+  .section-title {
+    margin: 26px 0 8px; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase;
+    border-bottom: 1px solid var(--card-border); padding-bottom: 6px;
+  }
+  .section-title.green { color: var(--good); }
+  .section-title.warm  { color: var(--warm); }
+  .section-title.bad   { color: var(--bad); }
+  .section-title.neu   { color: var(--muted); }
+  .section-sub { color: var(--muted); font-size: 0.86rem; margin: 0 0 6px; line-height: 1.45; }
+
+  .signal { padding: 8px 0; border-bottom: 1px dashed rgba(255,255,255,0.07); line-height: 1.45; }
+  .signal:last-child { border-bottom: none; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 9px; vertical-align: middle; }
+  .dot.green { background: var(--good); }
+  .dot.warm  { background: var(--warm); }
+  .dot.bad   { background: var(--bad); }
+  .dot.neu   { background: var(--muted); }
+
+  .methodology { margin-top: 22px; color: var(--muted); font-size: 0.82rem; line-height: 1.55; text-align: center; font-style: italic; }
+
+  .share-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+  .share-btn {
+    appearance: none; border: 1.5px solid var(--card-border); background: rgba(255,255,255,0.05); color: var(--ink);
+    padding: 11px 18px; border-radius: 12px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.15s;
+  }
+  .share-btn:hover { border-color: var(--accent); background: rgba(77,166,255,0.12); }
+
+  .restart-btn {
+    display: block; margin: 22px auto 0; appearance: none; border: none; cursor: pointer;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    color: #06214a; font-weight: 700; font-size: 1rem; padding: 14px 30px; border-radius: 14px;
+    box-shadow: 0 8px 22px rgba(77,166,255,0.4);
+  }
+  .restart-btn:hover { filter: brightness(1.06); }
+
+  /* ---------- Read-depth toggle ---------- */
+  .mode-options { display: flex; gap: 10px; margin: 0 auto; max-width: 380px; }
+  .mode-btn {
+    flex: 1; appearance: none; border: 1.5px solid var(--card-border); background: rgba(255,255,255,0.04); color: var(--ink);
+    padding: 11px 10px; border-radius: 12px; font-size: 0.88rem; cursor: pointer; transition: 0.15s; text-align: center; line-height: 1.3;
+  }
+  .mode-btn small { display: block; color: var(--muted); font-size: 0.76rem; margin-top: 2px; }
+  .mode-btn:hover { border-color: var(--accent); }
+  .mode-btn.selected { border-color: var(--accent); background: linear-gradient(90deg, rgba(77,166,255,0.28), rgba(111,211,255,0.16)); font-weight: 600; }
+  .mode-btn.selected small { color: #cdddf6; }
+
+  /* ---------- Low-signal result ---------- */
+  .score-unknown {
+    font-size: 4.2rem; font-weight: 800; line-height: 1; margin: 4px 0 6px; color: #9fb6da;
+  }
+  .watch-list { margin: 10px 0 4px; }
+
+  /* ---------- Mobile ---------- */
+  @media (max-width: 600px) {
+    /* Fix 3: Dynamic bottom padding to clear the iPhone home bar */
+    body { padding: 0 13px calc(90px + env(safe-area-inset-bottom)); -webkit-text-size-adjust: 100%; }
+    
+    .topbar { margin: 0 -13px; padding: 11px 13px; }
+    .topbar .label { font-size: 0.66rem; }
+    .topbar-inner { gap: 10px; }
+    .hero { margin-top: 30px; }
+    .hero h1 { font-size: 1.95rem; }
+    .hero p { font-size: 0.97rem; }
+    .intro { padding: 22px 15px; border-radius: 16px; margin-top: 20px; }
+    .mode-btn { font-size: 0.82rem; }
+    .block { margin: 18px 0; padding: 20px 16px; border-radius: 18px; }
+    .q-text { font-size: 1.12rem; }
+    .q-sub { font-size: 0.88rem; }
+    .option-btn { padding: 13px 15px; font-size: 0.97rem; }
+    .result { margin-top: 28px; padding: 26px 17px; border-radius: 18px; }
+    .score-num { font-size: 3.5rem; }
+    .score-unknown { font-size: 3.1rem; }
+    .verdict { font-size: 1.25rem; }
+    .read { font-size: 1rem; line-height: 1.66; }
+    .section-title { margin-top: 20px; }
+    .share-row { flex-direction: column; }
+    .share-btn { width: 100%; }
+    
+    /* Fix 4: Expanding touch targets for smaller buttons */
+    .hdel { padding: 10px; margin: -10px; }
+  }
+</style>
+</head>
+<body>
+
+  <div id="bubbles"></div>
+
+  <div class="topbar" id="topbar" style="display:none;">
+    <div class="topbar-inner">
+      <span class="label">Completed</span>
+      <div class="live-meter"><div class="live-fill" id="progFill"></div></div>
+      <span class="live-num" id="progNum">0%</span>
+    </div>
+  </div>
+
+  <header class="hero">
+    <h1>Do They Like You?</h1>
+    <p>A careful, honest read on the signals — the green flags, the false alarms, and the truth in between.</p>
+  </header>
+
+  <section class="intro" id="intro">
+    <span class="field-label">First, who are we thinking about? Their name or a nickname.</span>
+    <input id="nameInput" type="text" placeholder="e.g. Alex" maxlength="24" autocomplete="off" />
+
+    <span class="field-label" style="margin-top:22px;">And how do you two actually know each other?</span>
+    <div class="ctx-options" id="ctxOptions">
+      <button class="ctx-btn" data-ctx="inperson">We interact in person — friends, school, work, a shared world</button>
+      <button class="ctx-btn" data-ctx="online">Mostly or entirely online / long-distance</button>
+      <button class="ctx-btn" data-ctx="afar">We barely interact — this is mostly from afar</button>
+    </div>
+
+    <span class="field-label" style="margin-top:22px;">How deep do you want to go?</span>
+    <div class="mode-options" id="modeOptions">
+      <button class="mode-btn selected" data-mode="deep">Deep read<small>~15 questions</small></button>
+      <button class="mode-btn" data-mode="quick">Quick read<small>~5 questions</small></button>
+    </div>
+
+    <button class="begin-btn" id="beginBtn" disabled>Begin →</button>
+
+    <div class="history" id="history" style="display:none;"></div>
+  </section>
+
+  <main class="feed" id="feed"></main>
+
+  <section class="result" id="result" style="display:none;"></section>
+
+  <canvas id="cardCanvas" width="1080" height="1350" style="display:none;"></canvas>
+
+<script>
+/* ============================================================
+   1) THE QUESTION GRAPH — what you edit.
+
+   Each question:  category, text, sub (optional helper line), next
+   Each option:
+     label / ev / reason   (see notes)
+     ev   – EVIDENCE in log-odds. + leans "likes you", − leans "no".
+            ±1.4+ strong & hard-to-fake. ±0.5 weak / could be anything.
+     ambiguous – OPTIONAL: a positive that's ALSO normal friendliness
+     wellbeing – OPTIONAL: a signal about the HEALTH of the dynamic
+     goto – OPTIONAL: jump to another question id (branching)
+   A "not sure / haven't noticed" option is added to every question
+   automatically (neutral, and it widens the confidence range).
+   {name} is replaced with the person's name.
+   ============================================================ */
+const QUESTIONS = {
+
+  /* ================= ADMIRING-FROM-AFAR TRACK ================= */
+  afar_look: {
+    category: "From a distance",
+    text: "Have you ever caught {name} looking at you when there was no reason to?",
+    sub: "Not a passing glance — the kind where your eyes meet and one of you looks away.",
+    next: "afar_orbit",
+    options: [
+      { label: "Yes — and they look away fast",              ev: 1.5,  reason: "{name} catches your eye, then looks away quickly" },
+      { label: "Maybe once or twice",                        ev: 0.5,  reason: "you might have caught {name} looking once or twice", ambiguous: true },
+      { label: "Not that I've ever noticed",                 ev: -0.8, reason: "you've never caught {name} looking your way" },
+    ],
+  },
+  afar_orbit: {
+    category: "From a distance",
+    text: "Does {name} seem to end up near you more than random chance would explain?",
+    sub: "Same corner of the room, same events, somehow always within range.",
+    next: "afar_friends",
+    options: [
+      { label: "Constantly — it's almost uncanny",           ev: 1.4,  reason: "{name} keeps gravitating into your orbit" },
+      { label: "Sometimes",                                  ev: 0.5,  reason: "{name} sometimes ends up near you", ambiguous: true },
+      { label: "No — our paths rarely cross",                ev: -1.0, reason: "your paths rarely cross" },
+    ],
+  },
+  afar_friends: {
+    category: "From a distance",
+    text: "Have {name}'s friends ever acted like they know something when you're around?",
+    sub: "The teasing, the nudges, the suspicious glances between them.",
+    next: "afar_social",
+    options: [
+      { label: "Yes — teasing, nudging, knowing looks",      ev: 1.3,  reason: "{name}'s friends behave like they're in on a secret around you" },
+      { label: "Maybe a little",                             ev: 0.5,  reason: "{name}'s friends might act slightly knowing", ambiguous: true },
+      { label: "Not at all",                                 ev: -0.5, reason: "{name}'s friends give nothing away" },
+    ],
+  },
+  afar_social: {
+    category: "From a distance",
+    text: "What's the situation between you two online?",
+    next: "afar_arrive",
+    options: [
+      { label: "They follow me AND react to my stuff",       ev: 1.0,  reason: "{name} follows you and reacts to what you post", ambiguous: true, goto: "afar_digital" },
+      { label: "We follow each other, but quietly",          ev: 0.2,  reason: "you follow each other but barely interact online", ambiguous: true },
+      { label: "No real connection online",                  ev: -0.9, reason: "there's no online connection at all" },
+    ],
+  },
+  afar_digital: {
+    category: "From a distance",
+    text: "How does {name} behave around your posts and stories?",
+    next: "afar_arrive",
+    options: [
+      { label: "Watches everything, quick to react",         ev: 1.0,  reason: "{name} watches your stories and is quick to react", ambiguous: true },
+      { label: "An occasional like",                         ev: 0.3,  reason: "{name} likes something of yours now and then", ambiguous: true },
+      { label: "Nothing, really",                            ev: -0.7, reason: "{name} doesn't engage with anything you post" },
+    ],
+  },
+  afar_arrive: {
+    category: "From a distance",
+    text: "When you walk into a room {name}'s in, does anything change in them?",
+    sub: "A straightened posture, a glance, suddenly louder or quieter.",
+    next: "result",
+    options: [
+      { label: "They perk up / find a reason to come over",  ev: 1.5,  reason: "{name} visibly perks up and drifts toward you when you arrive" },
+      { label: "A flicker, but nothing more",                ev: 0.3,  reason: "{name} clocks you arriving but does nothing with it", ambiguous: true },
+      { label: "No reaction at all",                         ev: -0.9, reason: "{name} doesn't react to you showing up" },
+    ],
+  },
+
+  /* ================= IN-PERSON TRACK ================= */
+  ip_presence: {
+    category: "Presence",
+    text: "When it's just the conversation between you, how present is {name}?",
+    sub: "Therapists call it attunement — are they really here, or half-somewhere-else?",
+    next: "ip_initiate",
+    options: [
+      { label: "Fully here — the room kind of narrows to us", ev: 1.4, reason: "{name} is fully present with you, like the room narrows to the two of you" },
+      { label: "Mostly with me",                              ev: 0.5, reason: "{name} is mostly present when you talk", ambiguous: true },
+      { label: "Often distracted — phone, scanning the room", ev: -1.1, reason: "{name} is often half-distracted, glancing at their phone or the room" },
+    ],
+  },
+  ip_initiate: {
+    category: "Effort",
+    text: "Strip away politeness: who actually reaches out to start things?",
+    next: "ip_linger",
+    options: [
+      { label: "{name} comes to me first, reliably",          ev: 1.7, reason: "{name} reliably reaches out to you first" },
+      { label: "It's genuinely balanced",                     ev: 0.9, reason: "the effort to connect is genuinely balanced between you" },
+      { label: "Mostly me, but they warm up once we start",   ev: 0.0, reason: "you start most of it, though {name} warms up once you do" },
+      { label: "Always me — and it quietly fizzles",          ev: -1.6, reason: "you always initiate and it tends to fizzle out" },
+    ],
+  },
+  ip_linger: {
+    category: "Effort",
+    text: "When the reason to be together ends, what does {name} do?",
+    sub: "The class is over, the work's done, the group's leaving.",
+    next: "ip_touch",
+    options: [
+      { label: "Lingers — invents reasons to stay near me",   ev: 1.5, reason: "{name} lingers and finds reasons to stretch the time with you" },
+      { label: "Sometimes hangs back",                        ev: 0.5, reason: "{name} sometimes hangs back a little", ambiguous: true },
+      { label: "Leaves promptly, like anyone would",          ev: -0.7, reason: "{name} heads off promptly when there's no reason to stay" },
+    ],
+  },
+  ip_touch: {
+    category: "Body language",
+    text: "Does {name} create small, low-stakes reasons for physical contact?",
+    sub: "A tap on the arm, a nudge, stealing your hoodie, fixing your collar.",
+    next: "core_bids",
+    options: [
+      { label: "Yes — often, and it tends to linger",         ev: 1.5, reason: "{name} finds excuses for contact, and it lingers" },
+      { label: "Once in a while",                             ev: 0.6, reason: "there's occasional, casual contact", ambiguous: true },
+      { label: "No — keeps a clear, careful distance",        ev: -0.7, reason: "{name} keeps a careful physical distance" },
+    ],
+  },
+
+  /* ================= ONLINE TRACK ================= */
+  on_initiate: {
+    category: "Effort",
+    text: "Who tends to send the first message, day to day?",
+    next: "on_cadence",
+    options: [
+      { label: "{name} texts me first, most days",            ev: 1.7, reason: "{name} reaches out first most days" },
+      { label: "Pretty evenly split",                         ev: 0.9, reason: "first messages are pretty evenly split" },
+      { label: "Mostly me, but they engage warmly",           ev: 0.0, reason: "you start most chats, though {name} engages warmly" },
+      { label: "Always me — and replies trail off",           ev: -1.6, reason: "you always start it and replies trail off" },
+    ],
+  },
+  on_cadence: {
+    category: "Communication",
+    text: "What's the actual rhythm of texting with {name}?",
+    sub: "Not just speed — the energy. Do they pick the thread back up?",
+    next: "on_alive",
+    options: [
+      { label: "Double-texts me, revives it, eager energy",   ev: 1.4, reason: "{name} double-texts and revives conversations with eager energy" },
+      { label: "Steady, comfortable back-and-forth",          ev: 0.6, reason: "you have a steady, comfortable back-and-forth", ambiguous: true },
+      { label: "Dry and delayed — I carry the whole thing",   ev: -1.3, reason: "texts are dry and delayed, and you carry the whole thing" },
+    ],
+  },
+  on_alive: {
+    category: "Communication",
+    text: "Does {name} bring things to you unprompted — or only ever reply?",
+    sub: "Random thoughts, things they saw, 'this made me think of you.'",
+    next: "on_voice",
+    options: [
+      { label: "Constantly sends me things unprompted",       ev: 1.5, reason: "{name} sends you things unprompted throughout the day" },
+      { label: "Now and then",                                ev: 0.5, reason: "{name} brings things to you now and then", ambiguous: true },
+      { label: "Only ever responds, never starts",            ev: -1.1, reason: "{name} only ever responds and never starts" },
+    ],
+  },
+  on_voice: {
+    category: "Communication",
+    text: "Have you two moved past plain text — voice notes, calls, video?",
+    sub: "Voice and video are higher-effort and more intimate than typing.",
+    next: "on_meet",
+    options: [
+      { label: "Yes — long calls, lots of voice notes",       ev: 1.5, reason: "you've moved into long calls and voice notes" },
+      { label: "A little, here and there",                    ev: 0.5, reason: "you've dipped into voice or video a little", ambiguous: true },
+      { label: "No — strictly text",                          ev: -0.6, reason: "it stays strictly text" },
+    ],
+  },
+  on_meet: {
+    category: "Intentions",
+    text: "Has {name} pushed to actually meet — or close the distance — in person?",
+    sub: "Online warmth is one thing; wanting to make it real is another.",
+    next: "core_bids",
+    options: [
+      { label: "Yes — actively tries to make it happen",      ev: 1.8, reason: "{name} actively pushes to meet or close the distance in person" },
+      { label: "Talks about it, but vaguely",                 ev: 0.5, reason: "{name} talks about meeting, but only vaguely", ambiguous: true },
+      { label: "Avoids or dodges the topic",                  ev: -1.4, reason: "{name} dodges the idea of actually meeting" },
+    ],
+  },
+
+  /* ================= SHARED DEEP CORE ================= */
+  core_bids: {
+    category: "Connection",
+    text: "When you share something small — a meme, a half-thought, a photo — what does {name} do with it?",
+    sub: "Relationship research calls these 'bids.' Turning toward them is the quiet currency of closeness.",
+    next: "core_curiosity",
+    options: [
+      { label: "Turns toward it — builds on it, runs with it", ev: 1.3, reason: "{name} turns toward your small bids for connection and builds on them" },
+      { label: "Acknowledges it, then moves on",              ev: 0.3, reason: "{name} acknowledges your small bids but doesn't run with them", ambiguous: true },
+      { label: "Often lets them drop / one-words them",       ev: -1.1, reason: "{name} often lets your small bids drop" },
+    ],
+  },
+  core_curiosity: {
+    category: "Connection",
+    text: "Does {name} ask questions that show they want to understand you — and circle back to them later?",
+    sub: "Curiosity that has follow-through is hard to fake.",
+    next: "core_attunement",
+    options: [
+      { label: "Yes — genuinely curious, and remembers",      ev: 1.5, reason: "{name} is genuinely curious about you and follows up later" },
+      { label: "Asks sometimes",                              ev: 0.5, reason: "{name} asks about you sometimes", ambiguous: true },
+      { label: "Mostly steers it back to themselves",         ev: -1.1, reason: "{name} mostly steers conversations back to themselves" },
+    ],
+  },
+  core_attunement: {
+    category: "Attunement",
+    text: "Can {name} tell when something's off with you before you say a single word?",
+    next: "core_confide",
+    options: [
+      { label: "Yes — they read me almost instantly",         ev: 1.5, reason: "{name} senses when something's off with you before you say anything" },
+      { label: "Sometimes, if it's obvious",                  ev: 0.5, reason: "{name} notices your mood when it's obvious", ambiguous: true },
+      { label: "No — they don't really pick up on it",        ev: -0.8, reason: "{name} doesn't pick up on your moods" },
+    ],
+  },
+  core_confide: {
+    category: "Trust",
+    text: "Has {name} ever let you see a genuinely unguarded side of them?",
+    sub: "Fear, a real worry, the unflattering story — the stuff they don't hand to just anyone.",
+    next: "core_consistency",
+    options: [
+      { label: "Yes — real, vulnerable, off-script",          ev: 1.5, reason: "{name} has trusted you with a genuinely vulnerable side of themselves" },
+      { label: "Surface-level openness only",                 ev: 0.3, reason: "{name} opens up, but only at the surface", ambiguous: true },
+      { label: "No — keeps a wall up with me",                ev: -0.9, reason: "{name} keeps a wall up with you" },
+    ],
+  },
+  core_consistency: {
+    category: "The hard truth",
+    text: "Is {name}'s warmth toward you steady — or does it run hot and cold?",
+    sub: "Consistency, not intensity, is what real interest usually looks like.",
+    next: "core_priority",
+    options: [
+      { label: "Steady and reliable — I know where I stand",  ev: 1.3, reason: "{name}'s warmth toward you is steady and reliable" },
+      { label: "Mostly steady",                               ev: 0.5, reason: "{name} is mostly steady with you", ambiguous: true },
+      { label: "Hot and cold — I can never quite predict it", ev: -1.2, reason: "{name} runs hot and cold, leaving you unsure where you stand", wellbeing: true },
+    ],
+  },
+  core_priority: {
+    category: "Effort",
+    text: "When {name}'s life gets genuinely busy or hard, what happens to you in it?",
+    next: "core_jealousy",
+    options: [
+      { label: "They still carve out time for me",            ev: 1.4, reason: "{name} still makes time for you even when life is hard" },
+      { label: "It depends on the week",                      ev: 0.0, reason: "whether {name} keeps time for you depends on the week" },
+      { label: "I'm the first thing to get dropped",          ev: -1.3, reason: "you're the first thing to get dropped when {name} is busy" },
+    ],
+  },
+  core_jealousy: {
+    category: "The tell-tale test",
+    text: "When you mention someone else you might be interested in, what flickers across {name}?",
+    next: "core_future",
+    options: [
+      { label: "They cool off / go quiet / get a little off",  ev: 1.8, reason: "{name} visibly cools when you mention someone else" },
+      { label: "They interrogate it — lots of pointed questions",ev: 1.2, reason: "{name} digs hard for details about your other prospects" },
+      { label: "Genuinely happy — basically plays matchmaker", ev: -1.1, reason: "{name} is genuinely happy to help you pursue someone else" },
+      { label: "I've honestly never tested this",             ev: 0.0, reason: "you've never seen how {name} reacts to competition" },
+    ],
+  },
+  core_future: {
+    category: "Intentions",
+    text: "Has {name} ever quietly written you into the future — without being prompted?",
+    sub: "'We should…', 'next time we…', a plan three months out that assumes you're in it.",
+    next: "core_silence",
+    options: [
+      { label: "Yes — they fold me into plans naturally",     ev: 1.7, reason: "{name} folds you into future plans unprompted" },
+      { label: "Vaguely, once or twice",                      ev: 0.6, reason: "{name} has vaguely floated future plans with you", ambiguous: true },
+      { label: "No — never looks past right now",             ev: -0.9, reason: "{name} never looks past the present with you" },
+    ],
+  },
+  core_silence: {
+    category: "The hard truth",
+    text: "Imagine you went quiet — didn't reach out at all for two weeks. What honestly happens?",
+    sub: "Sometimes the clearest signal is what someone does in the absence of your effort.",
+    next: "core_feeling",
+    options: [
+      { label: "They'd notice and come find me",              ev: 1.4, reason: "if you went quiet, {name} would notice and reach out" },
+      { label: "Maybe, eventually",                           ev: 0.2, reason: "if you went quiet, {name} might eventually reach out", ambiguous: true },
+      { label: "Honestly? Probably nothing",                  ev: -1.5, reason: "if you went quiet, {name} likely wouldn't reach out at all" },
+    ],
+  },
+  core_feeling: {
+    category: "Your gut",
+    text: "Be honest with yourself: after time with {name}, how do you usually feel?",
+    sub: "Your nervous system keeps score too. This one's about you.",
+    next: "result",
+    options: [
+      { label: "Calm, warm, more like myself",                ev: 1.2, reason: "time with {name} tends to leave you calm and more yourself" },
+      { label: "On a high — but a little anxious after",       ev: 0.3, reason: "{name} leaves you buzzing but a little anxious", ambiguous: true, wellbeing: true },
+      { label: "Often drained, or unsure where I stand",       ev: -1.0, reason: "you're often left drained or unsure where you stand", wellbeing: true },
+    ],
+  },
+};
+
+/* Add a "not sure" option to every question (neutral; widens confidence). */
+for (const [id, q] of Object.entries(QUESTIONS)) {
+  q.options.push({
+    label: "I'm honestly not sure / haven't noticed",
+    ev: 0, unsure: true,
+    reason: `you couldn't quite read ${"{name}"} on ${q.category.toLowerCase()}`,
+  });
+}
+
+const START_BY_CONTEXT = { inperson: "ip_presence", online: "on_initiate", afar: "afar_look" };
+
+/* Quick read — a curated, linear subset of the highest-signal questions per track.
+   Branching (option `goto`) is ignored in quick mode; we follow this order, last → result. */
+const QUICK_FLOW = {
+  inperson: ["ip_initiate", "ip_presence", "core_bids", "core_jealousy", "core_silence"],
+  online:   ["on_initiate", "on_cadence", "on_meet", "core_jealousy", "core_silence"],
+  afar:     ["afar_look", "afar_orbit", "afar_friends", "afar_arrive"],
+};
+
+/* Quick read sees fewer signals, so its evidence sum is naturally smaller. Scale it
+   up by ~(deep length / quick length) per track so equally-strong answers land at a
+   comparable headline % to a deep read. (Confidence is left unscaled — quick reads
+   honestly admit a slightly wider range.) */
+const QUICK_GAIN = { inperson: 2.8, online: 3.0, afar: 1.3 };
+
+const SIG_K = 0.11;        // how sharply evidence bends the probability curve
+const HISTORY_KEY = "crushReads";
+
+/* ============================================================
+   2) THE ENGINE — usually no need to touch below here.
+   ============================================================ */
+const feedEl   = document.getElementById("feed");
+const resultEl = document.getElementById("result");
+const introEl  = document.getElementById("intro");
+const topbarEl = document.getElementById("topbar");
+const progFill = document.getElementById("progFill");
+const progNum  = document.getElementById("progNum");
+const historyEl= document.getElementById("history");
+
+let crushName = "your crush";
+let relContext = null;
+let readMode = "deep";      // "deep" | "quick"
+let path = [];   // ordered [{ id, optionIndex }]
+
+const fill = (s) => s.replaceAll("{name}", crushName);
+
+/* Active question sequence in quick mode (null in deep mode). */
+function quickSeq() { return readMode === "quick" ? QUICK_FLOW[relContext] : null; }
+function nextOf(id, opt) {
+  const seq = quickSeq();
+  if (seq) {
+    const i = seq.indexOf(id);
+    return (i >= 0 && i < seq.length - 1) ? seq[i + 1] : "result";
+  }
+  return opt.goto || QUESTIONS[id].next;
+}
+
+function chosenList() {
+  return path
+    .filter(step => step.optionIndex != null)
+    .map(step => {
+      const q = QUESTIONS[step.id];
+      const o = q.options[step.optionIndex];
+      return { ev: o.ev, ambiguous: !!o.ambiguous, wellbeing: !!o.wellbeing, unsure: !!o.unsure, reason: fill(o.reason) };
+    });
+}
+
+/* Logistic model — probability bends toward (never reaches) 0/100. */
+function scoreFrom(evSum) {
+  const p = 1 / (1 + Math.exp(-SIG_K * evSum));
+  return Math.round(Math.max(0.03, Math.min(0.97, p)) * 100);
+}
+function currentScore() {
+  let evSum = chosenList().reduce((s, c) => s + c.ev, 0);
+  if (readMode === "quick") evSum *= (QUICK_GAIN[relContext] || 1);
+  return scoreFrom(evSum);
+}
+
+/* Confidence: how wide a range we honestly admit to. */
+function confidence(chosen, score) {
+  const n = chosen.length;
+  const sumAbs = chosen.reduce((s, c) => s + Math.abs(c.ev), 0);
+  const soft = chosen.filter(c => c.unsure || c.ev === 0 || c.ambiguous).length;
+  let U = 11 - 0.5 * n - 0.25 * sumAbs + 1.0 * soft;
+  if (relContext === "afar") U += 5;
+  U = Math.max(4, Math.min(20, Math.round(U)));
+  const low  = Math.max(2,  score - U);
+  const high = Math.min(98, score + U);
+  return { U, low, high, n };
+}
+
+/* Too little to honestly call: few decisive signals AND low total evidence.
+   "I'm not sure" / faint-ambiguous answers don't count as decisive. */
+function isLowSignal(chosen) {
+  const decisive = chosen.filter(c => !c.unsure && Math.abs(c.ev) >= 1.0).length;
+  const sumAbs   = chosen.reduce((s, c) => s + Math.abs(c.ev), 0);
+  return decisive < 2 && sumAbs < 3.0;
+}
+
+/* Completion meter. */
+function updateProgress(done) {
+  if (done) { progFill.style.width = "100%"; progNum.textContent = "100%"; return; }
+  const answered = path.filter(s => s.optionIndex != null).length;
+  let remaining = 0, id = path.length ? path[path.length - 1].id : null;
+  const seq = quickSeq();
+  if (seq) {
+    const i = seq.indexOf(id);
+    remaining = i >= 0 ? (seq.length - i) : 0;
+  } else {
+    while (id && id !== "result") { remaining++; id = QUESTIONS[id].next; }
+  }
+  const total = answered + remaining;
+  const pct = total ? Math.round((answered / total) * 100) : 0;
+  progFill.style.width = pct + "%";
+  progNum.textContent = pct + "%";
+}
+
+function buildBlock(id, stepNumber) {
+  const q = QUESTIONS[id];
+  const block = document.createElement("section");
+  block.className = "block";
+  block.dataset.id = id;
+
+  const step = document.createElement("div");
+  step.className = "step-num";
+  step.innerHTML = `Step ${stepNumber} &nbsp;·&nbsp; <span class="q-cat">${q.category}</span>`;
+  block.appendChild(step);
+
+  const qText = document.createElement("div");
+  qText.className = "q-text";
+  qText.textContent = fill(q.text);
+  block.appendChild(qText);
+
+  if (q.sub) {
+    const sub = document.createElement("p");
+    sub.className = "q-sub";
+    sub.textContent = fill(q.sub);
+    block.appendChild(sub);
+  }
+
+  const opts = document.createElement("div");
+  opts.className = "options";
+  q.options.forEach((opt, oIndex) => {
+    const btn = document.createElement("button");
+    btn.className = "option-btn" + (opt.unsure ? " unsure" : "");
+    btn.textContent = fill(opt.label);
+    btn.onclick = () => selectOption(id, oIndex, btn);
+    opts.appendChild(btn);
+  });
+  block.appendChild(opts);
+
+  feedEl.appendChild(block);
+  requestAnimationFrame(() => block.classList.add("revealed"));
+  return block;
+}
+
+function selectOption(id, oIndex, btn) {
+  const q = QUESTIONS[id];
+  const opt = q.options[oIndex];
+  const block = btn.closest(".block");
+  const stepIdx = path.findIndex(s => s.id === id);
+  const changed = path[stepIdx]?.optionIndex !== oIndex;
+
+  if (changed) {
+    let sib = block.nextElementSibling;
+    while (sib) { const n = sib.nextElementSibling; sib.remove(); sib = n; }
+    resultEl.classList.remove("revealed");
+    resultEl.style.display = "none";
+    path = path.slice(0, stepIdx + 1);
+  }
+
+  path[stepIdx] = { id, optionIndex: oIndex };
+  [...block.querySelectorAll(".option-btn")].forEach((b, i) =>
+    b.classList.toggle("selected", i === oIndex));
+  block.classList.add("locked");
+
+  if (changed) {
+    const nextId = nextOf(id, opt);
+    if (nextId === "result") {
+      updateProgress(true);
+      showResult();
+    } else {
+      path.push({ id: nextId, optionIndex: null });
+      updateProgress(false);
+      const next = buildBlock(nextId, path.length);
+      setTimeout(() => next.scrollIntoView({ behavior: "smooth", block: "center" }), 130);
+    }
+  }
+}
+
+/* ---------- Band styling ---------- */
+function bandHead(score) {
+  if (score >= 80) return "🔥 The signals are loud";
+  if (score >= 64) return "💙 There's a real spark here";
+  if (score >= 48) return "🤔 Honestly, it's a coin-flip";
+  if (score >= 32) return "🫧 This reads more like friendship — for now";
+  return "🌧️ The interest isn't really showing yet";
+}
+function bandColors(score) {
+  if (score >= 80) return { a: "#ffd27f", b: "#ff9d6f" };
+  if (score >= 64) return { a: "#6fd3ff", b: "#36d399" };
+  if (score >= 48) return { a: "#4da6ff", b: "#6fd3ff" };
+  if (score >= 32) return { a: "#7aa0d0", b: "#4da6ff" };
+  return { a: "#ff6b8a", b: "#9aa8c8" };
+}
+
+/* ---------- Narrative ---------- */
+function joinReasons(arr, max) {
+  const items = arr.slice(0, max).map(c => c.reason);
+  if (items.length <= 1) return items[0] || "";
+  if (items.length === 2) return items[0] + " and " + items[1];
+  return items.slice(0, -1).join(", ") + ", and " + items[items.length - 1];
+}
+
+function buildNarrative(score, telling, warm, reds, wellbeingHits) {
+  const N = `<span class="nm">${crushName}</span>`;
+  const ctxPhrase = relContext === "online"
+    ? " — and remember, your whole read is built on a connection that mostly lives through a screen"
+    : "";
+  const lines = [];
+
+  let observer;
+  if (score >= 80)      observer = `they'd say ${N} is very likely into you`;
+  else if (score >= 64) observer = `they'd say ${N} probably likes you, with a little honest room for doubt`;
+  else if (score >= 48) observer = `they'd genuinely shrug — it could land either way`;
+  else if (score >= 32) observer = `they'd gently say this looks more like friendship than a crush right now`;
+  else                  observer = `they'd say the romantic interest just isn't showing yet`;
+  lines.push(`If a perceptive, level-headed friend watched you and ${N} for a couple of weeks${ctxPhrase}, ${observer}.`);
+
+  if (telling.length === 0 && warm.length > 0) {
+    lines.push(`Here's the honest catch, though: almost everything encouraging here — ${joinReasons(warm, 2)} — is also just how kind, sociable people treat everyone in their life. It's genuinely lovely. It is not, on its own, proof of a crush.`);
+  } else if (telling.length > 0 && warm.length > telling.length) {
+    lines.push(`A few things genuinely stand out — ${joinReasons(telling, 2)} — but stay clear-eyed: a lot of the warmth here, like ${joinReasons(warm, 1)}, is the kind of thing a good friend does too. Don't let the friendly stuff inflate the picture.`);
+  } else if (telling.length >= 3) {
+    lines.push(`What lifts this above wishful thinking is that several of the signals — ${joinReasons(telling, 3)} — are genuinely hard to explain as "just friends." Those are the ones to trust.`);
+  } else if (telling.length > 0) {
+    lines.push(`The signal worth trusting most is that ${joinReasons(telling, 2)} — the kind of thing people rarely do by accident.`);
+  }
+
+  if (reds.length >= 2) {
+    lines.push(`An outside eye wouldn't ignore the cooler signs either — ${joinReasons(reds, 2)}. Those are real, and they're exactly what's keeping this from being a sure thing.`);
+  } else if (reds.length === 1) {
+    lines.push(`The one thing pulling the other way is that ${joinReasons(reds, 1)} — worth staying honest about.`);
+  }
+
+  if (relContext === "afar") {
+    lines.push(`And the big asterisk: you've barely spoken, so this is really a read on <i>attraction from a distance</i>, not on whether ${N} likes <i>you</i>, the actual person they haven't met yet. Nothing here turns into an answer until there's a real, low-stakes conversation.`);
+  }
+
+  let advice;
+  if (score >= 80) advice = telling.length >= warm.length
+      ? `My honest read: you've gathered enough evidence. The kindest thing you can do for yourself now is make your interest known, gently and clearly.`
+      : `My honest read: it looks great — just walk in aware that you're leaning on warm-but-ambiguous signs, so keep the first move low-stakes and watch how ${N} responds.`;
+  else if (score >= 64) advice = `My honest read: lean in. Create one genuine reason for one-on-one time and pay attention to how ${N} meets it — that'll resolve the remaining doubt faster than any quiz.`;
+  else if (score >= 48) advice = `My honest read: you're working with half a picture. Gather more real, unhurried time together before you let yourself commit to either story.`;
+  else if (score >= 32) advice = `My honest read: don't build a narrative on this yet. One low-risk hangout will tell you more than re-reading old conversations ever will.`;
+  else advice = `My honest read: protect your peace. The signs aren't here right now — that can change with time, but it isn't something to pin your hopes on today.`;
+  lines.push(advice);
+
+  let html = lines.map(l => `<p class="read">${l}</p>`).join("");
+  if (wellbeingHits.length) {
+    html += `<p class="read soft">A gentler note, therapist-style: you told me ${joinReasons(wellbeingHits, 2)}. Whatever the percentage says, a connection that leaves you anxious or guessing deserves just as much of your attention as the question of whether they like you back. You're allowed to want to feel <i>steady</i>, not just chosen.</p>`;
+  }
+  return html;
+}
+
+/* ---------- Result ---------- */
+let lastResult = null;   // for the share card
+
+function showResult() {
+  const chosen = chosenList();
+  const score = currentScore();
+  const conf = confidence(chosen, score);
+  const lowSignal = isLowSignal(chosen);
+  const colors = lowSignal ? { a: "#9fb6da", b: "#6f86b0" } : bandColors(score);
+
+  const telling = [], warm = [], reds = [], neutral = [];
+  chosen.forEach(c => {
+    if (c.ev > 0) (c.ambiguous || c.ev < 1.0 ? warm : telling).push(c);
+    else if (c.ev < 0) reds.push(c);
+    else neutral.push(c);
+  });
+  telling.sort((a, b) => b.ev - a.ev);
+  warm.sort((a, b) => b.ev - a.ev);
+  reds.sort((a, b) => a.ev - b.ev);
+  const wellbeingHits = chosen.filter(c => c.wellbeing);
+
+  lastResult = {
+    name: crushName, score, low: conf.low, high: conf.high, lowSignal,
+    verdict: lowSignal ? "Too soon to tell" : bandHead(score),
+    topGreen: (telling[0] || warm[0] || {}).reason || "",
+    topRed: (reds[0] || {}).reason || "",
+    colors,
+  };
+
+  const li = (c, dot) => `<div class="signal"><span class="dot ${dot}"></span>${c.reason}</div>`;
+
+  let html;
+  if (lowSignal) {
+    html = `
+      <div class="result-head">
+        <div class="step-num" style="color:var(--accent-2);">The read on ${crushName}</div>
+        <div class="score-unknown" id="scoreNum">?</div>
+        <div class="verdict" id="verdictLine" style="color:${colors.a};">🌫️ Not enough to call yet</div>
+      </div>
+      <p class="read">Honestly? You didn't give me enough to put a fair number on this. Most of your answers were "not sure / haven't noticed," or signals too faint to lean on — and a confident percentage built on that would only mislead you. This isn't a failure. It just means the evidence isn't there <i>yet</i>.</p>
+      <p class="read">Here's what would actually tell you, if you pay attention over the next week or two:</p>
+      <div class="watch-list">
+        <div class="signal"><span class="dot green"></span>Who reaches out first — and whether ${crushName} ever starts things <i>without</i> you nudging.</div>
+        <div class="signal"><span class="dot green"></span>Whether ${crushName} brings you small things unprompted — a thought, a meme, "this reminded me of you."</div>
+        <div class="signal"><span class="dot green"></span>What flickers across ${crushName} when you mention someone else you might like.</div>
+        <div class="signal"><span class="dot green"></span>Whether the warmth is <i>steady</i>, or runs hot and cold week to week.</div>
+      </div>`;
+  } else {
+    html = `
+    <div class="result-head">
+      <div class="step-num" style="color:var(--accent-2);">The read on ${crushName}</div>
+      <div class="score-num" id="scoreNum">0%</div>
+      <div class="conf" id="confLine"></div>
+      <div class="result-meter"><div class="result-fill" id="resultFill"></div></div>
+      <div class="verdict" id="verdictLine" style="color:${colors.a};">${bandHead(score)}</div>
+    </div>
+    ${buildNarrative(score, telling, warm, reds, wellbeingHits)}`;
+  }
+
+  if (telling.length) {
+    html += `<div class="section-title green">💚 The clearest signs they're into you</div>
+             <p class="section-sub">Behaviors that are genuinely hard to chalk up to ordinary friendliness.</p>`
+         +  telling.map(c => li(c, "green")).join("");
+  }
+  if (warm.length) {
+    html += `<div class="section-title warm">💛 Warm — but could just be friendliness</div>
+             <p class="section-sub">Real positives, but the kind of thing kind, sociable people also do for friends.</p>`
+         +  warm.map(c => li(c, "warm")).join("");
+  }
+  if (reds.length) {
+    html += `<div class="section-title bad">❤️‍🩹 What gives me pause</div>
+             <p class="section-sub">Signals leaning the other way — the ones keeping this honest.</p>`
+         +  reds.map(c => li(c, "bad")).join("");
+  }
+  if (neutral.length) {
+    html += `<div class="section-title neu">🤍 Couldn't really read</div>`
+         +  neutral.map(c => li(c, "neu")).join("");
+  }
+
+  html += `
+    <p class="methodology">This isn't magic. It's a structured read of the patterns you described — weighing the hard-to-fake signals more than the friendly ones, never pretending to be certain, and showing you a range instead of a single number. The final word is always yours.</p>
+    <div class="share-row">
+      <button class="share-btn" id="shareBtn">📷 Save / share card</button>
+      <button class="share-btn" id="copyBtn">📋 Copy summary</button>
+    </div>
+    <button class="restart-btn" id="restart">Analyze someone else</button>`;
+
+  resultEl.innerHTML = html;
+  resultEl.style.display = "block";
+
+  document.getElementById("restart").onclick = restart;
+  document.getElementById("shareBtn").onclick = shareCard;
+  document.getElementById("copyBtn").onclick = copySummary;
+
+  if (!lowSignal) recordRead(crushName, score, conf.low, conf.high);
+
+  runReveal(score, conf, colors, lowSignal);
+}
+
+/* ---------- Suspense reveal ---------- */
+let audioCtx = null;
+function playChime() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+    [523.25, 659.25, 783.99].forEach((f, i) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      o.connect(g); g.connect(audioCtx.destination);
+      const t = now + i * 0.09;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.12, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+      o.start(t); o.stop(t + 0.55);
+    });
+  } catch (e) { /* audio not available — fine */ }
+}
+
+function countUp(score, conf, colors) {
+  const num = document.getElementById("scoreNum");
+  const meter = document.getElementById("resultFill");
+  num.style.background = `linear-gradient(90deg,${colors.a},${colors.b})`;
+  num.style.webkitBackgroundClip = "text"; num.style.backgroundClip = "text"; num.style.color = "transparent";
+  meter.style.background = `linear-gradient(90deg,${colors.a},${colors.b})`;
+  playChime();
+  const dur = 1400, t0 = performance.now();
+  function tick(t) {
+    const p = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - p, 3);
+    num.textContent = Math.round(score * e) + "%";
+    meter.style.width = (score * e) + "%";
+    if (p < 1) requestAnimationFrame(tick);
+    else {
+      num.textContent = score + "%";
+      meter.style.width = score + "%";
+      document.getElementById("confLine").textContent =
+        `likely ${conf.low}–${conf.high}% · based on ${conf.n} signal${conf.n === 1 ? "" : "s"}`;
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+function runReveal(score, conf, colors, lowSignal) {
+  const ov = document.createElement("div");
+  ov.id = "analyzing";
+  ov.innerHTML = `<div class="analyzing-text">Reading the signals<span class="dots"></span></div>
+                  <div class="analyzing-sub">weighing what matters, ignoring what doesn't…</div>`;
+  document.body.appendChild(ov);
+  document.getElementById("bubbles").classList.add("turbo");
+
+  setTimeout(() => {
+    ov.style.opacity = "0";
+    document.getElementById("bubbles").classList.remove("turbo");
+    setTimeout(() => ov.remove(), 400);
+    resultEl.classList.add("revealed");
+    resultEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!lowSignal) setTimeout(() => countUp(score, conf, colors), 360);
+  }, 1700);
+}
+
+/* ---------- Share card (canvas → image) ---------- */
+function wrapText(ctx, text, x, y, maxW, lh) {
+  const words = text.split(" ");
+  let line = "";
+  for (const w of words) {
+    const test = line ? line + " " + w : w;
+    if (ctx.measureText(test).width > maxW && line) { ctx.fillText(line, x, y); line = w; y += lh; }
+    else line = test;
+  }
+  ctx.fillText(line, x, y);
+  return y;
+}
+
+function drawCard() {
+  const c = document.getElementById("cardCanvas");
+  const ctx = c.getContext("2d");
+  const W = c.width, H = c.height, r = lastResult;
+
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#08142e"); g.addColorStop(1, "#15294f");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = "rgba(255,255,255,0.06)";
+  for (let i = 0; i < 18; i++) {
+    const rad = 12 + Math.random() * 70;
+    ctx.beginPath(); ctx.arc(Math.random() * W, Math.random() * H, rad, 0, Math.PI * 2); ctx.fill();
+  }
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#93a9d1";
+  ctx.font = "600 38px 'Segoe UI', sans-serif";
+  ctx.fillText("DO THEY LIKE YOU?", W / 2, 150);
+
+  ctx.fillStyle = "#eaf2ff";
+  ctx.font = "800 64px 'Segoe UI', sans-serif";
+  ctx.fillText(`The read on ${r.name}`, W / 2, 250);
+
+  const grd = ctx.createLinearGradient(W / 2 - 200, 0, W / 2 + 200, 0);
+  grd.addColorStop(0, r.colors.a); grd.addColorStop(1, r.colors.b);
+  ctx.fillStyle = grd;
+  if (r.lowSignal) {
+    ctx.font = "800 240px 'Segoe UI', sans-serif";
+    ctx.fillText("?", W / 2, 560);
+    ctx.fillStyle = "#93a9d1";
+    ctx.font = "400 40px 'Segoe UI', sans-serif";
+    ctx.fillText("not enough to call yet", W / 2, 630);
+  } else {
+    ctx.font = "800 240px 'Segoe UI', sans-serif";
+    ctx.fillText(`${r.score}%`, W / 2, 560);
+    ctx.fillStyle = "#93a9d1";
+    ctx.font = "400 40px 'Segoe UI', sans-serif";
+    ctx.fillText(`likely ${r.low}–${r.high}%`, W / 2, 630);
+  }
+
+  ctx.fillStyle = "#eaf2ff";
+  ctx.font = "700 54px 'Segoe UI', sans-serif";
+  wrapText(ctx, r.verdict, W / 2, 740, W - 160, 64);
+
+  ctx.font = "400 38px 'Segoe UI', sans-serif";
+  let y = 900;
+  if (r.topGreen) {
+    ctx.fillStyle = "#36d399"; ctx.fillText("✓ strongest sign", W / 2, y); y += 56;
+    ctx.fillStyle = "#cdddf6"; y = wrapText(ctx, r.topGreen, W / 2, y, W - 180, 50) + 80;
+  }
+  if (r.topRed) {
+    ctx.fillStyle = "#ff6b8a"; ctx.fillText("⚠ biggest doubt", W / 2, y); y += 56;
+    ctx.fillStyle = "#cdddf6"; y = wrapText(ctx, r.topRed, W / 2, y, W - 180, 50);
+  }
+
+  ctx.fillStyle = "#5c739c";
+  ctx.font = "italic 32px 'Segoe UI', sans-serif";
+  ctx.fillText("a structured read — never certain · the final word is yours", W / 2, H - 70);
+  return c;
+}
+
+function shareCard() {
+  const c = drawCard();
+  c.toBlob(async (blob) => {
+    const file = new File([blob], `crush-read-${lastResult.name}.png`, { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: "Do They Like You?",
+          text: `My read on ${lastResult.name}: ${lastResult.score}%` });
+        return;
+      } catch (e) { /* fell through to download */ }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `crush-read-${lastResult.name}.png`;
+    a.click(); URL.revokeObjectURL(url);
+  }, "image/png");
+}
+
+function copySummary() {
+  const r = lastResult;
+  const text = r.lowSignal
+    ? `Do They Like You? — my read on ${r.name}: not enough signal to call it yet.`
+    : `Do They Like You? — my read on ${r.name}: ${r.score}% (likely ${r.low}–${r.high}%). `
+        + `${r.verdict}.` + (r.topGreen ? ` Strongest sign: ${r.topGreen}.` : "");
+  const btn = document.getElementById("copyBtn");
+  const done = () => { btn.textContent = "✓ Copied!"; setTimeout(() => btn.textContent = "📋 Copy summary", 1800); };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, done);
+  else done();
+}
+
+/* ---------- History (localStorage) ---------- */
+function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch (e) { return []; } }
+function saveHistory(arr) { try { localStorage.setItem(HISTORY_KEY, JSON.stringify(arr)); } catch (e) {} }
+function recordRead(name, score, low, high) {
+  const h = loadHistory().filter(e => e.name.toLowerCase() !== name.toLowerCase());
+  h.push({ name, score, low, high, ts: Date.now() });
+  saveHistory(h);
+  renderHistory();
+}
+function bandEmoji(score) { return bandHead(score).split(" ")[0]; }
+
+function renderHistory() {
+  const h = loadHistory().sort((a, b) => b.score - a.score);
+  if (!h.length) { historyEl.style.display = "none"; historyEl.innerHTML = ""; return; }
+  historyEl.style.display = "block";
+  historyEl.innerHTML = `<h3>Your past reads</h3>` + h.map(e => `
+    <div class="hrow">
+      <span class="hemoji">${bandEmoji(e.score)}</span>
+      <span class="hname">${e.name}</span>
+      <span class="hbar"><i style="width:${e.score}%"></i></span>
+      <span class="hpct">${e.score}%</span>
+      <button class="hdel" data-name="${e.name}" title="Remove">×</button>
+    </div>`).join("") + `<button class="hclear" id="hclear">clear all</button>`;
+
+  [...historyEl.querySelectorAll(".hdel")].forEach(b => b.onclick = () => {
+    saveHistory(loadHistory().filter(e => e.name.toLowerCase() !== b.dataset.name.toLowerCase()));
+    renderHistory();
+  });
+  document.getElementById("hclear").onclick = () => { saveHistory([]); renderHistory(); };
+}
+
+/* ---------- Flow control ---------- */
+function restart() {
+  path = []; relContext = null; readMode = "deep";
+  feedEl.innerHTML = "";
+  resultEl.classList.remove("revealed");
+  resultEl.style.display = "none";
+  topbarEl.style.display = "none";
+  introEl.style.display = "block";
+  document.getElementById("nameInput").value = "";
+  [...document.querySelectorAll(".ctx-btn")].forEach(b => b.classList.remove("selected"));
+  [...document.querySelectorAll(".mode-btn")].forEach(b => b.classList.toggle("selected", b.dataset.mode === "deep"));
+  document.getElementById("beginBtn").disabled = true;
+  crushName = "your crush";
+  renderHistory();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function begin() {
+  if (!relContext) return;
+  crushName = document.getElementById("nameInput").value.trim() || "your crush";
+  introEl.style.display = "none";
+  topbarEl.style.display = "block";
+  const seq = quickSeq();
+  const startId = seq ? seq[0] : START_BY_CONTEXT[relContext];
+  path = [{ id: startId, optionIndex: null }];
+  updateProgress(false);
+  const first = buildBlock(startId, 1);
+  setTimeout(() => first.scrollIntoView({ behavior: "smooth", block: "center" }), 130);
+}
+
+[...document.querySelectorAll(".ctx-btn")].forEach(btn => {
+  btn.onclick = () => {
+    relContext = btn.dataset.ctx;
+    [...document.querySelectorAll(".ctx-btn")].forEach(b => b.classList.toggle("selected", b === btn));
+    document.getElementById("beginBtn").disabled = false;
+  };
+});
+[...document.querySelectorAll(".mode-btn")].forEach(btn => {
+  btn.onclick = () => {
+    readMode = btn.dataset.mode;
+    [...document.querySelectorAll(".mode-btn")].forEach(b => b.classList.toggle("selected", b === btn));
+  };
+});
+document.getElementById("beginBtn").onclick = begin;
+document.getElementById("nameInput").addEventListener("keydown", e => { if (e.key === "Enter" && relContext) begin(); });
+
+/* ---------- Bubble background ---------- */
+(function spawnBubbles() {
+  const host = document.getElementById("bubbles");
+  for (let i = 0; i < 22; i++) {
+    const b = document.createElement("div");
+    b.className = "bubble";
+    const size = 14 + Math.random() * 64;
+    b.style.width = b.style.height = size + "px";
+    b.style.left = Math.random() * 100 + "vw";
+    b.style.animationDuration = (10 + Math.random() * 16) + "s";
+    b.style.animationDelay = (-Math.random() * 20) + "s";
+    host.appendChild(b);
+  }
+})();
+
+renderHistory();
+
+/* ---------- Installable PWA: register the service worker ---------- */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => { /* offline support unavailable — fine */ });
+  });
+}
+</script>
+</body>
+</html>
