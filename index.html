@@ -958,10 +958,19 @@ function renderUpgrades(){
       <div class="icon" style="font-size:30px;">${u.emoji}</div>
       <div class="info"><div class="name">${u.name} ${owned?'✅':''}</div><div class="desc">${u.desc}</div></div>
       ${owned?`<span class="owned" style="font-size:14px;color:var(--good)">Owned</span>`
-        :`<button class="buy alt" data-up="${u.id}" ${state.money>=u.cost?"":"disabled"}>${money(u.cost)}</button>`}
+        :`<button class="buy alt" id="upbuy-${u.id}" data-up="${u.id}" ${state.money>=u.cost?"":"disabled"}>${money(u.cost)}</button>`}
     </div>`;
   }
   $("panel-upgrades").innerHTML=html;
+}
+// Per-tick refresh that only toggles affordability in place — never rebuilds the
+// panel's innerHTML, so a button can't be destroyed out from under an in-flight tap.
+function updateUpgrades(){
+  for(const u of UPGRADE_DEFS){
+    if(state.upgrades[u.id]) continue;
+    const btn=$("upbuy-"+u.id); if(!btn) continue;
+    btn.disabled=state.money<u.cost;
+  }
 }
 
 /* ---------- Gacha tab (Talismans) ---------- */
@@ -987,11 +996,11 @@ function renderGacha(){
     let btns="";
     for(const c of ROLL_COUNTS){
       const cost=per*c, can=state.money>=cost;
-      btns+=`<button class="buy" data-roll="${b.id}" data-count="${c}" ${can?"":"disabled"} style="flex:1;min-width:70px;">x${c}<br>${money(cost)}</button>`;
+      btns+=`<button class="buy" id="roll-${b.id}-${c}" data-roll="${b.id}" data-count="${c}" ${can?"":"disabled"} style="flex:1;min-width:70px;">x${c}<br>${money(cost)}</button>`;
     }
     html+=`<div class="propgroup" style="--gc:${TAL_RARITY['legendary'].color};">
       <div class="propgrouphead" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>${b.emoji} ${b.name}</span><span style="font-size:11px;color:var(--ink2);">${money(per)} / roll</span></div>
+        <span>${b.emoji} ${b.name}</span><span id="rollper-${b.id}" style="font-size:11px;color:var(--ink2);">${money(per)} / roll</span></div>
       <div class="sub" style="margin:0 0 8px;font-size:11px;line-height:1.7;">${oddsStr}</div>
       <div class="sub" style="margin:0 0 8px;font-size:11px;">🎟️ Pity: ${pity}/${b.pity} — guaranteed ${TAL_RARITY['legendary'].emoji}Legendary+ in <b>${toPity}</b> roll${toPity===1?"":"s"}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;">${btns}</div>
@@ -1019,6 +1028,20 @@ function renderGacha(){
     </div>`;
   }
   $("panel-gacha").innerHTML=html;
+}
+// Per-tick refresh: roll costs scale with progression, so update the cost labels and
+// affordability in place. Collection/pity only change on a roll (handled by renderGacha).
+function updateGacha(){
+  for(const b of BANNERS){
+    const per=rollCost(b.id);
+    const ph=$("rollper-"+b.id); if(ph) ph.textContent=money(per)+" / roll";
+    for(const c of ROLL_COUNTS){
+      const btn=$("roll-"+b.id+"-"+c); if(!btn) continue;
+      const cost=per*c;
+      btn.innerHTML="x"+c+"<br>"+money(cost);
+      btn.disabled=state.money<cost;
+    }
+  }
 }
 
 function miceFromRebirth(){ if(state.lifetime<5e6) return 0; return Math.floor(Math.pow(state.lifetime/5e6,0.45)*miceSkillBonus()); }
@@ -1223,12 +1246,21 @@ function renderProperty(){
         <div class="info"><div class="name">${p.name}</div>
           <div class="desc">${lvl>0?propLevelIcon(lvl)+" · ":""}+${Math.round(p.bonus*100)}%/lvl · Lv ${lvl}/${PROP_MAX_LVL}</div></div>
         ${maxed?`<span class="owned" style="font-size:13px;color:var(--good)">MAX</span>`
-          :`<button class="buy" data-prop="${i}" ${can?"":"disabled"}>${lvl===0?"Buy":"Build"}<br>${money(cost)}</button>`}
+          :`<button class="buy" id="propbuy-${i}" data-prop="${i}" ${can?"":"disabled"}>${lvl===0?"Buy":"Build"}<br>${money(cost)}</button>`}
       </div>`;
     });
     html+=`</div>`;
   }
   $("panel-property").innerHTML=html;
+}
+// Per-tick refresh: only update affordability in place (cost depends on level, not
+// money, so it doesn't change between purchases). Avoids rebuilding innerHTML.
+function updateProperty(){
+  PROPERTY_DEFS.forEach((p,i)=>{
+    const lvl=state.properties[i]||0; if(lvl>=PROP_MAX_LVL) return;
+    const btn=$("propbuy-"+i); if(!btn) return;
+    btn.disabled=state.money<propCost(i);
+  });
 }
 function buyProperty(i){
   const lvl=state.properties[i]||0; if(lvl>=PROP_MAX_LVL) return;
@@ -1363,9 +1395,9 @@ function tick(){
   renderStats();
   updateFrenzyBanner();
   if(currentTab==="cats") updateCats();
-  else if(currentTab==="upgrades") renderUpgrades();
-  else if(currentTab==="property") renderProperty();
-  else if(currentTab==="gacha" && tickN%10===0) renderGacha();  // refresh costs ~every 1s
+  else if(currentTab==="upgrades") updateUpgrades();
+  else if(currentTab==="property") updateProperty();
+  else if(currentTab==="gacha" && tickN%10===0) updateGacha();  // refresh costs ~every 1s
   if((++tickN)%20===0) checkAchievements();   // ~every 2s
 }
 
