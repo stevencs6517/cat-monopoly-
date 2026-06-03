@@ -174,12 +174,14 @@
   }
   input.nameinput:focus{outline:none;border-color:var(--pink);}
 
+  /* The overlay is the scroll container (reliable on mobile, where 100vh exceeds the visible
+     area behind the browser chrome). The modal centres with margin:auto and, when it's taller
+     than the screen, the overlay scrolls so the buttons are always reachable. */
   .overlay{position:fixed;inset:0;background:rgba(122,90,134,.35);backdrop-filter:blur(3px);
-    display:none;align-items:center;justify-content:center;padding:16px;z-index:50;}
+    display:none;padding:16px;z-index:50;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
   .overlay.show{display:flex;}
   .modal{background:var(--panel);border:3px solid #ffd9ee;border-radius:26px;padding:24px;
-    max-width:480px;width:100%;box-shadow:0 24px 60px rgba(122,90,134,.4);text-align:left;
-    max-height:calc(100vh - 32px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+    max-width:480px;width:100%;box-shadow:0 24px 60px rgba(122,90,134,.4);text-align:left;margin:auto;}
   .modal h2{margin-top:0;color:var(--pink-d);}
   textarea{width:100%;height:110px;background:#fdf3fa;color:var(--lav);border:2px solid #f0dcea;
     border-radius:14px;padding:10px;font-family:monospace;font-size:12px;resize:vertical;}
