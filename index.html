@@ -382,6 +382,15 @@
   </div>
 </div>
 
+<div class="overlay" id="updateModal">
+  <div class="modal" style="text-align:center;">
+    <h2 style="text-align:center;margin:4px 0 8px;">✨ What's New</h2>
+    <p class="sub" style="margin:0 0 10px;font-weight:700;">A few fixes to make Cat Monopoly smoother ♡</p>
+    <div id="updateList" style="text-align:left;"></div>
+    <div class="row"><button class="smallbtn" id="closeUpdate" style="flex:1;">Yay! ♡</button></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -1179,29 +1188,41 @@ function checkAchievements(){
   for(const a of ACHIEVEMENTS){
     if(!state.achievements[a.id] && a.cond()){ state.achievements[a.id]=true; any=true; toast("🏅 Achievement: "+a.name+"!"); }
   }
-  if(any){ renderStats(); if(currentTab==="goals") renderGoals(); }
+  // Refresh only the (display-only) achievement list — never the interactive daily
+  // button — so an unlock firing on the tick can't destroy a button mid-tap.
+  if(any){ renderStats(); if(currentTab==="goals") updateGoalsAchievements(); }
   return any;
 }
-function renderGoals(){
-  const today=new Date().toDateString();
-  const canDaily = state.lastDaily!==today;
-  const unlocked=ACHIEVEMENTS.filter(a=>state.achievements[a.id]).length;
-  const rows=ACHIEVEMENTS.map(a=>{
+function goalsRowsHtml(){
+  return ACHIEVEMENTS.map(a=>{
     const got=!!state.achievements[a.id];
     return `<div class="item ${got?'':'locked'}">
       <div class="icon" style="font-size:28px;">${got?a.emoji:'🔒'}</div>
       <div class="info"><div class="name">${a.name} ${got?'✅':''}</div><div class="desc">${a.desc} · +${Math.round(a.bonus*100)}% income</div></div>
     </div>`;
   }).join("");
+}
+function goalsSummaryHtml(){
+  const unlocked=ACHIEVEMENTS.filter(a=>state.achievements[a.id]).length;
+  return `🏅 Achievements — ${unlocked}/${ACHIEVEMENTS.length} · <b>+${Math.round((achievementMult()-1)*100)}%</b> income`;
+}
+function renderGoals(){
+  const today=new Date().toDateString();
+  const canDaily = state.lastDaily!==today;
   $("panel-goals").innerHTML=`
     <div class="item" style="flex-direction:column;align-items:stretch;gap:8px;">
       <div class="name" style="text-align:center;">🎁 Daily Reward</div>
       <div class="desc" style="text-align:center;">Come back each day for a kitty bonus!</div>
       <button class="buy alt" id="dailyBtn" ${canDaily?'':'disabled'}>${canDaily?"🎁 Claim today's reward":'✅ Come back tomorrow'}</button>
     </div>
-    <div class="sub" style="text-align:center;margin:8px 0;">🏅 Achievements — ${unlocked}/${ACHIEVEMENTS.length} · <b>+${Math.round((achievementMult()-1)*100)}%</b> income</div>
-    ${rows}`;
+    <div class="sub" id="goalsSummary" style="text-align:center;margin:8px 0;">${goalsSummaryHtml()}</div>
+    <div id="goalsList">${goalsRowsHtml()}</div>`;
   const db=$("dailyBtn"); if(db) db.onclick=claimDaily;
+}
+// In-place refresh of the achievement list/summary (no interactive nodes inside).
+function updateGoalsAchievements(){
+  const sum=$("goalsSummary"); if(sum) sum.innerHTML=goalsSummaryHtml();
+  const list=$("goalsList"); if(list) list.innerHTML=goalsRowsHtml();
 }
 function claimDaily(){
   const today=new Date().toDateString();
@@ -1560,9 +1581,39 @@ function maybeShowMobileTip(){
   }
 }
 
+/* ---------- "What's New" update log (shown once per version) ---------- */
+const UPDATE_LOG_KEY="catMonopolySeenUpdate";
+const UPDATE_VERSION="2026-06-03";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_LOG=[
+  "🐛 <b>Fixed laggy / unresponsive taps</b> on the <b>Upgrades</b>, <b>Estates</b> &amp; <b>Gacha</b> menus — buttons used to get rebuilt while you were tapping, so taps sometimes did nothing. Every tap lands now! ♡",
+  "🏅 Smoothed out the <b>Goals</b> tab too — claiming your daily reward won't get interrupted when an achievement pops.",
+  "⚡ Menus are lighter on the game loop, so the whole game feels snappier."
+];
+function maybeShowUpdateLog(){
+  try{ if(localStorage.getItem(UPDATE_LOG_KEY)===UPDATE_VERSION) return false; }catch(e){}
+  $("updateList").innerHTML=UPDATE_LOG.map(x=>`<div class="tut-step"><div class="tut-txt">${x}</div></div>`).join("");
+  $("updateModal").classList.add("show");
+  return true;
+}
+function dismissUpdateLog(){
+  $("updateModal").classList.remove("show");
+  try{ localStorage.setItem(UPDATE_LOG_KEY,UPDATE_VERSION); }catch(e){}
+  maybeShowMobileTip();   // continue the boot popup chain
+}
+$("closeUpdate").addEventListener("click",dismissUpdateLog);
+// Boot popup order: "Welcome back" (offline) → "What's New" → "Play on mobile" tip.
+function showBootPopups(){
+  const next=()=>{ if(!maybeShowUpdateLog()) maybeShowMobileTip(); };
+  if($("welcomeModal").classList.contains("show")){
+    $("closeWelcome").addEventListener("click",()=>setTimeout(next,300),{once:true});
+  } else {
+    setTimeout(next,400);
+  }
+}
+
 /* ---------- Boot ---------- */
 load(); applyOffline(); checkAchievements(); setActiveTab(); updateMascot(); renderAll();
-maybeShowMobileTip();
+showBootPopups();
 lastTick=Date.now();
 setInterval(tick,100);
 setInterval(save,10000);
