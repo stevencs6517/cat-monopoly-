@@ -659,6 +659,26 @@
   </div>
 </div>
 
+  <!-- ===== SECRET ADMIN MODAL ===== -->
+<div class="overlay" id="adminModal">
+  <div class="modal" style="text-align:center;">
+    <h2 style="text-align:center;margin:4px 0 8px;">🛠️ Secret Admin Panel</h2>
+    <p class="sub" style="margin:0 0 10px;">Enter the passkey to access developer tools.</p>
+    
+    <input type="password" class="nameinput" id="adminPasskeyInput" placeholder="Enter Passkey..." style="margin-bottom:12px;">
+    
+    <div id="adminMenuControls" style="display:none; flex-direction:column; gap:8px; margin-bottom:12px;">
+      <button class="buy alt" id="btnAdminMoney">💰 Give Max Money</button>
+      <button class="buy alt" id="btnAdminRaid">👹 Force Spawn Raid Boss</button>
+      <button class="buy alt" id="btnAdminScrolls">📜 Give Max Scrolls</button>
+    </div>
+
+    <div class="row">
+      <button class="smallbtn active" id="verifyAdminBtn" style="flex:1;">🔓 Unlock</button>
+      <button class="smallbtn" id="closeAdminBtn" style="flex:1;">Close</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -4214,7 +4234,73 @@ $("panel-reforge").addEventListener("click",e=>{
   const lk=e.target.closest("[data-lock]"); if(lk){ const p=lk.dataset.lock.split(":"); toggleLock(p[0],p[1]); return; }
   const btn=e.target.closest("[data-reforge]"); if(btn) reforgeTalisman(btn.dataset.reforge);
 });
+/* ---------- Secret Admin Menu ---------- */
+let headerTaps = 0;
+let headerTapTimer = null;
 
+// Listen for clicks/taps on the main header h1
+document.querySelector("header h1").addEventListener("click", () => {
+  headerTaps++;
+  clearTimeout(headerTapTimer);
+  
+  // Reset the tap counter if 2 seconds pass without a tap
+  headerTapTimer = setTimeout(() => { headerTaps = 0; }, 2000);
+  
+  // 7 fast taps opens the menu
+  if (headerTaps >= 7) {
+    headerTaps = 0;
+    $("adminPasskeyInput").value = "";
+    $("adminPasskeyInput").style.display = "block";
+    $("adminMenuControls").style.display = "none";
+    $("verifyAdminBtn").style.display = "block";
+    $("adminModal").classList.add("show");
+  }
+});
+
+// Close Button
+$("closeAdminBtn").addEventListener("click", () => $("adminModal").classList.remove("show"));
+$("adminModal").addEventListener("click", e => { if(e.target.id === "adminModal") $("adminModal").classList.remove("show"); });
+
+// Verify Passkey
+$("verifyAdminBtn").addEventListener("click", () => {
+  const pk = $("adminPasskeyInput").value;
+  
+  // Change "AdminKitten2026" to whatever password you want
+  if (pk === "AdminKitten2026") {
+    toast("🔓 Admin Access Granted!");
+    $("adminPasskeyInput").style.display = "none";
+    $("verifyAdminBtn").style.display = "none";
+    $("adminMenuControls").style.display = "flex";
+  } else {
+    toast("❌ Incorrect Passkey");
+  }
+});
+
+// Cheat Buttons Action Listeners
+$("btnAdminMoney").addEventListener("click", () => {
+  state.money = 9e99; 
+  state.lifetime = 9e99;
+  renderAll(); 
+  save(); 
+  toast("💰 Max Money Granted!");
+});
+
+$("btnAdminRaid").addEventListener("click", () => {
+  spawnRaidBoss();
+  $("adminModal").classList.remove("show");
+  toast("👹 Raid Boss Spawned!");
+});
+
+$("btnAdminScrolls").addEventListener("click", () => {
+  state.scrolls.basic = 999; 
+  state.scrolls.advanced = 999; 
+  state.scrolls.pity = 999;
+  renderStats(); 
+  save(); 
+  if(currentTab === "gacha") updateGacha();
+  toast("📜 Max Scrolls Granted!");
+});
+  
 $("saveBtn").addEventListener("click",()=>{ save(); toast("Game saved 💾"); });
 $("keyBtn").addEventListener("click",()=>{ save(); $("settingsModal").classList.remove("show"); $("keyText").value=encode(state); $("keyModal").classList.add("show"); });
 $("closeKey").addEventListener("click",()=>$("keyModal").classList.remove("show"));
