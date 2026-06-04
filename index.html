@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -510,6 +511,7 @@ if("serviceWorker" in navigator){
 const SAVE_KEY = "catMonopolySave_v4";   // v4: rebirths reset to 0 globally; estates reset on rebirth; lofi music
 const LB_KEY   = "catMonopolyLB_v2";     // bumped -> clears the local (offline) leaderboard too
 const VERSION  = 4;
+const WIPE_V1_KEY = "catMonopolyWipe_v1"; // one-time wipe: resets cats/money/upgrades/skills for all existing saves
 const OFFLINE_CAP_HOURS = 12;
 const COST_GROWTH = 1.17;        // each additional cat of a tier costs more
 const CAT_SOFT_CAP = 50;         // beyond this many of ONE tier, extra cats earn far less
@@ -1095,7 +1097,7 @@ function upgradeComboBonus(){ let b=0; for(const u of UPGRADE_DEFS){ if(u.comboB
 function upgradeComboCap(){ let b=0; for(const u of UPGRADE_DEFS){ if(u.comboCap&&state.upgrades[u.id]) b+=u.comboCap; } return b; }
 function upgradeTapShare(){ let b=0; for(const u of UPGRADE_DEFS){ if(u.tapShare&&state.upgrades[u.id]) b+=u.tapShare; } return b; }
 // effective combo multiplier considering comboCap upgrades
-function effectiveComboCap(){ return COMBO_MAX + upgradeComboCap(); }
+function effectiveComboCap(){ return COMBO_MAX; }  // hard cap — upgrades no longer extend it
 function effectiveComboMult(){
   if(Date.now()-_comboLast > buildComboWindow() || _combo<2) return 1;
   const effCombo = Math.max(0, _combo - upgradeComboBonus()); // bonus makes it feel like higher combo
@@ -1130,10 +1132,10 @@ function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProdu
    Chaining taps quickly builds a combo that multiplies the value (up to COMBO cap). The whole
    system is bounded by the 14-tap/sec anti-autoclicker cap, so even fully maxed an active
    tapper roughly *doubles* their rate while present — a real alternative, never a runaway. */
-const COMBO_WINDOW = 1500;     // ms — tap again within this to keep the streak alive
-const COMBO_MAX    = 250;      // combo length where the base multiplier caps (x2.5)
-const COMBO_STEP   = 0.006;    // +0.6% tap value per combo (250 * 0.006 = 1.5 => x2.5 total)
-const COMBO_OVER_STEP = 0.0002;// +0.02% per combo PAST 250 (every 500 extra = +0.1)
+const COMBO_WINDOW = 2500;     // ms — tap again within this to keep the streak alive
+const COMBO_MAX    = 10;       // combo length where the multiplier caps (x2.5 at 10 hits)
+const COMBO_STEP   = 0.15;     // +15% tap value per combo (10 * 0.15 = 1.5 => x2.5 total)
+const COMBO_OVER_STEP = 0;     // no further gain past the cap
 const TAP_SHARE_BASE = 0.015;  // base: each tap is worth ~1.5% of one second of idle income
 let _combo = 0, _comboLast = 0;            // ephemeral streak (not saved)
 function tapShare(){ return TAP_SHARE_BASE + 0.0015*(state.skills.tap||0) + upgradeTapShare(); }   // Tap Power deepens it
@@ -1568,7 +1570,7 @@ function renderRebirth(){
 /* ---------- Leaderboard (local + optional global Supabase) ---------- */
 function loadLB(){ try{ return JSON.parse(localStorage.getItem(LB_KEY))||[]; }catch(e){ return []; } }
 function saveLB(arr){ try{ localStorage.setItem(LB_KEY, JSON.stringify(arr)); }catch(e){} }
-function myScore(){ return Math.floor(state.totalEarned||state.lifetime||0); }
+function myScore(){ return Math.floor(state.lifetime||0); }
 
 // --- Supabase REST calls (only used when ONLINE) ---
 async function fetchTopScores(){
@@ -1608,7 +1610,8 @@ function recordLocal(entry){
   let arr=loadLB();
   const idx=arr.findIndex(e=>(e.name||"").toLowerCase()===(entry.name||"").toLowerCase());
   const local={ ...entry, date:Date.now() };
-  if(idx>=0){ if(entry.lifetime>=arr[idx].lifetime) arr[idx]=local; } else arr.push(local);
+  // Always overwrite own entry — score resets to 0 on rebirth, so we never guard with >=
+  if(idx>=0){ arr[idx]=local; } else arr.push(local);
   arr.sort((a,b)=>b.lifetime-a.lifetime); saveLB(arr.slice(0,25));
 }
 // Auto-publish the current run under the player's locked name. Runs on a 60s timer (so the
@@ -1646,8 +1649,8 @@ function lbRows(arr){
   return arr.map((e,i)=>`
     <div class="lbrow ${i<3?'lb'+(i+1):''} ${e.name===state.name?'me':''}">
       <div class="rank">${medal[i]||("#"+(i+1))}</div>
-      <div class="who"><b>${i===0?'👑 ':''}${escapeHtml(safeName(e.name))}</b><div class="meta">✨ ${e.rebirths} rebirths · ⏱ ${fmtTime(e.time)}</div></div>
-      <div class="val">${money(e.lifetime)}</div>
+      <div class="who"><b>${i===0?'👑 ':''}${escapeHtml(safeName(e.name))}</b><div class="meta">✨ ${e.rebirths} rebirth${e.rebirths===1?'':'s'} · ⏱ ${fmtTime(e.time)}</div></div>
+      <div class="val" style="text-align:right;">${money(e.lifetime)}${e.rebirths>0?`<div style="font-size:11px;color:var(--lav);font-weight:700;">+${e.rebirths} ✨</div>`:''}</div>
     </div>`).join("");
 }
 
@@ -1655,7 +1658,7 @@ function renderRanks(){
   const named = !!(state.name && state.name.trim());
   $("panel-ranks").innerHTML=`
     <div class="item" style="flex-direction:column;align-items:stretch;gap:8px;">
-      <div class="sub" style="margin:0;">Your run</div>
+      <div class="sub" style="margin:0;">Your run <span style="font-size:11px;color:var(--ink2);">(resets on rebirth · +✨ rebirths carry over)</span></div>
       <div style="display:flex;justify-content:space-between;font-weight:700;">
         <span>💰 ${money(myScore())}</span><span>✨ ${state.rebirths}</span><span>⏱ ${fmtTime(state.timePlayed)}</span>
       </div>
@@ -1666,7 +1669,7 @@ function renderRanks(){
         : `<input class="nameinput" id="lbName" maxlength="16" placeholder="Choose your name — you only pick once!">
            <button class="buy alt" id="lbSetName">${ONLINE?"🌍 Set name &amp; join leaderboard":"🏆 Set my name"}</button>`}
     </div>
-    <div class="sub" style="text-align:center;margin:4px 0 10px;">${ONLINE?"🌍 Global Leaderboard · live":"🏆 Local Leaderboard (this device)"}</div>
+    <div class="sub" style="text-align:center;margin:4px 0 10px;">${ONLINE?"🌍 Global Leaderboard · current run · resets on rebirth":"🏆 Local Leaderboard · current run · resets on rebirth"}</div>
     <div id="lbList"><p class="sub" style="text-align:center;">${ONLINE?"Loading global ranks… ⋆":""}</p></div>
     <div style="text-align:center;margin-top:10px;">${ONLINE?"":'<button class="smallbtn danger" id="lbClear">Clear leaderboard</button>'}</div>`;
   const setBtn=$("lbSetName"); if(setBtn) setBtn.onclick=setName;
@@ -2182,22 +2185,61 @@ function doRebirth(){
   checkAchievements();
   currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); save();
 }
-/* Anti-autoclicker: only pay out up to MAX_TAPS_PER_SEC taps in any rolling 1s
-   window. A fast human taps ~10/sec; a 1ms autoclicker does ~1000/sec — those
-   extra taps simply don't pay, so the exploit can't outpace a real player. */
-const MAX_TAPS_PER_SEC = 14;
-let _tapTimes = [];
+/* Anti-autoclicker:
+   Layer 1 — rate cap: max MAX_TAPS_PER_SEC paid taps in any rolling 1s window.
+   Layer 2 — rhythm detection: real humans have irregular tap timing; autoclickers
+   fire at near-perfectly-uniform intervals. We measure the coefficient of variation
+   (std-dev / mean) of the last N inter-tap gaps. A CV below RHYTHM_CV_MIN across
+   enough samples means machine-like regularity → taps are penalised to 1 coin each
+   for RHYTHM_PENALTY_MS ms. The threshold is deliberately generous so fast-but-human
+   tappers are never flagged. */
+const MAX_TAPS_PER_SEC   = 14;
+const RHYTHM_SAMPLES     = 10;   // gaps to accumulate before judging
+const RHYTHM_CV_MIN      = 0.10; // CV below this = suspiciously uniform (10% variance)
+const RHYTHM_PENALTY_MS  = 8000; // how long the tap-value penalty lasts (ms)
+let _tapTimes    = [];
+let _tapGaps     = [];           // rolling list of inter-tap intervals
 let _lastTapWarn = 0;
 let _lastAutoFloat = 0;
+let _rhythmPenaltyUntil = 0;    // timestamp when penalty lifts
+
+function _checkRhythm(now){
+  if(_tapGaps.length < RHYTHM_SAMPLES) return;
+  const mean = _tapGaps.reduce((a,b)=>a+b,0) / _tapGaps.length;
+  if(mean <= 0) return;
+  const variance = _tapGaps.reduce((a,b)=>a+(b-mean)**2,0) / _tapGaps.length;
+  const cv = Math.sqrt(variance) / mean;
+  if(cv < RHYTHM_CV_MIN){
+    _rhythmPenaltyUntil = now + RHYTHM_PENALTY_MS;
+    _tapGaps = [];   // reset so a brief pause can clear the flag
+    if(now - _lastTapWarn > 3000){
+      _lastTapWarn = now;
+      toast("😼 Autoclicker detected! Tap naturally ♡");
+    }
+  }
+}
+
 function petCat(ev, auto){
   const now = Date.now();
   // Auto-Paw powerup bypasses the anti-autoclicker cap — it's a purchased reward,
   // not an exploit, so it should tap freely for its duration.
   if(!auto){
+    // Layer 1: rate cap
     while(_tapTimes.length && now - _tapTimes[0] > 1000) _tapTimes.shift();
     if(_tapTimes.length >= MAX_TAPS_PER_SEC){
       if(now - _lastTapWarn > 2500){ _lastTapWarn = now; toast("😼 Tapping too fast! (max "+MAX_TAPS_PER_SEC+"/sec)"); }
       return;
+    }
+    // Layer 2: rhythm detection
+    if(_tapTimes.length > 0){
+      const gap = now - _tapTimes[_tapTimes.length - 1];
+      if(gap > 0 && gap < 1000){   // only count gaps within a continuous burst
+        _tapGaps.push(gap);
+        if(_tapGaps.length > RHYTHM_SAMPLES * 2) _tapGaps.shift();
+        _checkRhythm(now);
+      } else {
+        _tapGaps = [];   // burst broke — reset rhythm window
+      }
     }
     _tapTimes.push(now);
   }
@@ -2206,7 +2248,8 @@ function petCat(ev, auto){
   _comboLast = now;
   if(_combo > (state.bestCombo||0)) state.bestCombo=_combo;
   checkComboMilestone(_combo);
-  const v=clickValue(); state.money+=v; state.lifetime+=v; state.totalEarned+=v; state.pets=(state.pets||0)+1;
+  const v = (now < _rhythmPenaltyUntil && !auto) ? 1 : clickValue();
+  state.money+=v; state.lifetime+=v; state.totalEarned+=v; state.pets=(state.pets||0)+1;
   // during auto-tap spawn floats at ~8/sec max (every 125ms) to avoid DOM spam
   if(!auto || (now - (_lastAutoFloat||0)) > 125){ _lastAutoFloat=now; spawnFloat(ev,"+"+money(v),_combo); }
   sfx("tap",_combo);
@@ -2381,7 +2424,7 @@ function sfx(name,arg){
   if(!soundOn()) return;
   switch(name){
     case "tap": { const now=performance.now(); if(now-_lastTapSfx<70) return; _lastTapSfx=now;
-      beep(520+Math.min(arg||1,COMBO_MAX)*10, 0.06, "triangle", 0.05); break; }
+      beep(520+Math.min(arg||1,COMBO_MAX)*25, 0.06, "triangle", 0.05); break; }
     case "buy":    beep(330,0.08,"sine",0.11); beep(495,0.09,"sine",0.09,0.05); break;
     case "golden": [660,880,1175].forEach((f,i)=>beep(f,0.18,"sine",0.12,i*0.08)); haptic(40); break;
     case "rare":   [784,988,1319,1568].forEach((f,i)=>beep(f,0.22,"triangle",0.13,i*0.09)); haptic([25,40,55]); break;
@@ -2782,8 +2825,36 @@ function showBootPopups(){
   }
 }
 
+/* ---------- One-time global wipe (v1) ----------
+   Fires once per device for any save that already existed before this patch.
+   Resets: money, cats, upgrades, estates, skills, goldenMice (mice tokens), spentMice.
+   Preserved: name, rebirths, achievements, talismans, scrolls, gacha pity,
+              prefs, timePlayed, dailyStreak, quests, reforges. */
+function applyWipeV1(){
+  try{ if(localStorage.getItem(WIPE_V1_KEY)) return; } catch(e){ return; }
+  // Only wipe if a real save exists (fresh players don't need it)
+  const hasSave = !!(localStorage.getItem(SAVE_KEY) || localStorage.getItem("catMonopolySave_v3"));
+  if(!hasSave){ try{ localStorage.setItem(WIPE_V1_KEY,"1"); }catch(e){} return; }
+
+  // Perform the wipe — nuke the hoarded resources, keep identity & progression
+  state.money        = 0;
+  state.lifetime     = 0;
+  state.totalEarned  = 0;
+  state.cats         = CAT_DEFS.map(()=>0);
+  state.discovered   = CAT_DEFS.map(()=>false);
+  state.upgrades     = {};
+  state.properties   = PROPERTY_DEFS.map(()=>0);
+  state.skills       = {idle:0, tap:0, cost:0, offline:0, mice:0};
+  state.spentMice    = 0;
+  state.goldenMice   = 0;   // wipe the hoarded mice token stockpile
+  state.comboRewards = {};
+  save();
+  try{ localStorage.setItem(WIPE_V1_KEY,"1"); }catch(e){}
+  toast("🔄 Server wipe applied — fresh start! Your rebirths & talismans are safe ♡");
+}
+
 /* ---------- Boot ---------- */
-load(); applyPrefs(); applyOffline(); checkAchievements(); setActiveTab(); updateMascot(); renderAll();
+load(); applyWipeV1(); applyPrefs(); applyOffline(); checkAchievements(); setActiveTab(); updateMascot(); renderAll();
 showBootPopups();
 lastTick=Date.now();
 setInterval(tick,100);
