@@ -1,6 +1,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,6 +38,11 @@
     --good:#6fd6a3;
     --danger:#ff7b9c;
     --line:#f3d9ea;
+    /* semantic "soft tinted surface" colors — overridden in dark mode so the
+       inline info boxes that use them don't end up as bright cards in dark mode */
+    --soft-warm:#fff8f0;
+    --soft-good:#f8fff5;
+    --soft-sel:#fff2fa;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   /* mobile: stop double-tap-to-zoom & 300ms delay so you can tap fast */
@@ -445,6 +451,29 @@
   body.dark .propgroup{background:color-mix(in srgb, var(--gc,#fff) 16%, var(--panel));}
   body.dark .propgroup .item{background:var(--panel2);}
   body.dark .pedestal::after{background:radial-gradient(closest-side, rgba(0,0,0,.45), transparent);}
+  /* soft tinted info-box surfaces: dark equivalents so text stays readable */
+  body.dark{
+    --soft-warm:#3a2f2a;
+    --soft-good:#27362d;
+    --soft-sel:#3b2d4b;
+  }
+  /* leaderboard top-3 keep their bright gold/silver/bronze rows in dark mode,
+     so force dark text on them instead of the light dark-mode ink (which clashed) */
+  body.dark .lbrow.lb1,
+  body.dark .lbrow.lb2,
+  body.dark .lbrow.lb3{color:#3e2f22;}
+  body.dark .lbrow.lb1 .who .meta,
+  body.dark .lbrow.lb2 .who .meta,
+  body.dark .lbrow.lb3 .who .meta{color:#7a6650;}
+  body.dark .lbrow.lb2 .who b,
+  body.dark .lbrow.lb3 .who b{color:#3e2f22;}
+  /* raid progress-bar tracks: darken so the light tracks don't glare in dark mode */
+  body.dark .raid-hp-bar-wrap{background:#3a2530;}
+  body.dark .raid-dmg-bar-wrap{background:#22332a;}
+  /* desktop scrollbar in dark mode (mobile hides it already) */
+  body.dark ::-webkit-scrollbar-thumb{background:#5a4a72;border-color:#241a30;}
+  body.dark ::-webkit-scrollbar-thumb:hover{background:#6f5c8c;}
+  body.dark ::-webkit-scrollbar-track{background:#1b1626;}
 </style>
 </head>
 <body>
@@ -492,6 +521,8 @@
       <div class="tab" data-tab="gacha">🎰 Gacha</div>
       <div class="tab" data-tab="reforge">⚒️ Reforge</div>
       <div class="tab" data-tab="rebirth">✨ Rebirth<span id="rebirthPing" style="display:none;margin-left:4px;background:var(--danger);color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;vertical-align:middle;">!</span></div>
+      <div class="tab" data-tab="ascend">🌌 Ascend<span id="ascendPing" style="display:none;margin-left:4px;background:var(--lav);color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;vertical-align:middle;">!</span></div>
+      <div class="tab" data-tab="expeditions">🧭 Expeditions<span id="expedPing" style="display:none;margin-left:4px;background:var(--good);color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;vertical-align:middle;">✓</span></div>
       <div class="tab" data-tab="adventure">🗺️ Adventure<span id="raidPing" style="display:none;margin-left:4px;background:var(--danger);color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;vertical-align:middle;animation:comboPop .5s ease-out infinite;">!</span></div>
       <div class="tab" data-tab="goals">🏅 Goals</div>
       <div class="tab" data-tab="ranks">🏆 Leaderboard</div>
@@ -511,6 +542,8 @@
     <div id="panel-gacha" style="display:none;"></div>
     <div id="panel-reforge" style="display:none;"></div>
     <div id="panel-rebirth" style="display:none;"></div>
+    <div id="panel-ascend" style="display:none;"></div>
+    <div id="panel-expeditions" style="display:none;"></div>
     <div id="panel-adventure" style="display:none;"></div>
     <div id="panel-goals" style="display:none;"></div>
     <div id="panel-ranks" style="display:none;"></div>
@@ -628,8 +661,8 @@
       <span class="mult-badge" style="color:var(--gold-d);" id="raidAlertDuration">⏱ 20 min raid</span>
       <span class="mult-badge" style="color:var(--lav);" id="raidAlertRaiders">👥 0 raiders</span>
     </div>
-    <div style="background:#fff8f0;border:2px solid #ffd9ee;border-radius:16px;padding:10px 14px;margin-bottom:12px;text-align:left;">
-      <div style="font-weight:800;font-size:13px;color:var(--pink-d);margin-bottom:6px;">🏆 Loot Table (damage-based)</div>
+    <div style="background:var(--soft-warm);border:2px solid #ffd9ee;border-radius:16px;padding:10px 14px;margin-bottom:12px;text-align:left;">
+      <div style="font-weight:800;font-size:13px;color:var(--pink-d);margin-bottom:6px;">🏆 Loot Table (every raider rolls these odds)</div>
       <div style="font-size:12px;font-weight:600;line-height:1.9;color:var(--ink);">
         🌟 <b>Godly Talisman</b> — 1% chance (rarest!)<br>
         💠 <b>Pity Scroll</b> — 5% chance<br>
@@ -639,7 +672,7 @@
         💰 <b>10 min income</b> — everyone who joins!
       </div>
     </div>
-    <p style="font-size:12px;color:var(--danger);font-weight:700;margin:0 0 10px;">⚠️ At 50% HP, one random raider is eliminated!</p>
+    <p style="font-size:12px;color:var(--danger);font-weight:700;margin:0 0 10px;">⚠️ At 50% HP, one random raider is stunned for 60s (only when 2+ raiders join)!</p>
     <div class="row">
       <button class="buy alt" id="joinRaidBtn" style="flex:1;font-size:16px;">⚔️ JOIN THE RAID!</button>
       <button class="smallbtn" id="skipRaidBtn" style="flex:1;">Skip</button>
@@ -682,8 +715,6 @@
 <div id="toast"></div>
 
 <script>
-
-  <script>
 // ==========================================
 // SCARY CONSOLE WARNING
 // ==========================================
@@ -1081,6 +1112,21 @@ function newState(){
     lastStaminaRefill:"",                        // date string of last coin-based stamina refill
     // ---- Raid Boss ----
     raidHistory:[],   // [{bossName, damage, reward, ts}] last 10 raids participated in
+    // ---- Ascension (2nd prestige) ----
+    ascensions:0,            // times ascended
+    stardust:0,              // ascension meta-currency (spent in the ascend tree)
+    ascendTree:{},           // {nodeId: rank}
+    // ---- Cat fusion (⭐ star levels) ----
+    catStars:{},             // {catIndex: starLevel}
+    // ---- Talisman equip slots + set bonuses ----
+    equippedTalismans:[],    // ordered list of equipped talisman ids (max TAL_EQUIP_SLOTS)
+    // ---- Leaderboard seasons ----
+    season:"",               // last seen season id "YYYY-MM"
+    seasonBest:0,            // best run score reached this season
+    seasonsPlayed:0,         // seasons participated in (badge count)
+    // ---- Cat expeditions ----
+    expeditions:{},          // {slotIndex: {catIdx, typeId, endsAt}}
+    expeditionsDone:0,       // total completed (stat)
   };
 }
 let state = newState();
@@ -1303,7 +1349,7 @@ function dexMult(){ return 1 + dexCount()*0.02; }
 function skillIdleMult(){ return 1 + 0.08*(state.skills.idle||0); }
 function skillTapMult(){ return 1 + 0.20*(state.skills.tap||0); }
 function skillCostFactor(){ return Math.pow(0.98, state.skills.cost||0); }
-function offlineCapHours(){ return OFFLINE_CAP_HOURS + 2*(state.skills.offline||0); }
+function offlineCapHours(){ return OFFLINE_CAP_HOURS + 2*(state.skills.offline||0) + ascendOfflineHours(); }
 function skillTreasureMult(){ return 1 + 0.07*(state.skills.mice||0); }
 /* ---------- Build Type bonuses ----------
    Tapper: +60% tap income, cats earn 30% less, combos earn 25% more value per tick
@@ -1380,15 +1426,65 @@ function talismanBonus(t){
   return Math.min(raw, R.base*DUPE_CAP_MULT);
 }
 function talismanMult(){ let s=0; for(const t of TALISMANS) s+=talismanBonus(t); return 1+s; }
+
+/* ============================================================
+   NEW META SYSTEMS — Ascension, Cat Fusion, Talisman Sets
+   ============================================================ */
+
+// ---- Ascension (2nd prestige) ----
+const ASCEND_REQ_REBIRTHS = 12;   // must reach this many rebirths before you can ascend
+const ASCEND_BASE_BONUS   = 0.20; // +20% permanent income per ascension (before the tree)
+const ASCEND_NODES = [
+  {id:"cosmic", emoji:"🌟", name:"Cosmic Power", desc:"+10% all income / rank", per:0.10, max:50, cost:r=>r+1},
+  {id:"surge",  emoji:"💥", name:"Star Surge",   desc:"+30% all income / rank", per:0.30, max:20, cost:r=>5*(r+1)},
+  {id:"warp",   emoji:"🕳️", name:"Time Warp",    desc:"+2h offline cap / rank", per:2,    max:8,  cost:r=>3*(r+1)},
+];
+function ascendNode(id){ return ASCEND_NODES.find(n=>n.id===id); }
+function ascendRank(id){ return (state.ascendTree&&state.ascendTree[id])||0; }
+function ascendTreeMult(){ return (1+ASCEND_NODES[0].per*ascendRank("cosmic")) * (1+ASCEND_NODES[1].per*ascendRank("surge")); }
+function ascendMult(){ return (1 + ASCEND_BASE_BONUS*(state.ascensions||0)) * ascendTreeMult(); }
+function ascendOfflineHours(){ return ASCEND_NODES[2].per*ascendRank("warp"); }
+// stardust earned for ascending right now (scales with rebirths reached)
+function ascendStardustGain(){ return Math.max(1, Math.floor((state.rebirths||0))); }
+function canAscend(){ return (state.rebirths||0) >= ASCEND_REQ_REBIRTHS; }
+
+// ---- Cat fusion (⭐ star levels) ----
+const FUSE_STAR_BONUS = 0.25;   // each ⭐ adds +25% to THAT cat's production
+const FUSE_MAX_STAR   = 10;
+function catStar(i){ return (state.catStars&&state.catStars[i])||0; }
+function catStarMult(i){ return 1 + FUSE_STAR_BONUS*catStar(i); }
+// duplicate copies of cat i consumed to gain the next ⭐ (your last copy is never eaten)
+function fuseCost(i){ return 5*(catStar(i)+1); }
+function canFuse(i){ return catStar(i)<FUSE_MAX_STAR && (state.cats[i]||0) >= fuseCost(i)+1; }
+
+// ---- Talisman equip slots + set bonuses ----
+// ADDITIVE layer: every owned talisman still contributes via talismanMult(); equipping just
+// grants an extra "set" bonus on top, so this never nerfs an existing collection.
+const TAL_EQUIP_SLOTS = 3;
+function talismanSetInfo(){
+  const ids=(state.equippedTalismans||[]).filter(id=>state.talismans&&state.talismans[id]>0);
+  let base=0; const rar=[];
+  for(const id of ids){ const t=TALISMANS.find(x=>x.id===id); if(!t) continue; base+=(RARITY_ORDER.indexOf(t.r)+1)*0.02; rar.push(t.r); }
+  let setMul=1, label="—";
+  if(ids.length===TAL_EQUIP_SLOTS){
+    const uniq=new Set(rar).size;
+    if(uniq===1){ setMul=3; label="✨ Pure Set ×3"; }
+    else if(uniq===TAL_EQUIP_SLOTS){ setMul=2; label="🌈 Rainbow Set ×2"; }
+    else { setMul=1.4; label="Partial Set ×1.4"; }
+  } else if(ids.length>0){ label=`${ids.length}/${TAL_EQUIP_SLOTS} slots`; }
+  return { count:ids.length, bonus:base*setMul, setMul, label };
+}
+function talismanSetMult(){ return 1 + talismanSetInfo().bonus; }
+
 // combined passive income multiplier (everything except each cat's base rate)
-function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*skillTreasureMult()*propertyMult()*goldenBuffMult()*talismanMult()*advBonusMult(); }
+function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*skillTreasureMult()*propertyMult()*goldenBuffMult()*talismanMult()*advBonusMult()*ascendMult()*talismanSetMult(); }
 // pricing multiplier — same as incomeMult but WITHOUT the frenzy buff so a golden-cat
 // event doesn't temporarily inflate gacha/upgrade costs by 5×
-function incomeMultForPricing(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*skillTreasureMult()*propertyMult()*talismanMult()*advBonusMult(); }
+function incomeMultForPricing(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*skillTreasureMult()*propertyMult()*talismanMult()*advBonusMult()*ascendMult()*talismanSetMult(); }
 // soft cap: the first CAT_SOFT_CAP of a tier earn full rate; every extra one earns far less,
 // so hoarding one cheap cat can't run the economy away.
 function effectiveCount(n){ return n<=CAT_SOFT_CAP ? n : CAT_SOFT_CAP + (n-CAT_SOFT_CAP)*CAT_OVERCAP_EFF; }
-function catProduction(i){ return effectiveCount(state.cats[i])*CAT_DEFS[i].baseProd; }
+function catProduction(i){ return effectiveCount(state.cats[i])*CAT_DEFS[i].baseProd*catStarMult(i); }
 function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*incomeMult()*buildCatMult()*reforgeCatMult(); }
 // Pricing variant: excludes frenzy buff so costs aren't inflated during golden-cat events.
 function incomePerSecForPricing(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*incomeMultForPricing()*buildCatMult()*reforgeCatMult(); }
@@ -1541,6 +1637,27 @@ function updateMascot(){
   $("topcat").textContent="Top cat: "+c.name;
 }
 
+// ---- Cat fusion UI helpers ----
+function fuseStarBadge(i){
+  const s=catStar(i); if(s<=0) return "";
+  return `<span style="color:var(--gold-d);font-weight:800;font-size:12px;">⭐${s}<span style="font-size:10px;color:var(--good);"> (+${Math.round(FUSE_STAR_BONUS*s*100)}%)</span></span>`;
+}
+function fuseLine(i){
+  if(catStar(i)>=FUSE_MAX_STAR) return `<div style="font-size:11px;color:var(--gold-d);font-weight:700;margin-top:3px;">⭐ MAX fusion (${FUSE_MAX_STAR}★)</div>`;
+  if((state.cats[i]||0) < 2) return "";   // need duplicates to fuse — hide until you have spares
+  const cost=fuseCost(i), able=canFuse(i);
+  return `<button class="smallbtn" data-fuse="${i}" ${able?"":"disabled"} style="padding:3px 9px;font-size:11px;margin-top:4px;${able?'border-color:var(--gold-d);color:var(--gold-d);':'opacity:.55;'}">⭐ Fuse → ${catStar(i)+1}★ · costs ${cost} dupes</button>`;
+}
+function fuseCat(i){
+  if(!canFuse(i)){ toast(`Need ${fuseCost(i)} spare copies to fuse (keeps 1). 🐾`); return; }
+  state.cats[i]-=fuseCost(i);                 // consume duplicates; your last copy is kept
+  if(!state.catStars) state.catStars={};
+  state.catStars[i]=catStar(i)+1;
+  sfx("buy");
+  toast(`⭐ ${CAT_DEFS[i].name} fused to ${catStar(i)}★! +${Math.round(FUSE_STAR_BONUS*100)}% production`);
+  renderCatsFull(); renderStats(); updateMascot(); checkAchievements();
+}
+
 function renderCatsFull(){
   lastUnlocked=unlockedCount();
   const p=$("panel-cats");
@@ -1562,8 +1679,9 @@ function renderCatsFull(){
     html+=`<div class="item" id="catrow-${i}">
       <div class="icon">${catVisual(c,48)}</div>
       <div class="info">
-        <div class="name">${c.name}</div>
+        <div class="name">${c.name} ${fuseStarBadge(i)}</div>
         <div class="desc">+${money(prodEach)}/sec each · <span id="catearn-${i}">${money(catProduction(i)*incomeMult()*buildCatMult()*buildIdleBonus())}/sec</span></div>
+        ${fuseLine(i)}
       </div>
       <div class="owned" id="catowned-${i}">${state.cats[i]}</div>
       <button class="buy" id="catbuy-${i}" data-cat="${i}"></button>
@@ -1671,6 +1789,39 @@ function fmtPct(p){
   if(v>=0.0001) return v.toFixed(4)+"%";
   return v.toExponential(1)+"%";
 }
+// ---- Talisman equip slots + set bonus (additive layer) ----
+function toggleEquipTalisman(id){
+  if(!(state.talismans&&state.talismans[id]>0)) return;
+  if(!Array.isArray(state.equippedTalismans)) state.equippedTalismans=[];
+  const idx=state.equippedTalismans.indexOf(id);
+  if(idx>=0){ state.equippedTalismans.splice(idx,1); }
+  else {
+    if(state.equippedTalismans.length>=TAL_EQUIP_SLOTS){ toast(`Only ${TAL_EQUIP_SLOTS} equip slots — unequip one first. ♡`); return; }
+    state.equippedTalismans.push(id);
+  }
+  sfx("buy"); save(); renderGacha(); renderStats();
+}
+function equipSectionHTML(){
+  const info=talismanSetInfo();
+  let slots="";
+  for(let s=0;s<TAL_EQUIP_SLOTS;s++){
+    const id=(state.equippedTalismans||[])[s];
+    const t=id?TALISMANS.find(x=>x.id===id):null;
+    slots += t
+      ? `<button class="dexcell" data-unequip="${t.id}" style="border-color:${TAL_RARITY[t.r].color};cursor:pointer;min-width:78px;">
+           <div class="dexicon" style="font-size:24px;">${t.emoji}</div><div class="dexname">${t.name}</div>
+           <div class="sub" style="margin:2px 0 0;font-size:9px;color:var(--ink2);">tap to remove</div></button>`
+      : `<div class="dexcell" style="min-width:78px;opacity:.6;border-style:dashed;">
+           <div class="dexicon" style="font-size:24px;">➕</div><div class="dexname">Empty</div></div>`;
+  }
+  return `<div class="propgroup" style="--gc:var(--lav);">
+    <div class="propgrouphead" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>⚔️ Equipped Set</span>
+      <span style="font-size:12px;color:var(--good);">+${(info.bonus*100).toFixed(1)}% income · ${info.label}</span></div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">${slots}</div>
+    <div class="sub" style="text-align:center;margin:8px 0 2px;font-size:11px;">Tap an owned talisman below to equip (max ${TAL_EQUIP_SLOTS}) · same rarity = ✨Pure ×3 · all different = 🌈Rainbow ×2</div>
+  </div>`;
+}
 function renderGacha(){
   const totalBonus=Math.round((talismanMult()-1)*100);
   const owned=TALISMANS.filter(t=>(state.talismans&&state.talismans[t.id])>0).length;
@@ -1682,6 +1833,7 @@ function renderGacha(){
       <div style="font-size:15px;">${scrollInv}</div>
       <div class="sub" style="font-size:10px;margin:4px 0 0;">Earn scrolls from daily/weekly quests and goal completions ♡</div>
     </div>`;
+  html += equipSectionHTML();
 
   // banners — one per scroll type
   for(const sc of SCROLL_TYPES){
@@ -1711,12 +1863,14 @@ function renderGacha(){
     const cells=list.map(t=>{
       const copies=(state.talismans&&state.talismans[t.id])||0;
       const has=copies>0;
+      const equipped=(state.equippedTalismans||[]).includes(t.id);
       const bonus=Math.round(talismanBonus(t)*1000)/10;  // one decimal %
       const capped=has && (R.base+(copies-1)*R.dupe) >= R.base*DUPE_CAP_MULT;
-      return `<div class="dexcell ${has?'':'undiscovered'}" style="${has?`border-color:${R.color};`:''}">
+      return `<div class="dexcell ${has?'':'undiscovered'}" ${has?`data-equip="${t.id}"`:''} style="${has?`border-color:${R.color};cursor:pointer;`:''}${equipped?'box-shadow:0 0 0 2px var(--lav);':''}">
         <div class="dexicon" style="font-size:26px;">${has?t.emoji:'❔'}</div>
         <div class="dexname">${has?t.name:'???'}</div>
         ${has?`<div class="sub" style="margin:2px 0 0;font-size:10px;">x${copies} · +${bonus}%${capped?' ⛛':''}</div>`:`<div class="sub" style="margin:2px 0 0;font-size:10px;">not found</div>`}
+        ${equipped?`<div class="sub" style="margin:1px 0 0;font-size:9px;color:var(--lav);font-weight:800;">⚔️ equipped</div>`:''}
       </div>`;
     }).join("");
     html+=`<div style="margin-bottom:6px;">
@@ -1859,6 +2013,166 @@ function renderRebirth(){
   const b=$("doRebirth"); if(b) b.onclick=doRebirth;
 }
 
+/* =====================================================================
+   ASCENSION — second prestige. Reset many rebirths for ⭐ Stardust, spent
+   on a permanent Cosmic tree. Gated behind ASCEND_REQ_REBIRTHS.
+   ===================================================================== */
+function renderAscend(){
+  const a=state.ascensions||0, sd=state.stardust||0, ready=canAscend(), gain=ascendStardustGain();
+  let tree="";
+  for(const node of ASCEND_NODES){
+    const rank=ascendRank(node.id), maxed=rank>=node.max, cost=node.cost(rank), afford=sd>=cost&&!maxed;
+    const cur = rank>0 ? ` · now +${node.id==='warp'?(node.per*rank)+'h':Math.round(node.per*rank*100)+'%'}` : "";
+    tree+=`<div class="item">
+      <div class="icon" style="font-size:28px;">${node.emoji}</div>
+      <div class="info"><div class="name">${node.name} <span style="font-size:11px;color:var(--lav);">Lv ${rank}/${node.max}</span></div>
+        <div class="desc">${node.desc}${cur}</div></div>
+      <button class="buy alt" data-ascend="${node.id}" ${afford?'':'disabled'} style="white-space:nowrap;">${maxed?'MAX':'⭐ '+cost}</button>
+    </div>`;
+  }
+  $("panel-ascend").innerHTML=`<div class="rebirth-box">
+    <div style="font-size:34px;">🌌</div>
+    <p style="font-weight:600;">Ascension is the second prestige. It <b>resets your rebirths, cash, cats, upgrades, estates, skills &amp; 🐭 tokens</b> — but you keep talismans, catdex &amp; everything bought here. Each ascension grants <b>+${Math.round(ASCEND_BASE_BONUS*100)}% permanent income</b> plus ⭐ Stardust to spend below.</p>
+    <div class="mult-badge">Ascensions ${a} · ×${ascendMult().toFixed(2)} income · ⭐ ${fmt(sd)} stardust</div>
+    <hr>
+    <p class="sub">Requires <b>${ASCEND_REQ_REBIRTHS} rebirths</b> (you have ${state.rebirths||0}). Ascending now grants <b>⭐ ${gain} stardust</b>.</p>
+    <button class="buy alt" id="doAscend" ${ready?'':'disabled'} style="font-size:16px;padding:13px 24px;margin-top:6px;">🌌 ASCEND → +⭐ ${gain}</button>
+    <hr>
+    <div class="sub" style="font-weight:800;margin-bottom:8px;">✦ Cosmic Tree — spend ⭐ Stardust</div>
+    ${tree}
+  </div>`;
+  const b=$("doAscend"); if(b) b.onclick=doAscend;
+}
+function buyAscendNode(id){
+  const node=ascendNode(id); if(!node) return;
+  const rank=ascendRank(id); if(rank>=node.max){ toast("Maxed! 🌟"); return; }
+  const cost=node.cost(rank);
+  if((state.stardust||0)<cost){ toast("Not enough ⭐ stardust!"); return; }
+  state.stardust-=cost; if(!state.ascendTree) state.ascendTree={}; state.ascendTree[id]=rank+1;
+  sfx("buy"); toast(`${node.emoji} ${node.name} → Lv ${rank+1}!`);
+  renderAscend(); renderStats(); save();
+}
+function doAscend(){
+  if(!canAscend()){ toast(`Reach ${ASCEND_REQ_REBIRTHS} rebirths to ascend.`); return; }
+  const gain=ascendStardustGain();
+  if(!confirm(`Ascend? Resets rebirths, cats, cash, upgrades, estates, skills, 🐭 tokens & cat fusions — but grants +${Math.round(ASCEND_BASE_BONUS*100)}% permanent income and ⭐ ${gain} stardust. Talismans & catdex are kept.`)) return;
+  backup();
+  state.ascensions=(state.ascensions||0)+1;
+  state.stardust=(state.stardust||0)+gain;
+  // Deep reset: everything a rebirth resets, PLUS rebirths, the 🐭 skill tree and cat fusions
+  state.rebirths=0; state.goldenMice=0; state.spentMice=0;
+  state.skills={idle:0,tap:0,cost:0,offline:0,mice:0};
+  state.money=0; state.lifetime=0; state.cats=CAT_DEFS.map(()=>0); state.upgrades={};
+  state.properties=PROPERTY_DEFS.map(()=>0); state.catStars={};
+  state._questBoughtCat=false; state._questWeeklyGolden=0; state._questWeeklyRolls=0;
+  stopAutoClick(); frenzy={mult:1,until:0}; _tapBuffUntil=0; _tapBuffMult=1; _combo=0; _comboLast=0;
+  updateFrenzyBanner();
+  toast(`🌌 Ascended! +⭐ ${gain} stardust`);
+  checkAchievements();
+  currentTab="ascend"; setActiveTab(); updateMascot(); renderAll(); save();
+}
+
+/* =====================================================================
+   EXPEDITIONS — send the colony on timed missions for scrolls / stardust.
+   Two slots; missions run in real time and persist across reloads.
+   ===================================================================== */
+const EXPED_SLOTS=2;
+const EXPED_TYPES=[
+  {id:"scout", emoji:"🌿", name:"Garden Scout",   mins:30,  minRebirth:0, reward:{basic:3},            rewardLabel:"3× Basic Scrolls"},
+  {id:"hunt",  emoji:"🐟", name:"River Hunt",     mins:120, minRebirth:0, reward:{advanced:2},         rewardLabel:"2× Advanced Scrolls"},
+  {id:"trek",  emoji:"⛰️", name:"Mountain Trek",  mins:480, minRebirth:1, reward:{advanced:5,pity:1},  rewardLabel:"5× Advanced + 1× Pity"},
+  {id:"void",  emoji:"🌌", name:"Starlit Voyage", mins:720, minRebirth:3, reward:{pity:1,stardust:1},  rewardLabel:"1× Pity + ⭐1 Stardust"},
+];
+function expedType(id){ return EXPED_TYPES.find(t=>t.id===id); }
+function expedActive(slot){ return state.expeditions&&state.expeditions[slot]; }
+function expedReady(slot){ const e=expedActive(slot); return !!e && Date.now()>=e.endsAt; }
+function anyExpedReady(){ for(let s=0;s<EXPED_SLOTS;s++) if(expedReady(s)) return true; return false; }
+function updateExpedPing(){ const p=$("expedPing"); if(p) p.style.display=anyExpedReady()?"":"none"; }
+function startExpedition(slot, typeId){
+  if(expedActive(slot)){ toast("That slot is busy! 🧭"); return; }
+  const t=expedType(typeId); if(!t) return;
+  if((t.minRebirth||0)>(state.rebirths||0)){ toast(`🔒 Needs ${t.minRebirth} rebirths.`); return; }
+  if(!state.expeditions) state.expeditions={};
+  state.expeditions[slot]={ typeId, startedAt:Date.now(), endsAt:Date.now()+t.mins*60000 };
+  sfx("buy"); toast(`🧭 ${t.name} set off! Back in ${fmtTime(t.mins*60)}`);
+  renderExpeditions(); save();
+}
+function claimExpedition(slot){
+  if(!expedReady(slot)) return;
+  const e=state.expeditions[slot], t=expedType(e.typeId); if(!t){ delete state.expeditions[slot]; return; }
+  for(const k in t.reward){
+    if(k==="stardust") state.stardust=(state.stardust||0)+t.reward[k];
+    else addScroll(k, t.reward[k]);
+  }
+  delete state.expeditions[slot];
+  state.expeditionsDone=(state.expeditionsDone||0)+1;
+  sfx("rare"); toast(`🎁 Expedition complete — ${t.rewardLabel}!`);
+  checkAchievements(); renderExpeditions(); renderStats(); updateExpedPing(); save();
+}
+function renderExpeditions(){
+  const now=Date.now();
+  let html=`<div class="sub" style="text-align:center;margin:0 0 10px;">🧭 Send your colony on timed missions for scrolls &amp; stardust. ${EXPED_SLOTS} slots · ${state.expeditionsDone||0} completed.</div>`;
+  for(let slot=0; slot<EXPED_SLOTS; slot++){
+    html+=`<div class="propgroup" style="--gc:var(--good);"><div class="propgrouphead">🧭 Expedition Slot ${slot+1}</div>`;
+    const e=expedActive(slot);
+    if(e){
+      const t=expedType(e.typeId), left=Math.max(0,Math.ceil((e.endsAt-now)/1000)), ready=now>=e.endsAt;
+      html+=`<div class="item">
+        <div class="icon" style="font-size:28px;">${t?t.emoji:"❔"}</div>
+        <div class="info"><div class="name">${t?t.name:"Mission"}</div>
+          <div class="desc">Reward: ${t?t.rewardLabel:"?"}</div>
+          <div class="sub" style="margin:3px 0 0;font-weight:700;color:${ready?'var(--good)':'var(--ink2)'};">${ready?'✅ Ready to claim!':'⏳ '+fmtTime(left)+' left'}</div></div>
+        ${ready?`<button class="buy alt" data-exped-claim="${slot}">🎁 Claim</button>`:`<button class="buy" disabled style="opacity:.6;">⏳</button>`}
+      </div>`;
+    } else {
+      html+=EXPED_TYPES.map(t=>{
+        const locked=(t.minRebirth||0)>(state.rebirths||0);
+        return `<div class="item ${locked?'locked':''}">
+          <div class="icon" style="font-size:26px;">${locked?'🔒':t.emoji}</div>
+          <div class="info"><div class="name">${t.name} <span style="font-size:11px;color:var(--ink2);">${fmtTime(t.mins*60)}</span></div>
+            <div class="desc">${locked?`Requires ${t.minRebirth} rebirth${t.minRebirth===1?'':'s'}`:'Reward: '+t.rewardLabel}</div></div>
+          <button class="buy" data-exped-start="${slot}:${t.id}" ${locked?'disabled':''}>Send</button>
+        </div>`;
+      }).join("");
+    }
+    html+=`</div>`;
+  }
+  $("panel-expeditions").innerHTML=html;
+}
+
+/* =====================================================================
+   LEADERBOARD SEASONS — a monthly cycle layered on the global board.
+   The shared Supabase board can't be reset from the client, so seasons are
+   framed per-player: a season label + countdown, a personal season-best,
+   and a participation reward each new month (seasonsPlayed = veteran badge).
+   ===================================================================== */
+const MONTHS=["","January","February","March","April","May","June","July","August","September","October","November","December"];
+function seasonId(d){ d=d?new Date(d):new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+function seasonLabel(id){ const [y,m]=(id||seasonId()).split("-").map(Number); return MONTHS[m]+" "+y; }
+function seasonEndsAt(){ const n=new Date(); return new Date(n.getFullYear(), n.getMonth()+1, 1).getTime(); }
+function checkSeason(){
+  const cur=seasonId();
+  if(!state.season){ state.season=cur; return; }
+  if(state.season===cur) return;
+  const best=state.seasonBest||0;
+  state.season=cur; state.seasonBest=0; state.seasonsPlayed=(state.seasonsPlayed||0)+1;
+  if(state.name && best>0){
+    const tier=Math.max(0, Math.min(4, Math.floor(Math.log10(best)-3)));   // $1K→0 … $10M+→4
+    const rw={basic:3+tier*2, advanced:tier, pity:tier>=4?1:0};
+    addScroll("basic",rw.basic); if(rw.advanced)addScroll("advanced",rw.advanced); if(rw.pity)addScroll("pity",rw.pity);
+    toast(`🏆 Season ${seasonLabel()}! Last season reward: ${rw.basic}× basic${rw.advanced?` · ${rw.advanced}× adv`:''}${rw.pity?` · ${rw.pity}× pity`:''}`);
+  } else { toast(`🏆 New season: ${seasonLabel()} — climb the board ♡`); }
+  renderStats(); save();
+}
+function seasonBannerHTML(){
+  const endsIn=Math.max(0,Math.ceil((seasonEndsAt()-Date.now())/1000));
+  return `<div class="propgroup" style="--gc:var(--gold-d);margin-bottom:10px;">
+    <div class="propgrouphead" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>🏆 Season: ${seasonLabel()}</span><span style="font-size:11px;color:var(--ink2);">resets in ${fmtTime(endsIn)}</span></div>
+    <div class="sub" style="margin:0;font-size:11px;">Season best: <b>${money(state.seasonBest||0)}</b> · 🎖️ ${state.seasonsPlayed||0} seasons played. New month = a scroll reward scaled to your peak!</div>
+  </div>`;
+}
+
 /* ---------- Leaderboard (local + optional global Supabase) ---------- */
 function loadLB(){ try{ return JSON.parse(localStorage.getItem(LB_KEY))||[]; }catch(e){ return []; } }
 function saveLB(arr){ try{ localStorage.setItem(LB_KEY, JSON.stringify(arr)); }catch(e){} }
@@ -1949,6 +2263,7 @@ function lbRows(arr){
 function renderRanks(){
   const named = !!(state.name && state.name.trim());
   $("panel-ranks").innerHTML=`
+    ${seasonBannerHTML()}
     <div class="item" style="flex-direction:column;align-items:stretch;gap:8px;">
       <div class="sub" style="margin:0;">Your run <span style="font-size:11px;color:var(--ink2);">(resets on rebirth · +✨ rebirths carry over)</span></div>
       <div style="display:flex;justify-content:space-between;font-weight:700;">
@@ -2444,6 +2759,8 @@ function renderAll(){
   else if(currentTab==="reforge") renderReforge();
   else if(currentTab==="upgrades") renderUpgrades();
   else if(currentTab==="rebirth") renderRebirth();
+  else if(currentTab==="ascend") renderAscend();
+  else if(currentTab==="expeditions") renderExpeditions();
   else if(currentTab==="ranks") renderRanks();
   else if(currentTab==="goals") renderGoals();
   else if(currentTab==="property") renderProperty();
@@ -2880,7 +3197,7 @@ function renderAdventure(){
       <div class="delver-scroll-list" style="max-height:200px;overflow-y:auto;overscroll-behavior:contain;">`;
     for(let i=0;i<CAT_DEFS.length;i++){ if(!(state.cats[i]>0)) continue;
       const c=CAT_DEFS[i], on=i===sel;
-      html+=`<div class="item" data-selcat="${i}" style="cursor:pointer;${on?'border-color:var(--pink);background:#fff2fa;':''}">
+      html+=`<div class="item" data-selcat="${i}" style="cursor:pointer;${on?'border-color:var(--pink);background:var(--soft-sel);':''}">
         <div class="icon">${catVisual(c,40)}</div>
         <div class="info"><div class="name">${c.name}</div>
           <div class="desc">${THEME_BY_ID[catAffinity(i)].emoji} ${THEME_BY_ID[catAffinity(i)].name.split(" ")[0]} · Delver Lv ${delverLevel(i)}</div></div>
@@ -2977,19 +3294,28 @@ function advClick(e){
 
 /* =====================================================================
    RAID BOSS ENGINE ♡
-   · Global boss spawns every 6 hours (Supabase-synced so all players see
-     the same window, or falls back to a local 6h timer).
+   · Global boss spawns every 3 hours (Supabase-synced so all players see
+     the same window, or falls back to a local 3h timer).
+   · 30 s join window after spawn, then a 20-min fight.
    · Joining costs nothing — your DPS = incomePerSecPassive() at join time.
-   · Boss HP = sum(all raiders' DPS) × 1200 (= 20 min if everyone hits full).
-   · Each tick deals proportional damage; boss MUST last ~20 min.
-   · At 50% HP, one raider is eliminated at random.
-   · After 20 min the boss dies; rewards are dealt individually.
+   · Boss HP = sum(all raiders' DPS) × RAID_HP_PER_DPS — scales with the raider
+     pool, tuned so a committed group can kill it inside the 20-min window.
+   · Each tick deals proportional damage.
+   · At 50% HP, if 2+ raiders, one (chosen deterministically by spawnAt) is
+     stunned for 60s — can't attack, but damage already dealt still counts.
+   · The boss dies when HP hits 0 or the 20-min window ends; rewards are individual.
    ===================================================================== */
 
-const RAID_INTERVAL_MS  = 6 * 60 * 60 * 1000;   // 6 hours between raids
+const RAID_INTERVAL_MS  = 3 * 60 * 60 * 1000;   // 3 hours between raids
 const RAID_DURATION_MS  = 20 * 60 * 1000;        // 20 minute fight window
-const RAID_JOIN_WINDOW  = 60 * 1000;             // 60 s to join after spawn
+const RAID_JOIN_WINDOW  = 30 * 1000;             // 30 s to join before the fight starts
 const RAID_HALF_HP_EV   = 0.50;                  // elimination at 50% HP
+// Boss HP per 1 point of total raider DPS. Because both HP and damage scale with
+// the raider pool, time-to-kill (with perfect sustained damage) ≈ this many
+// seconds regardless of how many people join — so it always scales per person.
+// 600 ⇒ ~10 min of committed group DPS inside the 20-min window: killable, but
+// it demands real participation. Lower this for an easier kill, raise it for harder.
+const RAID_HP_PER_DPS   = 600;
 const RAID_DB_KEY       = "catMonopolyRaid_v1";  // Supabase table name
 
 // Boss roster
@@ -3012,13 +3338,13 @@ let _raid = {
   endsAt: 0,            // epoch ms when the raid ends
   totalHP: 0,
   currentHP: 0,
-  eliminatedAt: 0,      // HP value when elimination should fire
-  raidersData: [],      // [{name, dps, eliminated}]
+  eliminatedAt: 0,      // HP value when the 50%-HP stun event fires (DB col: eliminated_at)
+  raidersData: [],      // [{name, dps, stunUntil}]
 
   // Local-only (not synced)
   _myDps: 0,
   _joined: false,
-  _eliminated: false,
+  _stunUntil: 0,        // epoch ms until which WE are stunned (can't attack); 0 = not stunned
   _halfFired: false,
   _rewardClaimed: false,
   _myDmgTotal: 0,       // damage dealt this raid
@@ -3123,7 +3449,7 @@ async function spawnRaidBoss(){
   _raid.raidersData = [];
   _raid._joined     = false;
   _raid._myDps      = 0;
-  _raid._eliminated = false;
+  _raid._stunUntil  = 0;
   _raid._halfFired  = false;
   _raid._rewardClaimed = false;
   _raid._myDmgTotal = 0;
@@ -3159,10 +3485,10 @@ async function joinRaid(){
     const row = await raidFetch();
     const raiders = row && row.raiders_data ? JSON.parse(row.raiders_data) : [];
     const existing = raiders.findIndex(r=>r.name===state.name);
-    if(existing < 0) raiders.push({ name:state.name, dps, eliminated:false });
+    if(existing < 0) raiders.push({ name:state.name, dps, stunUntil:0 });
     else raiders[existing].dps = dps;
     const totalDPS = raiders.reduce((s,r)=>s+r.dps, 0);
-    const newHP    = Math.round(totalDPS * 1200);  // 20 min × 60 s × total_dps
+    const newHP    = Math.round(totalDPS * RAID_HP_PER_DPS);
     _raid.raidersData = raiders;
     _raid.totalHP  = newHP;
     _raid.currentHP= newHP;
@@ -3174,9 +3500,9 @@ async function joinRaid(){
     });
   } else {
     // Offline: just track locally
-    _raid.raidersData.push({ name: state.name||"You", dps, eliminated:false });
+    _raid.raidersData.push({ name: state.name||"You", dps, stunUntil:0 });
     const totalDPS = _raid.raidersData.reduce((s,r)=>s+r.dps, 0);
-    _raid.totalHP  = Math.round(totalDPS * 1200);
+    _raid.totalHP  = Math.round(totalDPS * RAID_HP_PER_DPS);
     _raid.currentHP= _raid.totalHP;
     _raid.eliminatedAt = Math.round(_raid.totalHP * RAID_HALF_HP_EV);
   }
@@ -3252,11 +3578,17 @@ async function raidTick(){
         _raid.phase       = row.phase || _raid.phase;
         _raid.endsAt      = row.ends_at || _raid.endsAt;
         _raid.eliminatedAt= row.eliminated_at || _raid.eliminatedAt;
+        // Pick up a stun applied to us by whichever client fired the 50% event
+        const me = _raid.raidersData.find(r=>r.name===state.name);
+        if(me && me.stunUntil && me.stunUntil > now && me.stunUntil > (_raid._stunUntil||0)){
+          _raid._stunUntil = me.stunUntil;
+          toast("😵 You were stunned for "+Math.ceil((me.stunUntil-now)/1000)+"s! Can't attack — damage still counts.");
+        }
       }
     }
 
-    // Deal our share of damage if we're in the raid
-    if(_raid._joined && !_raid._eliminated){
+    // Deal our share of damage if we're in the raid and not currently stunned
+    if(_raid._joined && now >= (_raid._stunUntil||0)){
       const dt = Math.min((now - _raid._lastTickAt) / 1000, 5); // clamp to 5s max to protect against rejoin spikes
       _raid._lastTickAt = now;
       const dmg = _raid._myDps * dt;
@@ -3276,10 +3608,10 @@ async function raidTick(){
       _raid._lastTickAt = now;
     }
 
-    // 50% HP elimination event
+    // 50% HP stun event
     if(!_raid._halfFired && _raid.currentHP <= _raid.eliminatedAt && _raid.eliminatedAt > 0 && _raid.totalHP > 0){
       _raid._halfFired = true;
-      fireHalfHPElimination();
+      fireHalfHPStun();
     }
 
     // Boss dies: time up or HP gone
@@ -3300,26 +3632,27 @@ async function raidTick(){
   }
 }
 
-function fireHalfHPElimination(){
-  if(ONLINE){
-    // Pick a random non-eliminated raider; if it's us, eliminate locally
-    const active = _raid.raidersData.filter(r=>!r.eliminated);
-    if(active.length === 0) return;
-    const victim = active[Math.floor(Math.random()*active.length)];
-    const idx = _raid.raidersData.findIndex(r=>r.name===victim.name);
-    if(idx>=0) _raid.raidersData[idx].eliminated = true;
-    if(victim.name === state.name){
-      _raid._eliminated = true;
-      toast("💀 You were eliminated at 50% HP! You'll still get participation reward.");
-    } else {
-      toast(`⚡ ${victim.name} was eliminated at 50% HP!`);
-    }
-    raidUpsert({ raiders_data: JSON.stringify(_raid.raidersData) });
+const RAID_STUN_MS = 60 * 1000;   // 50%-HP stun duration: 1 minute
+
+function fireHalfHPStun(){
+  const now = Date.now();
+  const raiders = _raid.raidersData || [];
+  // Only fires when MORE THAN ONE person is in the raid (no solo self-stun)
+  if(raiders.length <= 1) return;
+
+  // Deterministic victim: seeded by spawnAt so every client picks the SAME raider
+  // without coordination (prevents multiple clients each stunning a different person).
+  const victim = raiders[_raid.spawnAt % raiders.length];
+  if(!victim) return;
+  victim.stunUntil = now + RAID_STUN_MS;
+
+  if(victim.name === state.name){
+    _raid._stunUntil = now + RAID_STUN_MS;
+    toast("😵 Stunned for 60s at 50% HP! You can't attack — damage so far still counts.");
   } else {
-    // Offline: eliminate self if only raider
-    _raid._eliminated = true;
-    toast("💀 You were eliminated at 50% HP! You'll still get participation rewards.");
+    toast(`⚡ ${victim.name} was stunned for 60s at 50% HP!`);
   }
+  if(ONLINE) raidUpsert({ raiders_data: JSON.stringify(raiders) });
   if(currentTab==="adventure") renderAdventure();
 }
 
@@ -3351,11 +3684,11 @@ function claimRaidReward(){
   state.money   += goldReward;
   state.lifetime+= goldReward;
 
-  // Damage-based loot roll (higher share = higher effective roll)
-  // myShare biases the roll upward: roll = raw * (1 - myShare) + myShare
-  // At 0% share roll is flat random; at 100% it's 1.0 (best tier guaranteed)
-  const rawRoll = Math.random();
-  const roll = rawRoll * (1 - myShare) + myShare;
+  // Flat loot roll — odds match the advertised loot table exactly.
+  // (The old "damage-based" bias was inverted: a high damage share pushed the
+  //  roll toward 1.0, which lands in the WORST bucket, so solo / top raiders got
+  //  a 1× Basic Scroll every single time. Removed so the table is honest.)
+  const roll = Math.random();
   let rewardLabel = "", rewardDesc = "";
 
   if(roll < 0.01){
@@ -3401,18 +3734,17 @@ function claimRaidReward(){
 
   // Show results modal
   const pct = Math.round(myShare * 100);
-  const survived = !_raid._eliminated;
-  $("raidResultEmoji").textContent = survived ? "🏆" : "💀";
-  $("raidResultTitle").textContent  = survived ? "Raid Victory!" : "Eliminated, but not forgotten!";
+  $("raidResultEmoji").textContent = "🏆";
+  $("raidResultTitle").textContent  = "Raid Victory!";
   $("raidResultBody").innerHTML = `
     <div class="item" style="margin-bottom:8px;">
       <div class="icon" style="font-size:30px;">${boss.emoji}</div>
       <div class="info">
         <div class="name">${boss.name} defeated!</div>
-        <div class="desc">You dealt ${pct}% of total damage · ${survived?'Survived ✅':'Eliminated at 50% HP 💀'}</div>
+        <div class="desc">You dealt ${pct}% of total damage ⚔️</div>
       </div>
     </div>
-    <div style="background:#f8fff5;border:2px solid #6fd6a3;border-radius:16px;padding:12px 14px;margin-bottom:8px;">
+    <div style="background:var(--soft-good);border:2px solid #6fd6a3;border-radius:16px;padding:12px 14px;margin-bottom:8px;">
       <div style="font-weight:800;font-size:14px;color:var(--good);margin-bottom:6px;">🎁 Your Rewards</div>
       <div style="font-weight:700;font-size:16px;color:var(--gold-d);margin-bottom:4px;">${rewardLabel}</div>
       <div style="font-size:13px;color:var(--ink2);font-weight:600;margin-bottom:6px;">${rewardDesc}</div>
@@ -3469,7 +3801,7 @@ function raidUpdateUI(){
     if(cb) cb.style.display="none";
     const hpPct = _raid.totalHP > 0 ? Math.round((_raid.currentHP/_raid.totalHP)*100) : 0;
     if(ab){ ab.style.display="block";
-      ab.textContent=`${boss.emoji} RAID ACTIVE — ${hpPct}% HP · ${secsLeft}s left · ${_raid._joined?(_raid._eliminated?"💀 Eliminated":"⚔️ Fighting"):"👀 Watching"}`; }
+      ab.textContent=`${boss.emoji} RAID ACTIVE — ${hpPct}% HP · ${secsLeft}s left · ${_raid._joined?(Date.now()<(_raid._stunUntil||0)?"😵 Stunned":"⚔️ Fighting"):"👀 Watching"}`; }
   } else {
     if(cb) cb.style.display="none";
     if(ab) ab.style.display="none";
@@ -3490,7 +3822,7 @@ function renderRaidSection(){
     const secsUntil = Math.ceil(Math.max(0, _raid.spawnAt - now)/1000);
     return `<div class="card" style="margin-bottom:14px;border-color:#ffd9ee;">
       <div style="text-align:center;font-family:'Baloo 2';font-weight:800;font-size:18px;color:var(--danger);">👹 Raid Boss</div>
-      <div class="sub" style="text-align:center;margin:4px 0 8px;">A powerful boss spawns every 6 hours for a 20-minute global raid!</div>
+      <div class="sub" style="text-align:center;margin:4px 0 8px;">A powerful boss spawns every 3 hours for a 20-minute global raid!</div>
       <div style="text-align:center;">
         <span class="mult-badge" style="color:var(--danger);">⏱ Next boss in ${fmtTime(secsUntil)}</span>
       </div>
@@ -3517,7 +3849,7 @@ function renderRaidSection(){
         <span class="mult-badge" style="color:var(--lav);">👥 ${raiderCount} raider${raiderCount===1?"":"s"}</span>
         <span class="mult-badge" style="color:var(--good);">⚔️ Your DPS: ${money(myDps)}/s</span>
       </div>
-      <p style="font-size:12px;text-align:center;color:var(--ink2);font-weight:600;margin:0 0 10px;">More raiders = more HP, but also more total DPS. Boss must last 20 min!</p>
+      <p style="font-size:12px;text-align:center;color:var(--ink2);font-weight:600;margin:0 0 10px;">More raiders = more HP, but also more total DPS. Take it down before the 20-min timer!</p>
       ${_raid._joined
         ? `<div class="buy alt" style="text-align:center;border-radius:16px;padding:12px;cursor:default;">✅ Joined! Fight starts in ${secsLeft}s</div>`
         : `<button class="buy alt" style="width:100%;font-size:16px;" onclick="joinRaid()">⚔️ JOIN THE RAID! (Free)</button>`}
@@ -3530,7 +3862,7 @@ function renderRaidSection(){
     const hpPct    = _raid.totalHP > 0 ? (_raid.currentHP/_raid.totalHP) : 0;
     const halfFired= _raid._halfFired;
     const raiderCount = _raid.raidersData.length;
-    const active   = _raid.raidersData.filter(r=>!r.eliminated).length;
+    const active   = _raid.raidersData.filter(r=> !(r.stunUntil && r.stunUntil > now)).length;
     const myDmgPct = _raid.totalHP > 0 ? Math.min(100, Math.round(_raid._myDmgTotal / _raid.totalHP * 100)) : 0;
     return `<div class="card" style="margin-bottom:14px;border-color:var(--danger);">
       <div style="text-align:center;font-size:32px;">${boss.emoji}</div>
@@ -3540,16 +3872,20 @@ function renderRaidSection(){
         <span style="color:var(--ink2);">⏱ ${fmtTime(secsLeft)} left</span>
       </div>
       <div class="raid-hp-bar-wrap"><div class="raid-hp-bar${hpPct<=0.5?' half':''}" style="width:${Math.round(hpPct*100)}%"></div></div>
-      ${!halfFired ? `<div style="font-size:11px;color:var(--gold-d);font-weight:700;text-align:center;margin:2px 0;">⚡ Elimination event at 50% HP!</div>` : `<div style="font-size:11px;color:var(--danger);font-weight:700;text-align:center;margin:2px 0;">💀 Elimination fired! ${active}/${raiderCount} raiders remain</div>`}
+      ${raiderCount > 1
+        ? (!halfFired
+            ? `<div style="font-size:11px;color:var(--gold-d);font-weight:700;text-align:center;margin:2px 0;">⚡ Stun event at 50% HP — a random raider can't attack for 60s!</div>`
+            : `<div style="font-size:11px;color:var(--danger);font-weight:700;text-align:center;margin:2px 0;">💫 Stun fired! ${active}/${raiderCount} raiders attacking</div>`)
+        : `<div style="font-size:11px;color:var(--ink2);font-weight:700;text-align:center;margin:2px 0;">Solo raid — no stun event (needs 2+ raiders)</div>`}
       <div style="margin:6px 0 2px;display:flex;justify-content:space-between;font-size:12px;font-weight:700;">
         <span style="color:var(--good);">Your damage: ${myDmgPct}%</span>
-        <span style="color:var(--lav);">👥 ${active} active raiders</span>
+        <span style="color:var(--lav);">👥 ${active} attacking</span>
       </div>
       <div class="raid-dmg-bar-wrap"><div class="raid-dmg-bar" style="width:${myDmgPct}%"></div></div>
       <div style="margin-top:8px;text-align:center;">
         ${_raid._joined
-          ? (_raid._eliminated
-            ? `<span class="mult-badge" style="color:var(--danger);">💀 You were eliminated — damage still counts!</span>`
+          ? (now < (_raid._stunUntil||0)
+            ? `<span class="mult-badge" style="color:var(--danger);">😵 Stunned ${Math.ceil(((_raid._stunUntil||0)-now)/1000)}s — can't attack, damage still counts!</span>`
             : `<span class="mult-badge" style="color:var(--good);">⚔️ Fighting! DPS: ${money(_raid._myDps)}/s</span>`)
           : `<span class="mult-badge" style="color:var(--ink2);">👀 Watching — you didn't join this raid</span>`}
       </div>
@@ -3585,6 +3921,9 @@ function tick(){
   else if(currentTab==="adventure" && tickN%10===0) renderAdventure();  // refresh stamina timer + raid
   else if(currentTab==="gacha" && tickN%10===0) updateGacha();  // refresh costs ~every 1s
   else if(currentTab==="reforge" && tickN%10===0) updateReforge();  // refresh 5%-gold cost ~every 1s
+  else if(currentTab==="expeditions" && tickN%10===0) renderExpeditions();  // live mission countdowns
+  if(tickN%10===0){ updateExpedPing(); const ap=$("ascendPing"); if(ap) ap.style.display=canAscend()?"":"none"; state.seasonBest=Math.max(state.seasonBest||0, myScore()); }
+  if(tickN%100===0) checkSeason();   // ~every 10s — roll the monthly season over if needed
   if((++tickN)%20===0) checkAchievements();   // ~every 2s
   // Raid boss tick: every ~1s (10 × 100ms)
   if(++_raidTickCounter >= 10){ _raidTickCounter=0; raidTick(); raidUpdateUI(); }
@@ -3692,6 +4031,21 @@ function applyLoadedState(s){
   if(typeof state.catacombUpgrades!=="object"||!state.catacombUpgrades) state.catacombUpgrades={};
   if(typeof state.lastStaminaRefill!=="string") state.lastStaminaRefill="";
   if(!Array.isArray(state.raidHistory)) state.raidHistory=[];
+  // ---- New-feature defaults (additive — keeps old saves valid) ----
+  if(typeof state.ascensions!=="number") state.ascensions=0;
+  if(typeof state.stardust!=="number") state.stardust=0;
+  if(typeof state.ascendTree!=="object"||!state.ascendTree) state.ascendTree={};
+  if(typeof state.catStars!=="object"||!state.catStars) state.catStars={};
+  if(!Array.isArray(state.equippedTalismans)) state.equippedTalismans=[];
+  // drop equipped ids the player no longer owns, and clamp to the slot count
+  state.equippedTalismans=state.equippedTalismans
+    .filter(id=>TALISMANS.some(t=>t.id===id) && (state.talismans&&state.talismans[id]>0))
+    .slice(0,TAL_EQUIP_SLOTS);
+  if(typeof state.season!=="string") state.season="";
+  if(typeof state.seasonBest!=="number") state.seasonBest=0;
+  if(typeof state.seasonsPlayed!=="number") state.seasonsPlayed=0;
+  if(typeof state.expeditions!=="object"||!state.expeditions) state.expeditions={};
+  if(typeof state.expeditionsDone!=="number") state.expeditionsDone=0;
 }
 function applyOffline(){
   const now=Date.now(); let elapsed=(now-(state.lastSave||now))/1000;
@@ -4187,7 +4541,7 @@ const msgsHtml = msgs.length === 0
       💬 Global Chat
       <span style="font-size:11px;font-weight:600;color:var(--ink2);margin-left:6px;">${ONLINE?"🟢 Live":"📴 Offline"}</span>
     </div>
-    ${noName?`<div style="background:#fff8f0;border:2px solid #ffd9ee;border-radius:16px;padding:10px 14px;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--danger);text-align:center;">⚠️ Set a name in 🏆 Leaderboard to chat!</div>`:""}
+    ${noName?`<div style="background:var(--soft-warm);border:2px solid #ffd9ee;border-radius:16px;padding:10px 14px;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--danger);text-align:center;">⚠️ Set a name in 🏆 Leaderboard to chat!</div>`:""}
     <div id="chatMessages">${msgsHtml}</div>
     <div class="chat-input-row">
       <input id="chatInput" maxlength="${CHAT_MAX_LEN}" placeholder="${noName?"Set a name first…":"Say something kawaii… ♡"}" ${noName?"disabled":""} autocomplete="off" autocorrect="off" spellcheck="false">
@@ -4218,7 +4572,7 @@ setTimeout(()=>{ if(ONLINE) chatPoll(); chatStartPoll(); }, 2000);
 
 function setActiveTab(){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===currentTab));
-  ["cats","property","upgrades","gacha","reforge","rebirth","ranks","goals","catdex","adventure","chat"].forEach(p=>{
+  ["cats","property","upgrades","gacha","reforge","rebirth","ascend","expeditions","ranks","goals","catdex","adventure","chat"].forEach(p=>{
     const el=$("panel-"+p); if(el) el.style.display=currentTab===p?"":"none";
   });
   $("buyAmtRow").style.display=currentTab==="cats"?"flex":"none";
@@ -4233,12 +4587,24 @@ document.querySelectorAll(".buyamt").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".buyamt").forEach(x=>x.classList.remove("active")); b.classList.add("active");
   buyAmount=b.dataset.amt==="max"?"max":parseInt(b.dataset.amt); if(currentTab==="cats") updateCats();
 }));
-$("panel-cats").addEventListener("click",e=>{ const btn=e.target.closest("[data-cat]"); if(btn) buyCat(parseInt(btn.dataset.cat)); });
+$("panel-cats").addEventListener("click",e=>{
+  const fz=e.target.closest("[data-fuse]"); if(fz){ fuseCat(parseInt(fz.dataset.fuse)); return; }
+  const btn=e.target.closest("[data-cat]"); if(btn) buyCat(parseInt(btn.dataset.cat));
+});
 $("panel-upgrades").addEventListener("click",e=>{ const btn=e.target.closest("[data-up]"); if(btn) buyUpgrade(btn.dataset.up); });
 $("panel-rebirth").addEventListener("click",e=>{ const btn=e.target.closest("[data-skill]"); if(btn) buySkill(btn.dataset.skill); });
 $("panel-property").addEventListener("click",e=>{ const btn=e.target.closest("[data-prop]"); if(btn) buyProperty(parseInt(btn.dataset.prop)); });
 $("panel-adventure").addEventListener("click",advClick);
-$("panel-gacha").addEventListener("click",e=>{ const btn=e.target.closest("[data-roll]"); if(btn) doRoll(btn.dataset.roll, parseInt(btn.dataset.count)); });
+$("panel-ascend").addEventListener("click",e=>{ const btn=e.target.closest("[data-ascend]"); if(btn) buyAscendNode(btn.dataset.ascend); });
+$("panel-expeditions").addEventListener("click",e=>{
+  const c=e.target.closest("[data-exped-claim]"); if(c){ claimExpedition(parseInt(c.dataset.expedClaim)); return; }
+  const s=e.target.closest("[data-exped-start]"); if(s){ const p=s.dataset.expedStart.split(":"); startExpedition(parseInt(p[0]), p[1]); return; }
+});
+$("panel-gacha").addEventListener("click",e=>{
+  const eq=e.target.closest("[data-equip]"); if(eq){ toggleEquipTalisman(eq.dataset.equip); return; }
+  const uq=e.target.closest("[data-unequip]"); if(uq){ toggleEquipTalisman(uq.dataset.unequip); return; }
+  const btn=e.target.closest("[data-roll]"); if(btn) doRoll(btn.dataset.roll, parseInt(btn.dataset.count));
+});
 $("panel-reforge").addEventListener("click",e=>{
   const lk=e.target.closest("[data-lock]"); if(lk){ const p=lk.dataset.lock.split(":"); toggleLock(p[0],p[1]); return; }
   const btn=e.target.closest("[data-reforge]"); if(btn) reforgeTalisman(btn.dataset.reforge);
@@ -4625,7 +4991,8 @@ function applyWipeV1(){
 }
 
 /* ---------- Boot ---------- */
-load(); applyWipeV1(); applyPrefs(); applyOffline(); checkAchievements(); setActiveTab(); updateMascot(); renderAll();
+load(); applyWipeV1(); applyPrefs(); applyOffline(); checkSeason(); checkAchievements(); setActiveTab(); updateMascot(); renderAll();
+updateExpedPing();
 showBootPopups();
 lastTick=Date.now();
 setInterval(tick,100);
