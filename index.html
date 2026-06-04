@@ -614,12 +614,32 @@ const UPGRADE_DEFS = [
   { id:"cream",    name:"Lucky Cream Saucer",    emoji:"🥛", cost:5e5,    globalMult:1.5,desc:"x1.5 ALL income",                   category:"global" },
   { id:"moonrock", name:"Moon Rock",             emoji:"🌙", cost:6e10,   globalMult:2,  desc:"x2 ALL income",                    category:"global" },
   { id:"sunstone", name:"Sunstone Amulet",       emoji:"☀️",  cost:8e14,   globalMult:2.5,desc:"x2.5 ALL income",                  category:"global" },
+  // ── PRESTIGE TAP (requires rebirths) ────────────────────────────────────
+  { id:"ptap1",    name:"Void Claw Gauntlet",    emoji:"🌑", cost:5e18,   clickMult:20,  desc:"x20 tap income",                   category:"prestige", minRebirth:1  },
+  { id:"ptap2",    name:"Nebula Strike",         emoji:"🌌", cost:8e21,   clickMult:35,  desc:"x35 tap income",                   category:"prestige", minRebirth:3  },
+  { id:"ptap3",    name:"Singularity Paw",       emoji:"🕳️",  cost:2e25,   clickMult:60,  desc:"x60 tap income",                   category:"prestige", minRebirth:6  },
+  { id:"ptap4",    name:"Divine Strike",         emoji:"⚡", cost:5e28,   clickMult:100, desc:"x100 tap income",                  category:"prestige", minRebirth:10 },
+  // ── PRESTIGE CAT (requires rebirths) ────────────────────────────────────
+  { id:"pcat1",    name:"Astral Catnip Field",   emoji:"🌠", cost:1e19,   mult:4,        desc:"x4 all cat income",                category:"prestige", minRebirth:1  },
+  { id:"pcat2",    name:"Dark Matter Litter",    emoji:"🪐", cost:6e22,   mult:6,        desc:"x6 all cat income",                category:"prestige", minRebirth:4  },
+  { id:"pcat3",    name:"Quantum Fur Matrix",    emoji:"⚛️",  cost:3e26,   mult:10,       desc:"x10 all cat income",               category:"prestige", minRebirth:7  },
+  { id:"pcat4",    name:"Omnipurr Collective",   emoji:"🐈", cost:9e29,   mult:15,       desc:"x15 all cat income",               category:"prestige", minRebirth:12 },
+  // ── PRESTIGE GLOBAL (requires rebirths) ─────────────────────────────────
+  { id:"pglo1",    name:"Rebirth Resonance",     emoji:"♻️",  cost:2e20,   globalMult:3,  desc:"x3 ALL income",                   category:"prestige", minRebirth:2  },
+  { id:"pglo2",    name:"Temporal Cat Loop",     emoji:"⏰", cost:4e23,   globalMult:5,  desc:"x5 ALL income",                   category:"prestige", minRebirth:5  },
+  { id:"pglo3",    name:"Infinite Paw Theorem",  emoji:"♾️",  cost:2e27,   globalMult:8,  desc:"x8 ALL income",                   category:"prestige", minRebirth:9  },
+  { id:"pglo4",    name:"Catgod Decree",         emoji:"👁️",  cost:8e30,   globalMult:15, desc:"x15 ALL income",                  category:"prestige", minRebirth:15 },
+  // ── PRESTIGE OFFLINE ─────────────────────────────────────────────────────
+  { id:"poff1",    name:"Dream Harvester",       emoji:"😴", cost:3e19,   offlineMult:2, desc:"x2 offline earnings",              category:"prestige", minRebirth:2  },
+  { id:"poff2",    name:"Sleep Singularity",     emoji:"💤", cost:5e23,   offlineMult:3, desc:"x3 offline earnings",              category:"prestige", minRebirth:6  },
+  { id:"poff3",    name:"Eternal Slumber Core",  emoji:"🌙", cost:1e28,   offlineMult:5, desc:"x5 offline earnings",              category:"prestige", minRebirth:11 },
 ];
 const UPGRADE_CATEGORIES = [
-  { id:"tap",    label:"👆 Tap Power",    desc:"Boost your manual tapping income" },
-  { id:"combo",  label:"🔥 Combo",        desc:"Enhance your tap combo streak" },
-  { id:"cat",    label:"🐾 Cat Power",    desc:"Multiply your cat idle income" },
-  { id:"global", label:"✨ Global",       desc:"Boost all income sources" },
+  { id:"tap",      label:"👆 Tap Power",    desc:"Boost your manual tapping income" },
+  { id:"combo",    label:"🔥 Combo",        desc:"Enhance your tap combo streak" },
+  { id:"cat",      label:"🐾 Cat Power",    desc:"Multiply your cat idle income" },
+  { id:"global",   label:"✨ Global",       desc:"Boost all income sources" },
+  { id:"prestige", label:"💫 Prestige",     desc:"Extreme multipliers — requires rebirths to unlock" },
 ];
 
 /* ---------- Estates (Monopoly board) — cash money-sink for permanent income % ----------
@@ -1093,6 +1113,7 @@ function reforgeTotals(){
 }
 function reforgeTapMult(){ return Math.max(0.1, 1 + reforgeTotals().tap/100); }
 function reforgeCatMult(){ return Math.max(0.1, 1 + reforgeTotals().cat/100); }
+function upgradeOfflineMult(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.offlineMult&&state.upgrades[u.id]) m*=u.offlineMult; } return m; }
 function reforgeAfkMult(){ return Math.max(0.1, 1 + reforgeTotals().afk/100); }
 function propCost(i){ const lvl=state.properties[i]||0; return PROPERTY_DEFS[i].cost*Math.pow(2.8,lvl); }
 function groupComplete(g){ return PROPERTY_DEFS.every((p,i)=> p.g!==g || (state.properties[i]||0)>=1); }
@@ -1355,10 +1376,17 @@ function renderUpgrades(){
       <div class="sub" style="font-size:11px;margin:0 0 8px 2px;">${cat.desc}</div>`;
     for(const u of items){
       const owned = !!state.upgrades[u.id];
-      html += `<div class="item ${owned?'locked':''}">
-        <div class="icon" style="font-size:30px;">${u.emoji}</div>
-        <div class="info"><div class="name">${u.name} ${owned?'✅':''}</div><div class="desc">${u.desc}</div></div>
+      const rebirthNeeded = u.minRebirth||0;
+      const rebirthLocked = (state.rebirths||0) < rebirthNeeded;
+      html += `<div class="item ${owned||rebirthLocked?'locked':''}">
+        <div class="icon" style="font-size:30px;">${rebirthLocked?'🔒':u.emoji}</div>
+        <div class="info">
+          <div class="name">${u.name} ${owned?'✅':rebirthLocked?`<span style="font-size:11px;color:var(--danger)">· ${rebirthNeeded} rebirths needed</span>`:''}
+          </div>
+          <div class="desc">${u.desc}</div>
+        </div>
         ${owned?`<span class="owned" style="font-size:14px;color:var(--good)">Owned</span>`
+          :rebirthLocked?`<span class="owned" style="font-size:12px;color:var(--ink2)">🔒 Rebirth ${rebirthNeeded}×</span>`
           :`<button class="buy alt" id="upbuy-${u.id}" data-up="${u.id}" ${state.money>=u.cost?"":"disabled"}>${money(u.cost)}</button>`}
       </div>`;
     }
@@ -1377,7 +1405,8 @@ function updateUpgrades(){
   for(const u of UPGRADE_DEFS){
     if(state.upgrades[u.id]) continue;
     const btn=$("upbuy-"+u.id); if(!btn) continue;
-    btn.disabled=state.money<u.cost;
+    const rebirthLocked=(state.rebirths||0)<(u.minRebirth||0);
+    btn.disabled=rebirthLocked||state.money<u.cost;
   }
 }
 
@@ -2180,6 +2209,7 @@ function buyCat(i){
 function buyUpgrade(id){
   const u=UPGRADE_DEFS.find(x=>x.id===id);
   if(!u||state.upgrades[id]||state.money<u.cost) return;
+  if((u.minRebirth||0) > (state.rebirths||0)){ toast("🔒 Requires "+u.minRebirth+" rebirths!"); return; }
   state.money-=u.cost; state.upgrades[id]=true;
   toast(u.name+" purchased! ♡"); renderUpgrades(); renderStats(); sfx("buy");
 }
@@ -2358,7 +2388,7 @@ function applyOffline(){
   if(elapsed<5) return;
   const capHours=offlineCapHours();
   const capped=Math.min(elapsed,capHours*3600);
-  const earned=incomePerSec()*capped*reforgeAfkMult(); if(earned<=0) return;
+  const earned=incomePerSec()*capped*reforgeAfkMult()*upgradeOfflineMult(); if(earned<=0) return;
   state.money+=earned; state.lifetime+=earned; state.totalEarned+=earned;
   $("offlineEarned").textContent=money(earned);
   $("offlineTime").textContent="Away for "+fmtTime(elapsed)+(elapsed>capped?" (capped at "+capHours+"h)":"");
@@ -2406,44 +2436,121 @@ function applyPrefs(){
   document.body.classList.toggle("dark", !!(state.prefs && state.prefs.dark));
 }
 
-/* ---------- Lofi Kawaii background music (synthesised, looping) ----------
-   Slow lofi hip-hop feel (~80 BPM) with:
-   · Deep sub-bass (sine) on beat 1 & 3
-   · Jazzy chord stabs (Am7 · Fmaj7 · C · G7) with soft attack
-   · Warm vinyl-style melody (triangle w/ slight detune)
-   · Soft hi-hat pulse on every eighth
-   · Master gain ~3× louder than the old version
-   Browsers block autoplay → kicks in on first tap. */
-const _BPM=80, _BEAT=60/_BPM, _STEP=_BEAT/2;   // eighth-note = 0.375s at 80 BPM
+/* ---------- Lofi Kawaii Music Engine — 4-track playlist ----------
+   Four distinct synthesised lofi tracks that play in sequence and loop.
+   Each track has its own BPM, chord progression, bass line, melody, and drum feel.
+   Track 1 — "Purrfect Afternoon"  : warm Am7 jazz, ~80 BPM, gentle hi-hats
+   Track 2 — "Midnight Catnap"     : moody Dm pentatonic, ~72 BPM, sparse kick
+   Track 3 — "Sunny Windowsill"    : bright Cmaj, ~88 BPM, bouncy groove
+   Track 4 — "Stardust Nap"        : dreamy Ebmaj7 float, ~68 BPM, minimal
+   Browsers block autoplay — starts on first user gesture. */
 
-// Note frequencies
 const _HZ={
-  C2:65.41,  G2:98.00,  A2:110.00, F2:87.31,
-  C3:130.81, E3:164.81, F3:174.61, G3:196.00, A3:220.00, B3:246.94,
-  C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
-  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00,
-  Eb4:311.13, Bb3:233.08, Db4:277.18,
+  C2:65.41,  D2:73.42,  Eb2:77.78, F2:87.31,  G2:98.00,  Ab2:103.83,
+  A2:110.00, Bb2:116.54,B2:123.47,
+  C3:130.81, D3:146.83, Eb3:155.56,E3:164.81, F3:174.61, G3:196.00,
+  Ab3:207.65,A3:220.00, Bb3:233.08,B3:246.94,
+  C4:261.63, D4:293.66, Eb4:311.13,E4:329.63, F4:349.23, G4:392.00,
+  Ab4:415.30,A4:440.00, Bb4:466.16,B4:493.88,
+  C5:523.25, D5:587.33, Eb5:622.25,E5:659.25, F5:698.46, G5:783.99,
+  Ab5:830.61,A5:880.00, Bb5:932.33,
 };
 
-// 4-bar chord progression (Am7 · Fmaj7 · Cmaj7 · G7), each bar = 8 eighth-steps
-const _CHORDS=[
-  [_HZ.A3,_HZ.C4,_HZ.E4,_HZ.G4],    // Am7
-  [_HZ.F3,_HZ.A3,_HZ.C4,_HZ.E4],    // Fmaj7
-  [_HZ.C3,_HZ.E4,_HZ.G4,_HZ.B4],    // Cmaj7
-  [_HZ.G3,_HZ.B3,_HZ.D4,_HZ.F4],    // G7
-];
-// Bass root per bar (one octave below chord root)
-const _BASSN=[_HZ.A2,_HZ.F2,_HZ.C3,_HZ.G2];
+// ── TRACK DEFINITIONS ──────────────────────────────────────────────────────
+const _TRACKS = [
 
-// Pentatonic melody over 32 steps (0=rest). Kawaii & slightly melancholic.
-const _MEL=[
-  _HZ.E5,0,_HZ.D5,_HZ.C5, 0,_HZ.E5,0,0,
-  _HZ.A4,0,_HZ.C5,0,       _HZ.D5,0,_HZ.E5,0,
-  _HZ.G5,0,_HZ.E5,_HZ.D5, _HZ.C5,0,0,_HZ.A4,
-  _HZ.B4,0,_HZ.G4,0,       _HZ.A4,_HZ.C5,0,0,
+  // ── Track 1: "Purrfect Afternoon" — Am7·Fmaj7·Cmaj7·G7, 80 BPM ──────────
+  { name:"Purrfect Afternoon", bpm:80, bars:4,
+    chords:[
+      [_HZ.A3,_HZ.C4,_HZ.E4,_HZ.G4],   // Am7
+      [_HZ.F3,_HZ.A3,_HZ.C4,_HZ.E4],   // Fmaj7
+      [_HZ.C3,_HZ.E4,_HZ.G4,_HZ.B4],   // Cmaj7
+      [_HZ.G3,_HZ.B3,_HZ.D4,_HZ.F4],   // G7
+    ],
+    bass:[_HZ.A2,_HZ.F2,_HZ.C3,_HZ.G2],
+    mel:[
+      _HZ.E5,0,_HZ.D5,_HZ.C5,  0,_HZ.E5,0,0,
+      _HZ.A4,0,_HZ.C5,0,        _HZ.D5,0,_HZ.E5,0,
+      _HZ.G5,0,_HZ.E5,_HZ.D5,  _HZ.C5,0,0,_HZ.A4,
+      _HZ.B4,0,_HZ.G4,0,        _HZ.A4,_HZ.C5,0,0,
+    ],
+    kick:[0,0,0,0, 0,0,0,0],   // beat pattern per 8 steps (0=off,1=on)
+    hatGain:0.18, hatAccent:0.09,
+    chordGain:0.22, chordOffGain:0.10,
+    melGain:0.28, bassGain:0.55,
+    melType:"triangle",
+  },
+
+  // ── Track 2: "Midnight Catnap" — Dm·Bb·F·Am, 72 BPM, sparse/moody ───────
+  { name:"Midnight Catnap", bpm:72, bars:4,
+    chords:[
+      [_HZ.D3,_HZ.F3,_HZ.A3,_HZ.C4],   // Dm7
+      [_HZ.Bb3,_HZ.D4,_HZ.F4,_HZ.A4],  // Bbmaj7
+      [_HZ.F3,_HZ.A3,_HZ.C4,_HZ.E4],   // Fmaj7
+      [_HZ.A3,_HZ.C4,_HZ.E4,_HZ.G4],   // Am7
+    ],
+    bass:[_HZ.D2,_HZ.Bb2,_HZ.F2,_HZ.A2],
+    mel:[
+      _HZ.F5,0,0,_HZ.E5,    0,_HZ.D5,0,0,
+      0,_HZ.C5,0,_HZ.D5,    _HZ.F5,0,0,0,
+      _HZ.A5,0,_HZ.G5,0,    _HZ.F5,0,_HZ.E5,0,
+      0,_HZ.D5,0,0,          _HZ.F5,0,0,_HZ.A4,
+    ],
+    kick:[1,0,0,0, 1,0,0,0],
+    hatGain:0.10, hatAccent:0.05,   // quieter hats — more minimal feel
+    chordGain:0.18, chordOffGain:0.07,
+    melGain:0.24, bassGain:0.50,
+    melType:"sine",               // sine melody feels softer/dreamier
+  },
+
+  // ── Track 3: "Sunny Windowsill" — Cmaj7·Em7·Fmaj7·G7, 88 BPM, bouncy ───
+  { name:"Sunny Windowsill", bpm:88, bars:4,
+    chords:[
+      [_HZ.C3,_HZ.E4,_HZ.G4,_HZ.B4],   // Cmaj7
+      [_HZ.E3,_HZ.G3,_HZ.B3,_HZ.D4],   // Em7
+      [_HZ.F3,_HZ.A3,_HZ.C4,_HZ.E4],   // Fmaj7
+      [_HZ.G3,_HZ.B3,_HZ.D4,_HZ.F4],   // G7
+    ],
+    bass:[_HZ.C2,_HZ.E2,_HZ.F2,_HZ.G2],
+    mel:[
+      _HZ.E5,_HZ.G5,0,_HZ.A5,    0,_HZ.G5,_HZ.E5,0,
+      _HZ.D5,0,_HZ.E5,_HZ.G5,    0,0,_HZ.A5,0,
+      _HZ.G5,0,_HZ.F5,_HZ.E5,    _HZ.D5,_HZ.C5,0,0,
+      _HZ.E5,0,_HZ.G5,0,          _HZ.A5,0,_HZ.G5,0,
+    ],
+    kick:[1,0,0,1, 0,0,1,0],     // busier kick pattern — more upbeat
+    hatGain:0.22, hatAccent:0.12,
+    chordGain:0.20, chordOffGain:0.12,
+    melGain:0.30, bassGain:0.48,
+    melType:"triangle",
+  },
+
+  // ── Track 4: "Stardust Nap" — Ebmaj7·Abmaj7·Bbmaj7·Cm, 68 BPM, dreamy ──
+  { name:"Stardust Nap", bpm:68, bars:4,
+    chords:[
+      [_HZ.Eb3,_HZ.G3,_HZ.Bb3,_HZ.D4],  // Ebmaj7
+      [_HZ.Ab3,_HZ.C4,_HZ.Eb4,_HZ.G4],  // Abmaj7
+      [_HZ.Bb3,_HZ.D4,_HZ.F4,_HZ.A4],   // Bbmaj7
+      [_HZ.C3,_HZ.Eb4,_HZ.G4,_HZ.Bb4],  // Cm7
+    ],
+    bass:[_HZ.Eb2,_HZ.Ab2,_HZ.Bb2,_HZ.C3],
+    mel:[
+      _HZ.G5,0,0,_HZ.Bb5,   0,0,_HZ.Ab5,0,
+      _HZ.G5,0,_HZ.Eb5,0,   0,_HZ.F5,0,0,
+      _HZ.Bb5,0,0,_HZ.Ab5,  _HZ.G5,0,0,_HZ.Eb5,
+      0,_HZ.F5,0,_HZ.G5,    0,0,_HZ.Bb5,0,
+    ],
+    kick:[1,0,0,0, 0,0,1,0],
+    hatGain:0.08, hatAccent:0.04,  // very sparse hats — floating feel
+    chordGain:0.16, chordOffGain:0.06,
+    melGain:0.22, bassGain:0.45,
+    melType:"triangle",
+  },
 ];
 
-let _music={timer:null,next:0,step:0}, _musicGain=null, _masterComp=null;
+// ── PLAYBACK STATE ─────────────────────────────────────────────────────────
+let _music = { timer:null, next:0, step:0, trackIdx:0, trackStep:0 };
+let _musicGain=null, _masterComp=null;
 function musicOn(){ return !!(state.prefs && state.prefs.music); }
 
 function ensureMusicGain(){
@@ -2455,7 +2562,7 @@ function ensureMusicGain(){
     _masterComp.connect(ac.destination);
   }
   if(!_musicGain){
-    _musicGain=ac.createGain(); _musicGain.gain.value=0.38;  // much louder master
+    _musicGain=ac.createGain(); _musicGain.gain.value=0.38;
     _musicGain.connect(_masterComp);
   }
   return _musicGain;
@@ -2464,8 +2571,7 @@ function ensureMusicGain(){
 function mNote(freq, t, dur, gain, type, detune){
   const ac=actx(); const mg=ensureMusicGain(); if(!ac||!mg||!freq) return;
   const o=ac.createOscillator(), g=ac.createGain();
-  o.type=type||"triangle";
-  o.frequency.value=freq;
+  o.type=type||"triangle"; o.frequency.value=freq;
   if(detune) o.detune.value=detune;
   g.gain.setValueAtTime(0.0001,t);
   g.gain.exponentialRampToValueAtTime(gain, t+0.04);
@@ -2475,9 +2581,8 @@ function mNote(freq, t, dur, gain, type, detune){
 }
 
 function mChord(notes, t, dur, gain){
-  // slightly detuned per voice for warm lofi width
   const detunes=[-8,-3,3,8];
-  notes.forEach((f,i)=> mNote(f, t, dur, gain*(0.7-i*0.04), "sine", detunes[i]||0));
+  notes.forEach((f,i)=> mNote(f, t, dur, gain*(0.70-i*0.04), "sine", detunes[i]||0));
 }
 
 function mHiHat(t, gain){
@@ -2486,49 +2591,62 @@ function mHiHat(t, gain){
   const d=buf.getChannelData(0); for(let i=0;i<512;i++) d[i]=(Math.random()*2-1);
   const src=ac.createBufferSource(), hpf=ac.createBiquadFilter(), g=ac.createGain();
   hpf.type="highpass"; hpf.frequency.value=8000;
-  g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.04);
+  g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.045);
   src.buffer=buf; src.connect(hpf); hpf.connect(g); g.connect(mg); src.start(t);
+}
+
+function mKick(t, gain){
+  const ac=actx(); const mg=ensureMusicGain(); if(!ac||!mg) return;
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type="sine";
+  o.frequency.setValueAtTime(120,t); o.frequency.exponentialRampToValueAtTime(40,t+0.12);
+  g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.18);
+  o.connect(g); g.connect(mg); o.start(t); o.stop(t+0.22);
 }
 
 function scheduleMusic(){
   const ac=actx(); if(!ac) return;
-  const lookahead=0.18;
+  const lookahead=0.20;
   while(_music.next < ac.currentTime + lookahead){
-    const s=_music.step%32;
-    const bar=Math.floor(s/8)%4;
-    const beat=s%8;   // 0-7 (eighth notes in a bar)
-    const t=_music.next;
+    const trk = _TRACKS[_music.trackIdx];
+    const BEAT = 60/trk.bpm, STEP = BEAT/2;
+    const totalSteps = trk.bars * 8;
+    const s  = _music.trackStep % totalSteps;
+    const bar  = Math.floor(s/8) % trk.bars;
+    const beat = s % 8;
+    const t  = _music.next;
 
-    // Sub-bass: beats 0 and 4 (quarter notes 1 & 3), long sustain, deep sine
-    if(beat===0 || beat===4){
-      mNote(_BASSN[bar], t, _BEAT*1.6, 0.55, "sine");
-    }
-    // Extra bass ghost note on beat 6 (weak 4) — lofi groove
-    if(beat===6){
-      mNote(_BASSN[bar]*1.5, t, _BEAT*0.4, 0.18, "sine");
-    }
+    // Sub-bass on beats 0 & 4
+    if(beat===0||beat===4) mNote(trk.bass[bar], t, BEAT*1.6, trk.bassGain, "sine");
+    // Ghost bass on beat 6
+    if(beat===6) mNote(trk.bass[bar]*1.5, t, BEAT*0.4, trk.bassGain*0.30, "sine");
 
-    // Chord stab on beat 0 of each bar (short, warm)
-    if(beat===0){
-      mChord(_CHORDS[bar], t, _BEAT*1.2, 0.22);
-    }
-    // Softer off-beat chord echo on beat 4
-    if(beat===4){
-      mChord(_CHORDS[bar], t, _BEAT*0.7, 0.10);
-    }
+    // Chord stab on beat 0
+    if(beat===0) mChord(trk.chords[bar], t, BEAT*1.2, trk.chordGain);
+    // Off-beat chord echo on beat 4
+    if(beat===4) mChord(trk.chords[bar], t, BEAT*0.7, trk.chordOffGain);
 
-    // Hi-hat: every eighth, accent on downbeats
-    mHiHat(t, (beat%2===0) ? 0.18 : 0.09);
+    // Hi-hat every eighth
+    mHiHat(t, (beat%2===0) ? trk.hatGain : trk.hatAccent);
 
-    // Melody: triangle, slightly detuned for warmth, with rests
-    if(_MEL[s]){
-      mNote(_MEL[s], t, _STEP*1.55, 0.28, "triangle", -6);
-      // soft harmony a minor third below on strong beats
-      if(beat===0||beat===4) mNote(_MEL[s]*0.841, t, _STEP*1.2, 0.08, "sine");
+    // Kick drum from pattern
+    if(trk.kick[beat]) mKick(t, 0.45);
+
+    // Melody
+    const mf = trk.mel[s];
+    if(mf){
+      mNote(mf, t, STEP*1.55, trk.melGain, trk.melType, -6);
+      if(beat===0||beat===4) mNote(mf*0.841, t, STEP*1.2, trk.melGain*0.30, "sine");
     }
 
-    _music.next += _STEP;
-    _music.step++;
+    _music.next += STEP;
+    _music.trackStep++;
+
+    // Advance to next track after one full loop of this track
+    if(_music.trackStep >= totalSteps){
+      _music.trackStep = 0;
+      _music.trackIdx  = (_music.trackIdx + 1) % _TRACKS.length;
+    }
   }
 }
 
@@ -2536,13 +2654,15 @@ function startMusic(){
   if(_music.timer || !musicOn()) return;
   const ac=actx(); if(!ac) return; if(ac.state==="suspended") ac.resume();
   ensureMusicGain();
-  _music.next=ac.currentTime+0.12; _music.step=0;
+  _music.next=ac.currentTime+0.12; _music.trackStep=0;
+  // Start from a random track each session for variety
+  _music.trackIdx=Math.floor(Math.random()*_TRACKS.length);
   _music.timer=setInterval(scheduleMusic, 40);
 }
 function stopMusic(){ if(_music.timer){ clearInterval(_music.timer); _music.timer=null; } }
-// browsers block autoplay → start on the first user gesture
+// browsers block autoplay — start on first gesture
 window.addEventListener("pointerdown", ()=>{ if(musicOn()) startMusic(); }, {once:true});
-// don't grind the scheduler in the background
+// pause in background, resume on return
 document.addEventListener("visibilitychange", ()=>{ if(document.hidden) stopMusic(); else if(musicOn()) startMusic(); });
 
 /* ---------- Temporary tap buff (rare "Golden Paw" powerup) ---------- */
