@@ -4256,6 +4256,29 @@ document.querySelector("header h1").addEventListener("click", () => {
     $("adminModal").classList.add("show");
   }
 });
+/* ---------- Desktop: Secret Word Listener ---------- */
+let secretBuffer = "";
+const secretWord = "admin"; // Type this to open the menu
+
+document.addEventListener("keydown", (e) => {
+  secretBuffer += e.key.toLowerCase();
+  
+  if (secretBuffer.length > secretWord.length) {
+    secretBuffer = secretBuffer.slice(-secretWord.length);
+  }
+  
+  if (secretBuffer === secretWord) {
+    $("adminPasskeyInput").value = "";
+    $("adminPasskeyInput").style.display = "block";
+    $("adminMenuControls").style.display = "none";
+    $("verifyAdminBtn").style.display = "block";
+    $("adminModal").classList.add("show");
+    
+    secretBuffer = ""; 
+  }
+});
+
+
 
 // Close Button
 $("closeAdminBtn").addEventListener("click", () => $("adminModal").classList.remove("show"));
