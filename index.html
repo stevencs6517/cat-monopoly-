@@ -527,7 +527,7 @@ if("serviceWorker" in navigator){
 const SAVE_KEY = "catMonopolySave_v4";   // v4: rebirths reset to 0 globally; estates reset on rebirth; lofi music
 const LB_KEY   = "catMonopolyLB_v2";     // bumped -> clears the local (offline) leaderboard too
 const VERSION  = 4;
-const WIPE_V1_KEY = "catMonopolyWipe_v2"; // v2: also wipes rebirths and mice tokens
+const WIPE_V1_KEY = "catMonopolyWipe_v3"; // v3: global refresh — everyone re-wipes & loads current version on next load
 const OFFLINE_CAP_HOURS = 12;
 const COST_GROWTH = 1.17;        // each additional cat of a tier costs more
 const CAT_SOFT_CAP = 50;         // beyond this many of ONE tier, extra cats earn far less
@@ -2972,7 +2972,7 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-04a";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-04b";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
   "🛠️ <b>Rebirth exploit fixed!</b> Active <b>Frenzy</b> and <b>Auto-Paw</b> buffs now end the moment you rebirth — no more carrying a 5× head-start into your fresh run.",
   "⚒️ <b>Reforge cost bug fixed!</b> Catching a golden cat no longer inflates the Reforge Anvil's price by 5× during a Frenzy — reforge costs now ignore the temporary buff, like all other prices.",
