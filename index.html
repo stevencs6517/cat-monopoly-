@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -455,6 +456,7 @@
     <h2 style="text-align:center;margin:4px 0 10px;">⚙️ Settings</h2>
     <div class="setrow"><span>🌙 Dark mode</span><button class="smallbtn" id="toggleDark">Off</button></div>
     <div class="setrow"><span>🎵 Music</span><button class="smallbtn" id="toggleMusic">On ✅</button></div>
+    <div class="setrow"><span>🎚️ Music volume <span id="musicVolPct" style="font-size:11px;color:var(--ink2);font-weight:600;"></span></span><input type="range" id="musicVol" min="0" max="100" step="1" value="100" style="flex:0 0 130px;accent-color:var(--pink-d);"></div>
     <div class="setrow"><span>🔊 Sound &amp; haptics</span><button class="smallbtn" id="toggleSound">On ✅</button></div>
     <div class="setrow"><span>🎐 Animations</span><button class="smallbtn" id="toggleMotion">On ✅</button></div>
     <div class="setrow"><span>✏️ Change name <span id="nameChangesLeft" style="font-size:11px;color:var(--ink2);font-weight:600;"></span></span><button class="smallbtn" id="changeNameBtn">Change</button></div>
@@ -1158,6 +1160,10 @@ function incomeMultForPricing(){ return globalUpgradeMult()*rebirthMultiplier()*
 function effectiveCount(n){ return n<=CAT_SOFT_CAP ? n : CAT_SOFT_CAP + (n-CAT_SOFT_CAP)*CAT_OVERCAP_EFF; }
 function catProduction(i){ return effectiveCount(state.cats[i])*CAT_DEFS[i].baseProd; }
 function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*incomeMult()*buildCatMult()*reforgeCatMult(); }
+// Pricing variant of incomePerSec: uses incomeMultForPricing() so it EXCLUDES the temporary
+// frenzy buff. Costs derived from income (e.g. the Reforge Anvil) must use this, otherwise a
+// 30s golden-cat frenzy would spike those costs 5× for its whole duration.
+function incomePerSecForPricing(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*incomeMultForPricing()*buildCatMult()*reforgeCatMult(); }
 /* ---------- Tap power: "Pounce Combo" alternative playstyle ----------
    Active tapping is its own progression lane. Each tap is worth the LARGER of:
      · a flat amount (tap upgrades + Tap Power skill + prestige) — bootstraps early game, and
@@ -1492,7 +1498,7 @@ const REFORGE_LABEL={tap:"Tap Power", cat:"Cat Power", afk:"AFK Reward"};
 const REFORGE_ICON={tap:"👆", cat:"🐈", afk:"💤"};
 // 5% of current gold, but never less than ~1 minute of income — stops "spend to near-zero then
 // fish cheaply for a Blessed roll" exploits.
-function reforgeCost(){ return Math.max(1, Math.floor((state.money||0)*0.05), Math.ceil(incomePerSec()*60)); }
+function reforgeCost(){ return Math.max(1, Math.floor((state.money||0)*0.05), Math.ceil(incomePerSecForPricing()*60)); }
 function lockCount(tid){ const L=state.reforgeLocks&&state.reforgeLocks[tid]; return L?REFORGE_STATS.filter(k=>L[k]).length:0; }
 function reforgeCostFor(tid){ return Math.ceil(reforgeCost()*(1+0.75*lockCount(tid))); }   // each lock +75%
 function toggleLock(tid, stat){
@@ -2221,6 +2227,13 @@ function doRebirth(){
   state._questWeeklyRebirths=(state._questWeeklyRebirths||0)+1;
   state.money=0; state.lifetime=0; state.cats=CAT_DEFS.map(()=>0); state.upgrades={};
   state.properties=PROPERTY_DEFS.map(()=>0);   // reset estates on rebirth
+  // End any active golden-cat buffs (frenzy / auto-paw / tap buff) and the live combo so they
+  // can't carry a 5× head-start into the brand-new run and trivialise the next rebirth.
+  stopAutoClick();
+  frenzy={mult:1, until:0};
+  _tapBuffUntil=0; _tapBuffMult=1;
+  _combo=0; _comboLast=0;
+  updateFrenzyBanner();
   toast("✨ Rebirth #"+n+"! +1 🐭 token");
   checkAchievements();
   currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); save();
@@ -2358,6 +2371,8 @@ function applyLoadedState(s){
   if(typeof state.prefs!=="object"||!state.prefs) state.prefs={sound:true,motion:true,dark:false};
   if(typeof state.prefs.sound!=="boolean") state.prefs.sound=true;
   if(typeof state.prefs.music!=="boolean") state.prefs.music=true;
+  if(typeof state.prefs.musicVol!=="number"||!isFinite(state.prefs.musicVol)) state.prefs.musicVol=1;
+  state.prefs.musicVol=Math.max(0,Math.min(1,state.prefs.musicVol));
   if(typeof state.prefs.motion!=="boolean") state.prefs.motion=true;
   if(typeof state.prefs.dark!=="boolean") state.prefs.dark=false;
   if(typeof state.talismans!=="object"||!state.talismans) state.talismans={};
@@ -2551,7 +2566,17 @@ const _TRACKS = [
 // ── PLAYBACK STATE ─────────────────────────────────────────────────────────
 let _music = { timer:null, next:0, step:0, trackIdx:0, trackStep:0 };
 let _musicGain=null, _masterComp=null;
+const MUSIC_BASE_GAIN=0.38;   // internal mix level; the master-volume slider scales this
 function musicOn(){ return !!(state.prefs && state.prefs.music); }
+function musicVolume(){ const v=state.prefs&&state.prefs.musicVol; return typeof v==="number"&&isFinite(v)?Math.max(0,Math.min(1,v)):1; }
+// Live master-volume control for the music. Updates the gain node smoothly if it already exists.
+function setMusicVolume(v){
+  v=Math.max(0,Math.min(1, isFinite(v)?v:1));
+  if(!state.prefs) state.prefs={};
+  state.prefs.musicVol=v;
+  const ac=actx();
+  if(_musicGain&&ac){ try{ _musicGain.gain.setTargetAtTime(MUSIC_BASE_GAIN*v, ac.currentTime, 0.02); }catch(e){ _musicGain.gain.value=MUSIC_BASE_GAIN*v; } }
+}
 
 function ensureMusicGain(){
   const ac=actx(); if(!ac) return null;
@@ -2562,7 +2587,7 @@ function ensureMusicGain(){
     _masterComp.connect(ac.destination);
   }
   if(!_musicGain){
-    _musicGain=ac.createGain(); _musicGain.gain.value=0.38;
+    _musicGain=ac.createGain(); _musicGain.gain.value=MUSIC_BASE_GAIN*musicVolume();
     _musicGain.connect(_masterComp);
   }
   return _musicGain;
@@ -2758,6 +2783,9 @@ function renderStatsBox(){
 function openSettings(){
   $("toggleDark").textContent="🌙 "+toggleTxt(state.prefs.dark);
   $("toggleMusic").textContent="🎵 "+toggleTxt(state.prefs.music);
+  const mvPct=Math.round(musicVolume()*100);
+  const mv=$("musicVol"); if(mv) mv.value=mvPct;
+  const mvp=$("musicVolPct"); if(mvp) mvp.textContent="("+mvPct+"%)";
   $("toggleSound").textContent="🔊 "+toggleTxt(state.prefs.sound);
   $("toggleMotion").textContent="🎐 "+toggleTxt(state.prefs.motion);
   const MAX_NAME_CHANGES=2;
@@ -2776,6 +2804,9 @@ $("toggleDark").addEventListener("click",()=>{ state.prefs.dark=!state.prefs.dar
 $("toggleMusic").addEventListener("click",()=>{ state.prefs.music=!state.prefs.music;
   $("toggleMusic").textContent="🎵 "+toggleTxt(state.prefs.music);
   if(state.prefs.music) startMusic(); else stopMusic(); save(); });
+$("musicVol").addEventListener("input",e=>{ const pct=parseInt(e.target.value)||0;
+  setMusicVolume(pct/100); const mvp=$("musicVolPct"); if(mvp) mvp.textContent="("+pct+"%)"; });
+$("musicVol").addEventListener("change",()=>save());   // persist once the user lets go of the slider
 $("toggleSound").addEventListener("click",()=>{ state.prefs.sound=!state.prefs.sound;
   $("toggleSound").textContent="🔊 "+toggleTxt(state.prefs.sound); if(state.prefs.sound) sfx("buy"); save(); });
 $("toggleMotion").addEventListener("click",()=>{ state.prefs.motion=!state.prefs.motion;
@@ -2941,8 +2972,11 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-03p";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-04a";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
+  "🛠️ <b>Rebirth exploit fixed!</b> Active <b>Frenzy</b> and <b>Auto-Paw</b> buffs now end the moment you rebirth — no more carrying a 5× head-start into your fresh run.",
+  "⚒️ <b>Reforge cost bug fixed!</b> Catching a golden cat no longer inflates the Reforge Anvil's price by 5× during a Frenzy — reforge costs now ignore the temporary buff, like all other prices.",
+  "🎚️ <b>Master music volume!</b> A new slider in ⚙️ Settings lets you set the music volume anywhere from 0–100% — independent of the on/off toggle.",
   "⚒️ <b>Reforge Anvil!</b> A new tab where you can reforge your talismans to boost <b>Tap, Cat, or AFK power</b>. Each reforge costs 5% of your gold and rolls a new bonus — usually a trade-off (+10% one / −10% another), but lucky rolls are all upside! Tap a 🔒 to <b>keep</b> a stat you like on the next re-roll. ♡",
   "📜 <b>Scroll System!</b> Gacha no longer costs coins — earn <b>Basic, Advanced, and Pity Scrolls</b> from daily/weekly quests, achievements, and the daily login. The Scroll of Pity <i>guarantees</i> Legendary+! ♡",
   "📅 <b>Daily & Weekly Quests!</b> The 🏅 Goals tab now has 5 daily and 5 weekly quests. Complete them to earn scrolls and build your talisman collection! Resets happen automatically each day/week.",
