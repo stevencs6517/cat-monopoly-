@@ -682,6 +682,15 @@
 <div id="toast"></div>
 
 <script>
+
+  <script>
+// ==========================================
+// SCARY CONSOLE WARNING
+// ==========================================
+console.log("%cSTOP!", "color: red; font-family: sans-serif; font-size: 4em; font-weight: bolder; text-shadow: #000 1px 1px;");
+console.log("%cThis is a browser feature intended for developers. if you do NOT know what you are doing, log OFF. This is for DEVELOPERS only and doing so will give access to your personal data.", "color: white; background: red; font-size: 16px; font-weight: bold; padding: 5px;");
+
+// ... the rest of your game code starts here ...
 "use strict";
 /* Self-heal: an old service worker (sw.js, since removed) may still be installed in some
    browsers and serving a stale/broken cached page. Unregister any leftover SW + clear its
