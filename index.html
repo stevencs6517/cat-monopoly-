@@ -472,6 +472,7 @@
       <button class="smallbtn danger" id="resetBtn" style="flex:1;">⚠️ Reset</button>
     </div>
     <div class="row">
+      <button class="smallbtn" id="redeemBtn" style="flex:1;">🎁 Redeem Code</button>
       <button class="smallbtn" id="closeSettings" style="flex:1;">Close</button>
     </div>
   </div>
@@ -486,6 +487,19 @@
     <div class="row">
       <button class="smallbtn" id="confirmNameChange" style="flex:1;">✅ Confirm</button>
       <button class="smallbtn" id="cancelNameChange" style="flex:1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="redeemModal">
+  <div class="modal" style="text-align:center;">
+    <h2 style="text-align:center;margin:4px 0 8px;">🎁 Redeem Code</h2>
+    <p class="sub" style="margin:0 0 12px;">Enter a code to claim your reward!</p>
+    <input class="nameinput" id="redeemInput" maxlength="32" placeholder="Enter code here..." style="margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">
+    <div id="redeemMsg" style="min-height:22px;font-size:13px;font-weight:700;margin-bottom:8px;color:var(--good);"></div>
+    <div class="row">
+      <button class="smallbtn active" id="confirmRedeem" style="flex:1;">✅ Redeem</button>
+      <button class="smallbtn" id="cancelRedeem" style="flex:1;">Cancel</button>
     </div>
   </div>
 </div>
@@ -824,7 +838,7 @@ function newState(){
     _questWeeklyRolls:0,
     _questWeeklyGolden:0,
     _questWeeklyRebirths:0,
-    comboRewards:{}, prefs:{sound:true, music:true, motion:true, dark:false},
+    comboRewards:{}, redeemedCodes:{}, prefs:{sound:true, music:true, motion:true, dark:false},
     name:"", nameChanges:0, lastSave:Date.now(),
     buildType:"balanced",   // "tapper" | "catmaster" | "balanced"
   };
@@ -2185,61 +2199,21 @@ function doRebirth(){
   checkAchievements();
   currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); save();
 }
-/* Anti-autoclicker:
-   Layer 1 — rate cap: max MAX_TAPS_PER_SEC paid taps in any rolling 1s window.
-   Layer 2 — rhythm detection: real humans have irregular tap timing; autoclickers
-   fire at near-perfectly-uniform intervals. We measure the coefficient of variation
-   (std-dev / mean) of the last N inter-tap gaps. A CV below RHYTHM_CV_MIN across
-   enough samples means machine-like regularity → taps are penalised to 1 coin each
-   for RHYTHM_PENALTY_MS ms. The threshold is deliberately generous so fast-but-human
-   tappers are never flagged. */
-const MAX_TAPS_PER_SEC   = 14;
-const RHYTHM_SAMPLES     = 10;   // gaps to accumulate before judging
-const RHYTHM_CV_MIN      = 0.10; // CV below this = suspiciously uniform (10% variance)
-const RHYTHM_PENALTY_MS  = 8000; // how long the tap-value penalty lasts (ms)
+/* Anti-autoclicker: only pay out up to MAX_TAPS_PER_SEC taps in any rolling 1s window. */
+const MAX_TAPS_PER_SEC = 14;
 let _tapTimes    = [];
-let _tapGaps     = [];           // rolling list of inter-tap intervals
 let _lastTapWarn = 0;
 let _lastAutoFloat = 0;
-let _rhythmPenaltyUntil = 0;    // timestamp when penalty lifts
-
-function _checkRhythm(now){
-  if(_tapGaps.length < RHYTHM_SAMPLES) return;
-  const mean = _tapGaps.reduce((a,b)=>a+b,0) / _tapGaps.length;
-  if(mean <= 0) return;
-  const variance = _tapGaps.reduce((a,b)=>a+(b-mean)**2,0) / _tapGaps.length;
-  const cv = Math.sqrt(variance) / mean;
-  if(cv < RHYTHM_CV_MIN){
-    _rhythmPenaltyUntil = now + RHYTHM_PENALTY_MS;
-    _tapGaps = [];   // reset so a brief pause can clear the flag
-    if(now - _lastTapWarn > 3000){
-      _lastTapWarn = now;
-      toast("😼 Autoclicker detected! Tap naturally ♡");
-    }
-  }
-}
 
 function petCat(ev, auto){
   const now = Date.now();
   // Auto-Paw powerup bypasses the anti-autoclicker cap — it's a purchased reward,
   // not an exploit, so it should tap freely for its duration.
   if(!auto){
-    // Layer 1: rate cap
     while(_tapTimes.length && now - _tapTimes[0] > 1000) _tapTimes.shift();
     if(_tapTimes.length >= MAX_TAPS_PER_SEC){
       if(now - _lastTapWarn > 2500){ _lastTapWarn = now; toast("😼 Tapping too fast! (max "+MAX_TAPS_PER_SEC+"/sec)"); }
       return;
-    }
-    // Layer 2: rhythm detection
-    if(_tapTimes.length > 0){
-      const gap = now - _tapTimes[_tapTimes.length - 1];
-      if(gap > 0 && gap < 1000){   // only count gaps within a continuous burst
-        _tapGaps.push(gap);
-        if(_tapGaps.length > RHYTHM_SAMPLES * 2) _tapGaps.shift();
-        _checkRhythm(now);
-      } else {
-        _tapGaps = [];   // burst broke — reset rhythm window
-      }
     }
     _tapTimes.push(now);
   }
@@ -2248,7 +2222,7 @@ function petCat(ev, auto){
   _comboLast = now;
   if(_combo > (state.bestCombo||0)) state.bestCombo=_combo;
   checkComboMilestone(_combo);
-  const v = (now < _rhythmPenaltyUntil && !auto) ? 1 : clickValue();
+  const v = clickValue();
   state.money+=v; state.lifetime+=v; state.totalEarned+=v; state.pets=(state.pets||0)+1;
   // during auto-tap spawn floats at ~8/sec max (every 125ms) to avoid DOM spam
   if(!auto || (now - (_lastAutoFloat||0)) > 125){ _lastAutoFloat=now; spawnFloat(ev,"+"+money(v),_combo); }
@@ -2369,6 +2343,7 @@ function applyLoadedState(s){
   if(typeof state.gacha.pity!=="number") state.gacha.pity=0;
   if(typeof state.gacha.rolls!=="number") state.gacha.rolls=0;
   if(typeof state.nameChanges!=="number") state.nameChanges=0;
+  if(typeof state.redeemedCodes!=="object"||!state.redeemedCodes) state.redeemedCodes={};
   // scrolls
   if(typeof state.scrolls!=="object"||!state.scrolls) state.scrolls={basic:0,advanced:0,pity:0};
   ["basic","advanced","pity"].forEach(k=>{ if(typeof state.scrolls[k]!=="number") state.scrolls[k]=0; });
@@ -2717,6 +2692,66 @@ $("cancelNameChange").addEventListener("click",()=>{
   $("settingsModal").classList.add("show");
 });
 $("changeNameModal").addEventListener("click",e=>{ if(e.target.id==="changeNameModal"){ $("changeNameModal").classList.remove("show"); $("settingsModal").classList.add("show"); }});
+/* ---------- Redeem Codes ----------
+   Codes are stored as SHA-256 hashes so the plaintext values are never
+   in the source. Add new codes by hashing them and adding an entry below.
+   reward format: "money_<amount>" | "mice_<n>" | "scrolls_<type>_<n>"
+   Used codes are stored in state.redeemedCodes so each can only be claimed once. */
+const REDEEM_CODES = {
+  "90f47021f660cc9655f6ff68cff6e3eb07513954bdd4c61fb79d41447e5de4a7": { reward:"money_1e12",          desc:"💰 1 Trillion coins!" },
+  "bca46d7691cb030f06b12562e93ede0beea4522789ae3aea730e6ae85273976c": { reward:"mice_10",              desc:"🐭 10 Golden Mice tokens!" },
+  "f2513e442b797c5dbc4d63cbf556fa4017b0c91cbef48fdb57ad28e7e0925fe1": { reward:"scrolls_advanced_5",  desc:"📋 5 Advanced Scrolls!" },
+  "95de618f71e8b9289e1b59cabb4a2052b348c0a2e735c8ebac5d6b781a96741d": { reward:"scrolls_basic_10",    desc:"📜 10 Basic Scrolls!" },
+  "3059d7a55d1510ca71f0f1c8cd33b9275fb74d52487dcbf3c3e14861655cdda7": { reward:"money_5e11",           desc:"💰 500 Billion coins!" },
+  "7b66ebd20cc963fabe89b6f7f4fa03ffd7fc6db70e737990f4fb2d5094fe9dc1": { reward:"mice_5",              desc:"🐭 5 Golden Mice tokens!" },
+  "5db9431e22e77acbe24183a551f3f314760cd6f56ba9fc57ffbc8c3f48e329e1": { reward:"scrolls_pity_2",      desc:"✨ 2 Pity Scrolls!" },
+};
+
+async function sha256(str){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+function applyRedeemReward(reward){
+  const [type, ...rest] = reward.split("_");
+  if(type === "money"){
+    const amt = parseFloat(rest[0]);
+    state.money += amt; state.lifetime += amt; state.totalEarned += amt;
+  } else if(type === "mice"){
+    state.goldenMice = (state.goldenMice||0) + parseInt(rest[0]);
+  } else if(type === "scrolls"){
+    const scrollType = rest[0], count = parseInt(rest[1]);
+    addScroll(scrollType, count);
+  }
+  renderStats(); save();
+}
+
+async function doRedeem(){
+  const raw = ($("redeemInput")||{value:""}).value.trim().toUpperCase();
+  const msg = $("redeemMsg");
+  if(!raw){ msg.style.color="var(--danger)"; msg.textContent="Enter a code first! ♡"; return; }
+  if(!state.redeemedCodes) state.redeemedCodes = {};
+  const hash = await sha256(raw);
+  const entry = REDEEM_CODES[hash];
+  if(!entry){ msg.style.color="var(--danger)"; msg.textContent="❌ Invalid code — double-check it!"; return; }
+  if(state.redeemedCodes[hash]){ msg.style.color="var(--ink2)"; msg.textContent="Already redeemed ✅"; return; }
+  state.redeemedCodes[hash] = true;
+  applyRedeemReward(entry.reward);
+  msg.style.color="var(--good)"; msg.textContent="🎉 Redeemed! " + entry.desc;
+  if($("redeemInput")) $("redeemInput").value="";
+  toast("🎁 Code redeemed: " + entry.desc);
+}
+
+$("redeemBtn").addEventListener("click",()=>{
+  $("settingsModal").classList.remove("show");
+  if($("redeemInput")) $("redeemInput").value="";
+  if($("redeemMsg")) $("redeemMsg").textContent="";
+  $("redeemModal").classList.add("show");
+});
+$("cancelRedeem").addEventListener("click",()=>{ $("redeemModal").classList.remove("show"); $("settingsModal").classList.add("show"); });
+$("redeemModal").addEventListener("click",e=>{ if(e.target.id==="redeemModal"){ $("redeemModal").classList.remove("show"); $("settingsModal").classList.add("show"); }});
+$("confirmRedeem").addEventListener("click", doRedeem);
+$("redeemInput").addEventListener("keydown",e=>{ if(e.key==="Enter") doRedeem(); });
 $("confirmNameChange").addEventListener("click",()=>{
   const used=state.nameChanges||0;
   const left=Math.max(0,MAX_NAME_CHANGES-used);
