@@ -1111,14 +1111,12 @@ function upgradeComboBonus(){ let b=0; for(const u of UPGRADE_DEFS){ if(u.comboB
 function upgradeComboCap(){ let b=0; for(const u of UPGRADE_DEFS){ if(u.comboCap&&state.upgrades[u.id]) b+=u.comboCap; } return b; }
 function upgradeTapShare(){ let b=0; for(const u of UPGRADE_DEFS){ if(u.tapShare&&state.upgrades[u.id]) b+=u.tapShare; } return b; }
 // effective combo multiplier considering comboCap upgrades
-function effectiveComboCap(){ return COMBO_MAX; }  // hard cap — upgrades no longer extend it
+function effectiveComboCap(){ return Infinity; }   // no cap — infinite combo, asymptotic curve
 function effectiveComboMult(){
   if(Date.now()-_comboLast > buildComboWindow() || _combo<2) return 1;
-  const effCombo = Math.max(0, _combo - upgradeComboBonus()); // bonus makes it feel like higher combo
-  const cap = effectiveComboCap();
-  const base = 1 + Math.min(effCombo, cap) * COMBO_STEP;
-  const over  = Math.max(0, effCombo - cap) * COMBO_OVER_STEP;
-  return base + over;
+  const n = Math.max(0, _combo - upgradeComboBonus());
+  // Asymptotic curve: starts at ~x1.8 on hit 1, approaches x10 but never reaches it
+  return 1 + 9 * (n / (n + COMBO_CURVE_K));
 }
 // talismans: each owned talisman adds a small bonus; duplicates add a diminishing amount,
 // capped at DUPE_CAP_MULT x the first-copy value so the collection never gets overpowered.
@@ -1147,9 +1145,7 @@ function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProdu
    system is bounded by the 14-tap/sec anti-autoclicker cap, so even fully maxed an active
    tapper roughly *doubles* their rate while present — a real alternative, never a runaway. */
 const COMBO_WINDOW = 2500;     // ms — tap again within this to keep the streak alive
-const COMBO_MAX    = 10;       // combo length where the multiplier caps (x2.5 at 10 hits)
-const COMBO_STEP   = 0.15;     // +15% tap value per combo (10 * 0.15 = 1.5 => x2.5 total)
-const COMBO_OVER_STEP = 0;     // no further gain past the cap
+const COMBO_CURVE_K = 10;      // asymptotic curve — mult = 1 + 9*(n/(n+K)), approaches x10 forever
 const TAP_SHARE_BASE = 0.015;  // base: each tap is worth ~1.5% of one second of idle income
 let _combo = 0, _comboLast = 0;            // ephemeral streak (not saved)
 function tapShare(){ return TAP_SHARE_BASE + 0.0015*(state.skills.tap||0) + upgradeTapShare(); }   // Tap Power deepens it
@@ -2239,9 +2235,7 @@ function updateComboUI(bumped){
   const bar=$("comboBar"), fill=$("comboFill");
   const now=Date.now(), alive=(now-_comboLast<=buildComboWindow())&&_combo>=2;
   if(alive){
-    const cap = effectiveComboCap();
-    const capLabel = _combo >= cap ? ` 🔥MAX` : `/${cap}`;
-    lbl.textContent="🔥 Combo "+_combo+capLabel+"  ×"+comboMult().toFixed(2)+" tap";
+    lbl.textContent="🔥 Combo "+_combo+"  ×"+comboMult().toFixed(2)+" tap";
     lbl.classList.add("on"); bar.classList.add("on");
     fill.style.width=(Math.max(0,1-(now-_comboLast)/buildComboWindow())*100)+"%";
     if(bumped){ lbl.classList.remove("bump"); void lbl.offsetWidth; lbl.classList.add("bump"); }
@@ -2576,7 +2570,7 @@ function checkComboMilestone(c){
 let toastTimer;
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2200); }
 function spawnFloat(ev,txt,combo){ const f=document.createElement("div"); f.className="float"; f.textContent=txt;
-  if(combo&&combo>=8){ f.style.fontSize=(20+Math.min(combo,effectiveComboCap())*0.08)+"px"; f.style.color="var(--gold-d)"; f.style.textShadow="0 1px 0 #fff,0 0 8px rgba(255,206,92,.7)"; }
+  if(combo&&combo>=8){ f.style.fontSize=Math.min(20+combo*0.08, 48)+"px"; f.style.color="var(--gold-d)"; f.style.textShadow="0 1px 0 #fff,0 0 8px rgba(255,206,92,.7)"; }
   const x=(ev.clientX||window.innerWidth/4), y=(ev.clientY||200);
   f.style.left=x+"px"; f.style.top=y+"px"; document.body.appendChild(f); setTimeout(()=>f.remove(),1000); }
 function setActiveTab(){
