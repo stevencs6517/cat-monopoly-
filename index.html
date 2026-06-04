@@ -303,6 +303,11 @@
   /* settings */
   .setrow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0;font-weight:700;color:var(--ink);}
   .setrow .smallbtn{min-width:84px;}
+  /* reforge stat-lock chips */
+  .lockchip{display:inline-block;font-size:12px;padding:2px 7px;margin:0 4px 0 0;border-radius:11px;
+    border:2px solid #f0dcea;cursor:pointer;font-weight:800;color:var(--ink2);user-select:none;}
+  .lockchip.on{border-color:var(--gold-d);color:var(--gold-d);background:rgba(255,206,92,.14);}
+  body.dark .lockchip{border-color:var(--line);}
   /* reduced-motion: kill decorative CSS animations (golden-cat movement uses JS, stays on) */
   body.reduce-motion *{animation:none !important;}
   body.reduce-motion .kw-particle,body.reduce-motion .sparkles{display:none !important;}
@@ -808,7 +813,7 @@ function newState(){
     achievements:{}, skills:{idle:0,tap:0,cost:0,offline:0,mice:0}, spentMice:0,
     pets:0, bestCombo:0, goldenCaught:0, lastDaily:"", dailyStreak:0,
     goldenMice:0, rebirths:0, timePlayed:0,
-    talismans:{}, gacha:{pity:0, rolls:0}, reforges:{},   // reforges: {talismanId:{tap,cat,afk}}
+    talismans:{}, gacha:{pity:0, rolls:0}, reforges:{}, reforgeLocks:{},   // reforges: {talismanId:{tap,cat,afk}}
     scrolls:{basic:0, advanced:0, pity:0},   // scroll inventory
     quests:{},                                // quest completion tracking: {questId: true/false}
     questsClaimedDaily:"",                    // date string of last daily quest reset
@@ -1444,7 +1449,20 @@ function updateGacha(){
 const REFORGE_STATS=["tap","cat","afk"];
 const REFORGE_LABEL={tap:"Tap Power", cat:"Cat Power", afk:"AFK Reward"};
 const REFORGE_ICON={tap:"👆", cat:"🐈", afk:"💤"};
-function reforgeCost(){ return Math.max(1, Math.floor((state.money||0)*0.05)); }
+// 5% of current gold, but never less than ~1 minute of income — stops "spend to near-zero then
+// fish cheaply for a Blessed roll" exploits.
+function reforgeCost(){ return Math.max(1, Math.floor((state.money||0)*0.05), Math.ceil(incomePerSec()*60)); }
+function lockCount(tid){ const L=state.reforgeLocks&&state.reforgeLocks[tid]; return L?REFORGE_STATS.filter(k=>L[k]).length:0; }
+function reforgeCostFor(tid){ return Math.ceil(reforgeCost()*(1+0.75*lockCount(tid))); }   // each lock +75%
+function toggleLock(tid, stat){
+  if(!(state.reforges&&state.reforges[tid])) return;            // can only lock a reforged talisman
+  if(!state.reforgeLocks) state.reforgeLocks={};
+  if(!state.reforgeLocks[tid]) state.reforgeLocks[tid]={};
+  const L=state.reforgeLocks[tid];
+  if(!L[stat] && lockCount(tid)>=2){ toast("Leave at least one stat to re-roll! ♡"); return; }
+  L[stat]=!L[stat];
+  save(); renderReforge();
+}
 // Roll a fresh affix: usually a trade-off (one stat up, another down); rarely all-upside.
 function rollReforge(){
   const r=Math.random(), res={tap:0,cat:0,afk:0};
@@ -1471,11 +1489,14 @@ function affixStr(res){
 }
 function reforgeTalisman(id){
   if(!(state.talismans&&state.talismans[id]>0)){ toast("You don't own that talisman"); return; }
-  const cost=reforgeCost();
+  const cost=reforgeCostFor(id);
   if((state.money||0)<cost){ toast("Not enough gold to reforge"); return; }
   state.money-=cost;
   if(!state.reforges) state.reforges={};
-  state.reforges[id]=rollReforge();
+  const nr=rollReforge(), old=state.reforges[id], L=(state.reforgeLocks&&state.reforgeLocks[id])||{};
+  const res={tap:nr.tap, cat:nr.cat, afk:nr.afk};
+  if(old){ for(const k of REFORGE_STATS){ if(L[k]) res[k]=old[k]||0; } }   // keep locked stats
+  state.reforges[id]=res;
   const t=TALISMANS.find(x=>x.id===id);
   sfx("rare");
   toast("⚒️ Reforged "+(t?t.name:"talisman")+"!");
@@ -1488,7 +1509,7 @@ function renderReforge(){
   const sign=v=>(v>=0?"+":"")+v;
   const col=v=>v>=0?"var(--good)":"var(--danger)";
   let html=`<div class="sub" style="text-align:center;margin:0 0 4px;font-weight:800;">⚒️ Reforge Anvil</div>
-    <div class="sub" style="text-align:center;font-size:11px;margin:0 0 10px;">Reforge a talisman to re-roll its powers. Each reforge costs <b>5% of your gold</b> and grants a new bonus — usually a trade-off (e.g. <b>+10% Tap / −10% Cat</b>), but lucky rolls are <b>all upside</b>! ♡</div>
+    <div class="sub" style="text-align:center;font-size:11px;margin:0 0 10px;">Re-roll a talisman's powers. Costs <b>5% of your gold</b> (min ~1 min of income). Usually a trade-off (e.g. <b>+10% Tap / −10% Cat</b>), but lucky rolls are <b>all upside</b>! Tap a 🔒 to <b>keep</b> a stat on the next reforge (each lock +75% cost). ♡</div>
     <div style="text-align:center;background:var(--panel2);border:2px solid #fbe6f3;border-radius:18px;padding:10px 14px;margin-bottom:12px;">
       <div class="sub" style="margin:0 0 4px;font-weight:800;">Total Reforge Bonuses</div>
       <div style="font-size:13px;font-weight:700;">
@@ -1496,18 +1517,21 @@ function renderReforge(){
         <span style="color:${col(tot.cat)}">🐈 ${sign(tot.cat)}% Cat</span> ·
         <span style="color:${col(tot.afk)}">💤 ${sign(tot.afk)}% AFK</span>
       </div>
-      <div class="sub" id="reforgeCostLine" style="font-size:11px;margin:6px 0 0;">Next reforge costs <b>${money(cost)}</b></div>
+      <div class="sub" id="reforgeCostLine" style="font-size:11px;margin:6px 0 0;">Base reforge cost: <b>${money(cost)}</b> · each 🔒 lock +75%</div>
     </div>`;
   if(!owned.length){
     html+=`<p class="sub" style="text-align:center;">You don't own any talismans yet — roll some in the 🎰 Gacha first! ♡</p>`;
   } else {
     html+=owned.map(t=>{
       const R=TAL_RARITY[t.r], res=state.reforges&&state.reforges[t.id], tier=res?reforgeTier(res):null;
+      const locks=(state.reforgeLocks&&state.reforgeLocks[t.id])||{};
+      const chips=res?`<div style="margin-top:4px;">`+REFORGE_STATS.map(k=>`<span class="lockchip${locks[k]?' on':''}" data-lock="${t.id}:${k}">${REFORGE_ICON[k]}${locks[k]?'🔒':''}</span>`).join("")+`</div>`:"";
+      const c=reforgeCostFor(t.id);
       return `<div class="item">
         <div class="icon" style="font-size:26px;">${t.emoji}</div>
         <div class="info"><div class="name">${t.name} <span style="color:${R.color};font-size:11px;">${R.emoji}${R.name}</span>${tier?` <span style="color:${tier.color};font-size:11px;">· ${tier.name}</span>`:""}</div>
-          <div class="desc">${affixStr(res)}</div></div>
-        <button class="buy alt" id="reforgebtn-${t.id}" data-reforge="${t.id}" ${(state.money||0)>=cost?"":"disabled"}>⚒️<br>${money(cost)}</button>
+          <div class="desc">${affixStr(res)}</div>${chips}</div>
+        <button class="buy alt" id="reforgebtn-${t.id}" data-reforge="${t.id}" ${(state.money||0)>=c?"":"disabled"}>⚒️<br>${money(c)}</button>
       </div>`;
     }).join("");
   }
@@ -1515,13 +1539,13 @@ function renderReforge(){
 }
 // in-place tick refresh so spam-tapping never destroys a button mid-tap
 function updateReforge(){
-  const cost=reforgeCost();
-  const cl=$("reforgeCostLine"); if(cl) cl.innerHTML="Next reforge costs <b>"+money(cost)+"</b>";
+  const cl=$("reforgeCostLine"); if(cl) cl.innerHTML="Base reforge cost: <b>"+money(reforgeCost())+"</b> · each 🔒 lock +75%";
   for(const t of TALISMANS){
     if(!(state.talismans&&state.talismans[t.id]>0)) continue;
     const btn=$("reforgebtn-"+t.id); if(!btn) continue;
-    btn.innerHTML="⚒️<br>"+money(cost);
-    btn.disabled=(state.money||0)<cost;
+    const c=reforgeCostFor(t.id);
+    btn.innerHTML="⚒️<br>"+money(c);
+    btn.disabled=(state.money||0)<c;
   }
 }
 
@@ -2297,6 +2321,7 @@ function applyLoadedState(s){
   if(typeof state.prefs.dark!=="boolean") state.prefs.dark=false;
   if(typeof state.talismans!=="object"||!state.talismans) state.talismans={};
   if(typeof state.reforges!=="object"||!state.reforges) state.reforges={};
+  if(typeof state.reforgeLocks!=="object"||!state.reforgeLocks) state.reforgeLocks={};
   if(typeof state.gacha!=="object"||!state.gacha) state.gacha={pity:0,rolls:0};
   if(typeof state.gacha.pity!=="number") state.gacha.pity=0;
   if(typeof state.gacha.rolls!=="number") state.gacha.rolls=0;
@@ -2556,7 +2581,10 @@ $("panel-upgrades").addEventListener("click",e=>{ const btn=e.target.closest("[d
 $("panel-rebirth").addEventListener("click",e=>{ const btn=e.target.closest("[data-skill]"); if(btn) buySkill(btn.dataset.skill); });
 $("panel-property").addEventListener("click",e=>{ const btn=e.target.closest("[data-prop]"); if(btn) buyProperty(parseInt(btn.dataset.prop)); });
 $("panel-gacha").addEventListener("click",e=>{ const btn=e.target.closest("[data-roll]"); if(btn) doRoll(btn.dataset.roll, parseInt(btn.dataset.count)); });
-$("panel-reforge").addEventListener("click",e=>{ const btn=e.target.closest("[data-reforge]"); if(btn) reforgeTalisman(btn.dataset.reforge); });
+$("panel-reforge").addEventListener("click",e=>{
+  const lk=e.target.closest("[data-lock]"); if(lk){ const p=lk.dataset.lock.split(":"); toggleLock(p[0],p[1]); return; }
+  const btn=e.target.closest("[data-reforge]"); if(btn) reforgeTalisman(btn.dataset.reforge);
+});
 
 $("saveBtn").addEventListener("click",()=>{ save(); toast("Game saved 💾"); });
 $("keyBtn").addEventListener("click",()=>{ save(); $("settingsModal").classList.remove("show"); $("keyText").value=encode(state); $("keyModal").classList.add("show"); });
@@ -2721,9 +2749,9 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-03o";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-03p";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
-  "⚒️ <b>Reforge Anvil!</b> A new tab where you can reforge your talismans to boost <b>Tap, Cat, or AFK power</b>. Each reforge costs 5% of your gold and rolls a new bonus — usually a trade-off (+10% one / −10% another), but lucky rolls are all upside! ♡",
+  "⚒️ <b>Reforge Anvil!</b> A new tab where you can reforge your talismans to boost <b>Tap, Cat, or AFK power</b>. Each reforge costs 5% of your gold and rolls a new bonus — usually a trade-off (+10% one / −10% another), but lucky rolls are all upside! Tap a 🔒 to <b>keep</b> a stat you like on the next re-roll. ♡",
   "📜 <b>Scroll System!</b> Gacha no longer costs coins — earn <b>Basic, Advanced, and Pity Scrolls</b> from daily/weekly quests, achievements, and the daily login. The Scroll of Pity <i>guarantees</i> Legendary+! ♡",
   "📅 <b>Daily & Weekly Quests!</b> The 🏅 Goals tab now has 5 daily and 5 weekly quests. Complete them to earn scrolls and build your talisman collection! Resets happen automatically each day/week.",
   "🏆 <b>Achievement Scroll Rewards!</b> Many achievements now also drop scrolls the first time you unlock them — check the 🏅 Goals tab to see what each one gives.",
