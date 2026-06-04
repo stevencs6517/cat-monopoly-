@@ -619,6 +619,9 @@
     </div>
     <div class="row">
       <button class="smallbtn" id="redeemBtn" style="flex:1;">🎁 Redeem Code</button>
+      <button class="smallbtn" id="changelogBtn" style="flex:1;">📜 What's New</button>
+    </div>
+    <div class="row">
       <button class="smallbtn" id="closeSettings" style="flex:1;">Close</button>
     </div>
   </div>
@@ -4928,14 +4931,16 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-04c";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-04d";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
-  "⚔️ <b>Catacomb Overhaul!</b> Treasure is now <b>once per floor</b> — loot it, then fight or cash out. No more infinite shard farming exploit!",
-  "🪦 <b>Tiered Companions!</b> Gravecat, Ember Familiar, Wraithpaw &amp; Revenant each now have <b>5 tiers (I–V)</b>. Costs scale ×1.5 per tier, and every tier stacks bonus income.",
-  "⚡ <b>Catacomb Buff Upgrades!</b> Five new upgrade trees purchasable with Shards: <b>Combat Mastery</b> (win rate %), <b>Loaded Dice</b> (re-roll discount), <b>Vault Lining</b> (shard yield), <b>Iron Paws</b> (max stamina), and <b>Delver's Focus</b> (XP). Each has 5 tiers!",
-  "🕐 <b>Stamina Refill is now once per day.</b> Coin-based refill is a daily cooldown — plan your runs strategically!",
-  "📜 <b>Scroll System!</b> Gacha uses <b>Basic, Advanced, and Pity Scrolls</b> earned from quests, achievements, and daily login.",
-  "📅 <b>Daily &amp; Weekly Quests!</b> Complete quests for scrolls. The 🏅 Goals tab has 5 daily and 5 weekly.",
+  "🌌 <b>Ascension — a brand-new second prestige!</b> Reach 12 rebirths to ascend for <b>⭐ Stardust</b> and <b>+20% permanent income</b> each time. Spend Stardust on the <b>Cosmic Tree</b> (Cosmic Power, Star Surge, Time Warp).",
+  "⭐ <b>Cat Fusion!</b> Feed duplicate cats to add ⭐ star levels — each star gives <b>+25% to that cat's income</b> (up to 10★). Your last copy is always safe.",
+  "⚔️ <b>Talisman Sets!</b> Equip up to 3 talismans for a bonus on top of your collection. Match rarities for a <b>✨ Pure Set ×3</b>, or go all-different for a <b>🌈 Rainbow ×2</b>.",
+  "🧭 <b>Expeditions!</b> Send your colony on timed missions (30m–12h) for scrolls &amp; Stardust. Two slots, and they keep running while you're away.",
+  "🏆 <b>Leaderboard Seasons!</b> A monthly cycle with a countdown, your personal <b>season best</b>, and a scroll reward each new month based on your peak.",
+  "👹 <b>Raids reworked:</b> bosses now spawn <b>every 3 hours</b> with a <b>30s</b> join window, are properly <b>killable</b> (rebalanced HP that scales per raider), and drop loot at the <b>correct advertised odds</b> (the old roll was bugged — solo raiders always got a Basic Scroll!).",
+  "💫 <b>No more 50% elimination.</b> At half HP a random raider is now <b>stunned for 60s</b> instead of knocked out — and only when 2+ raiders have joined.",
+  "🌙 <b>Dark mode fixes:</b> info boxes, leaderboard medals and raid bars are now readable in dark mode. Plus a stability fix so the game loads reliably.",
 ];
 function maybeShowUpdateLog(){
   try{ if(localStorage.getItem(UPDATE_LOG_KEY)===UPDATE_VERSION) return false; }catch(e){}
@@ -4943,11 +4948,21 @@ function maybeShowUpdateLog(){
   $("updateModal").classList.add("show");
   return true;
 }
+let _updateLogManual=false;   // true when opened from Settings (so we skip the boot popup chain)
 function dismissUpdateLog(){
   $("updateModal").classList.remove("show");
   try{ localStorage.setItem(UPDATE_LOG_KEY,UPDATE_VERSION); }catch(e){}
+  if(_updateLogManual){ _updateLogManual=false; $("settingsModal").classList.add("show"); return; }
   maybeShowMobileTip();   // continue the boot popup chain
 }
+// Re-open the changelog any time from Settings → 📜 What's New
+function showUpdateLog(){
+  _updateLogManual=true;
+  $("settingsModal").classList.remove("show");
+  $("updateList").innerHTML=UPDATE_LOG.map(x=>`<div class="tut-step"><div class="tut-txt">${x}</div></div>`).join("");
+  $("updateModal").classList.add("show");
+}
+$("changelogBtn").addEventListener("click",showUpdateLog);
 $("closeUpdate").addEventListener("click",dismissUpdateLog);
 // tap the dimmed backdrop (outside the card) to dismiss
 $("updateModal").addEventListener("click",e=>{ if(e.target.id==="updateModal") dismissUpdateLog(); });
