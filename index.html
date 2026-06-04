@@ -361,6 +361,7 @@
       <div>
         <span class="mult-badge" id="rebirthMult">Prestige x1.00</span>
         <span class="mult-badge" id="timeBadge">⏱ 0m</span>
+        <span class="mult-badge" id="scrollBadge" style="display:none;">📜 0 scrolls</span>
       </div>
       <div class="footer-btns">
         <button class="smallbtn" id="settingsBtn">⚙️ Settings</button>
@@ -375,7 +376,8 @@
       <div class="tab" data-tab="catdex">📖 Catdex</div>
       <div class="tab" data-tab="upgrades">⬆️ Upgrades</div>
       <div class="tab" data-tab="gacha">🎰 Gacha</div>
-      <div class="tab" data-tab="rebirth">✨ Rebirth</div>
+      <div class="tab" data-tab="reforge">⚒️ Reforge</div>
+      <div class="tab" data-tab="rebirth">✨ Rebirth<span id="rebirthPing" style="display:none;margin-left:4px;background:var(--danger);color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;vertical-align:middle;">!</span></div>
       <div class="tab" data-tab="goals">🏅 Goals</div>
       <div class="tab" data-tab="ranks">🏆 Leaderboard</div>
     </div>
@@ -391,6 +393,7 @@
     <div id="panel-catdex" style="display:none;"></div>
     <div id="panel-upgrades" style="display:none;"></div>
     <div id="panel-gacha" style="display:none;"></div>
+    <div id="panel-reforge" style="display:none;"></div>
     <div id="panel-rebirth" style="display:none;"></div>
     <div id="panel-goals" style="display:none;"></div>
     <div id="panel-ranks" style="display:none;"></div>
@@ -448,6 +451,7 @@
     <div class="setrow"><span>🎵 Music</span><button class="smallbtn" id="toggleMusic">On ✅</button></div>
     <div class="setrow"><span>🔊 Sound &amp; haptics</span><button class="smallbtn" id="toggleSound">On ✅</button></div>
     <div class="setrow"><span>🎐 Animations</span><button class="smallbtn" id="toggleMotion">On ✅</button></div>
+    <div class="setrow"><span>✏️ Change name <span id="nameChangesLeft" style="font-size:11px;color:var(--ink2);font-weight:600;"></span></span><button class="smallbtn" id="changeNameBtn">Change</button></div>
     <div class="sub" style="margin:12px 0 6px;font-weight:800;text-align:center;">📊 Your Stats</div>
     <div id="statsBox" style="font-size:13px;line-height:1.85;"></div>
     <div class="sub" style="margin:12px 0 6px;font-weight:800;text-align:center;">💾 Save &amp; Data</div>
@@ -463,6 +467,19 @@
     </div>
     <div class="row">
       <button class="smallbtn" id="closeSettings" style="flex:1;">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="changeNameModal">
+  <div class="modal" style="text-align:center;">
+    <h2 style="text-align:center;margin:4px 0 8px;">✏️ Change Name</h2>
+    <p class="sub" style="margin:0 0 10px;">You get <b>2 name changes</b> total, ever. Choose wisely! ♡</p>
+    <p class="sub" style="margin:0 0 10px;" id="nameChangesInfo"></p>
+    <input class="nameinput" id="changeNameInput" maxlength="16" placeholder="New name (max 16 chars)" style="margin-bottom:10px;">
+    <div class="row">
+      <button class="smallbtn" id="confirmNameChange" style="flex:1;">✅ Confirm</button>
+      <button class="smallbtn" id="cancelNameChange" style="flex:1;">Cancel</button>
     </div>
   </div>
 </div>
@@ -485,9 +502,9 @@ if("serviceWorker" in navigator){
 /* =====================================================================
    CAT MONOPOLY — kawaii idle game (single file)
    ===================================================================== */
-const SAVE_KEY = "catMonopolySave_v3";   // bumped to v3 -> wipes everyone's old save on next load (fresh start for the rebalanced economy)
+const SAVE_KEY = "catMonopolySave_v4";   // v4: rebirths reset to 0 globally; estates reset on rebirth; lofi music
 const LB_KEY   = "catMonopolyLB_v2";     // bumped -> clears the local (offline) leaderboard too
-const VERSION  = 3;
+const VERSION  = 4;
 const OFFLINE_CAP_HOURS = 12;
 const COST_GROWTH = 1.17;        // each additional cat of a tier costs more
 const CAT_SOFT_CAP = 50;         // beyond this many of ONE tier, extra cats earn far less
@@ -545,49 +562,139 @@ const CAT_DEFS = CAT_BASE.map((c,i)=>({
   baseProd: sig(0.08*Math.pow(4.8,i),2), // less power per cat — income grows slower than cost
 }));
 
-/* ---------- Upgrades / modifiers ---------- */
+/* ---------- Upgrades / modifiers ----------
+   category: "tap" | "cat" | "combo" | "global"
+*/
 const UPGRADE_DEFS = [
-  { id:"catnip", name:"Catnip Stash",      emoji:"🌿", cost:8000,    mult:2,   desc:"x2 all cat income" },
-  { id:"collar", name:"Golden Collar",     emoji:"⭐", cost:3e5,     mult:2,   desc:"x2 all cat income" },
-  { id:"food",   name:"Premium Cat Food",  emoji:"🍣", cost:8e6,     mult:2,   desc:"x2 all cat income" },
-  { id:"tower",  name:"Luxury Cat Tower",  emoji:"🏰", cost:2.5e8,   mult:2,   desc:"x2 all cat income" },
-  { id:"laser",  name:"Laser Pointer Co",  emoji:"🔴", cost:8e9,     mult:2.5, desc:"x2.5 all cat income" },
-  { id:"spa",    name:"Kitty Spa Resort",  emoji:"🛁", cost:3e11,    mult:2.5, desc:"x2.5 all cat income" },
-  { id:"fund",   name:"Feline Hedge Fund", emoji:"📈", cost:1e13,    mult:3,   desc:"x3 all cat income" },
-  { id:"island", name:"Private Cat Island",emoji:"🏝️", cost:5e14,    mult:3,   desc:"x3 all cat income" },
-  { id:"bank",   name:"Cat Central Bank",  emoji:"🏛️", cost:2e16,    mult:3,   desc:"x3 all cat income" },
-  { id:"glove1", name:"Petting Glove",     emoji:"🧤", cost:4e4,     clickMult:3, desc:"x3 tap income" },
-  { id:"glove2", name:"Massage Mitt",      emoji:"💆", cost:6e7,     clickMult:5, desc:"x5 tap income" },
-  { id:"glove3", name:"Royal Paw Scepter", emoji:"👑", cost:8e10,    clickMult:8, desc:"x8 tap income" },
+  // ── TAP POWER ──────────────────────────────────────────────────────────
+  { id:"glove1",   name:"Petting Glove",        emoji:"🧤", cost:4e4,    clickMult:3,   desc:"x3 tap income",                    category:"tap" },
+  { id:"glove2",   name:"Massage Mitt",          emoji:"💆", cost:6e7,    clickMult:5,   desc:"x5 tap income",                    category:"tap" },
+  { id:"glove3",   name:"Royal Paw Scepter",     emoji:"👑", cost:8e10,   clickMult:8,   desc:"x8 tap income",                    category:"tap" },
+  { id:"glove4",   name:"Celestial Paw Crystal", emoji:"💎", cost:5e13,   clickMult:12,  desc:"x12 tap income",                   category:"tap" },
+  { id:"tapshoes", name:"Speed Paws",            emoji:"⚡", cost:2e5,    tapShare:0.005,desc:"+0.5% idle share per tap",          category:"tap" },
+  { id:"tapband",  name:"Rhythm Collar",         emoji:"🎵", cost:9e8,    tapShare:0.01, desc:"+1% idle share per tap (stacks)",   category:"tap" },
+  { id:"tapglory", name:"Pounce Overdrive",      emoji:"🔥", cost:3e12,   tapShare:0.02, desc:"+2% idle share per tap (stacks)",   category:"tap" },
+  // ── COMBO ──────────────────────────────────────────────────────────────
+  { id:"combo1",   name:"Streak Stripes",        emoji:"🐯", cost:1.5e5,  comboBonus:25, desc:"Combo builds 25 taps faster",       category:"combo" },
+  { id:"combo2",   name:"Frenzy Fur",            emoji:"🌀", cost:4e8,    comboBonus:50, desc:"Combo builds 50 taps faster (stacks)",category:"combo" },
+  { id:"combo3",   name:"Pounce Mastery",        emoji:"🏆", cost:2e12,   comboCap:100,  desc:"+100 to max combo cap",              category:"combo" },
+  { id:"combo4",   name:"Infinite Streak",       emoji:"♾️",  cost:1e16,   comboCap:250,  desc:"+250 to max combo cap",              category:"combo" },
+  // ── CAT POWER ──────────────────────────────────────────────────────────
+  { id:"catnip",   name:"Catnip Stash",          emoji:"🌿", cost:8000,   mult:2,        desc:"x2 all cat income",                 category:"cat" },
+  { id:"collar",   name:"Golden Collar",         emoji:"⭐", cost:3e5,    mult:2,        desc:"x2 all cat income",                 category:"cat" },
+  { id:"food",     name:"Premium Cat Food",      emoji:"🍣", cost:8e6,    mult:2,        desc:"x2 all cat income",                 category:"cat" },
+  { id:"tower",    name:"Luxury Cat Tower",      emoji:"🏰", cost:2.5e8,  mult:2,        desc:"x2 all cat income",                 category:"cat" },
+  { id:"laser",    name:"Laser Pointer Co",      emoji:"🔴", cost:8e9,    mult:2.5,      desc:"x2.5 all cat income",               category:"cat" },
+  { id:"spa",      name:"Kitty Spa Resort",      emoji:"🛁", cost:3e11,   mult:2.5,      desc:"x2.5 all cat income",               category:"cat" },
+  { id:"fund",     name:"Feline Hedge Fund",     emoji:"📈", cost:1e13,   mult:3,        desc:"x3 all cat income",                 category:"cat" },
+  { id:"island",   name:"Private Cat Island",    emoji:"🏝️",  cost:5e14,   mult:3,        desc:"x3 all cat income",                 category:"cat" },
+  { id:"bank",     name:"Cat Central Bank",      emoji:"🏛️",  cost:2e16,   mult:3,        desc:"x3 all cat income",                 category:"cat" },
+  // ── GLOBAL ──────────────────────────────────────────────────────────────
+  { id:"cream",    name:"Lucky Cream Saucer",    emoji:"🥛", cost:5e5,    globalMult:1.5,desc:"x1.5 ALL income",                   category:"global" },
+  { id:"moonrock", name:"Moon Rock",             emoji:"🌙", cost:6e10,   globalMult:2,  desc:"x2 ALL income",                    category:"global" },
+  { id:"sunstone", name:"Sunstone Amulet",       emoji:"☀️",  cost:8e14,   globalMult:2.5,desc:"x2.5 ALL income",                  category:"global" },
+];
+const UPGRADE_CATEGORIES = [
+  { id:"tap",    label:"👆 Tap Power",    desc:"Boost your manual tapping income" },
+  { id:"combo",  label:"🔥 Combo",        desc:"Enhance your tap combo streak" },
+  { id:"cat",    label:"🐾 Cat Power",    desc:"Multiply your cat idle income" },
+  { id:"global", label:"✨ Global",       desc:"Boost all income sources" },
 ];
 
-/* ---------- Estates (Monopoly board) — cash money-sink for permanent income % ---------- */
+/* ---------- Estates (Monopoly board) — cash money-sink for permanent income % ----------
+   Properties are grouped into TIERS locked by rebirth count.
+   Each tier has multiple color groups; completing a group gives a set bonus.
+   PROP_MAX_LVL: 1=owned, 2-4=houses, 5=hotel. */
+const PROP_MAX_LVL  = 5;
+const PROP_SET_BONUS = 0.05;   // completing a full color group = +5% income (nerfed from 8%)
+
+/* tier: minimum rebirths to unlock this group */
 const PROP_GROUPS = {
-  brown: {name:"Litter District", color:"#b07b53"},
-  cyan:  {name:"Yarn Quarter",    color:"#5cc7dd"},
-  pink:  {name:"Purr Heights",    color:"#ff8fc0"},
-  orange:{name:"Sunbeam Row",     color:"#ff9e4a"},
-  green: {name:"Velvet Estates",  color:"#5fc98a"},
-  blue:  {name:"Royal Boardwalk", color:"#6c8cff"},
+  /* ── TIER 0 (rebirth 0) ── starter district */
+  brown:   { name:"Litter District",   color:"#b07b53", tier:0 },
+  cyan:    { name:"Yarn Quarter",      color:"#5cc7dd", tier:0 },
+  /* ── TIER 1 (rebirth 1) ── neighbourhood */
+  pink:    { name:"Purr Heights",      color:"#ff8fc0", tier:1 },
+  orange:  { name:"Sunbeam Row",       color:"#ff9e4a", tier:1 },
+  teal:    { name:"Nap Nook",          color:"#3dbdaa", tier:1 },
+  /* ── TIER 2 (rebirth 2) ── uptown */
+  green:   { name:"Velvet Estates",    color:"#5fc98a", tier:2 },
+  amber:   { name:"Honey Heights",     color:"#e8a020", tier:2 },
+  violet:  { name:"Twilight Terrace",  color:"#9966cc", tier:2 },
+  /* ── TIER 3 (rebirth 3) ── prestige */
+  blue:    { name:"Royal Boardwalk",   color:"#6c8cff", tier:3 },
+  rose:    { name:"Blossom Boulevard", color:"#e8608a", tier:3 },
+  silver:  { name:"Silverbell Square", color:"#8aa8bf", tier:3 },
+  /* ── TIER 4 (rebirth 5) ── elite */
+  crimson: { name:"Scarlet Spire",     color:"#d93a3a", tier:5 },
+  gold:    { name:"Gilded Galleria",   color:"#d4a017", tier:5 },
+  sapphire:{ name:"Sapphire Sanctum",  color:"#2255cc", tier:5 },
+  /* ── TIER 5 (rebirth 8) ── legendary */
+  celestial:{ name:"Celestial Citadel",color:"#b06bff", tier:8 },
+  divine:   { name:"Divine Dynasty",   color:"#ff6a20", tier:8 },
 };
+
 const PROPERTY_DEFS = [
-  {g:"brown",  name:"Litterbox Lane",  cost:4e4,  bonus:0.012},
-  {g:"brown",  name:"Hairball Alley",  cost:7e4,  bonus:0.012},
-  {g:"cyan",   name:"Catnip Avenue",   cost:5e5,  bonus:0.018},
-  {g:"cyan",   name:"Yarn Boulevard",  cost:8e5,  bonus:0.018},
-  {g:"cyan",   name:"Paw Place",       cost:1.2e6,bonus:0.018},
-  {g:"pink",   name:"Purrfect Plaza",  cost:7e6,  bonus:0.024},
-  {g:"pink",   name:"Meow Manor",      cost:1.1e7,bonus:0.024},
-  {g:"pink",   name:"Tabby Terrace",   cost:1.6e7,bonus:0.024},
-  {g:"orange", name:"Scratch Street",  cost:9e7,  bonus:0.03},
-  {g:"orange", name:"Sunbeam Square",  cost:1.4e8,bonus:0.03},
-  {g:"green",  name:"Diamond Den",     cost:9e8,  bonus:0.04},
-  {g:"green",  name:"Royal Catwalk",   cost:1.4e9,bonus:0.04},
-  {g:"blue",   name:"Caviar Court",    cost:1.1e10,bonus:0.06},
-  {g:"blue",   name:"Golden Throne",   cost:2e10, bonus:0.06},
+  /* ── TIER 0 ── brown */
+  { g:"brown",    name:"Litterbox Lane",      cost:4e4,    bonus:0.010 },
+  { g:"brown",    name:"Hairball Alley",       cost:7e4,    bonus:0.010 },
+  /* ── TIER 0 ── cyan */
+  { g:"cyan",     name:"Catnip Avenue",        cost:3e5,    bonus:0.012 },
+  { g:"cyan",     name:"Yarn Boulevard",       cost:5e5,    bonus:0.012 },
+  { g:"cyan",     name:"Paw Place",            cost:8e5,    bonus:0.012 },
+  /* ── TIER 1 ── pink */
+  { g:"pink",     name:"Purrfect Plaza",       cost:5e6,    bonus:0.016 },
+  { g:"pink",     name:"Meow Manor",           cost:8e6,    bonus:0.016 },
+  { g:"pink",     name:"Tabby Terrace",        cost:1.2e7,  bonus:0.016 },
+  /* ── TIER 1 ── orange */
+  { g:"orange",   name:"Scratch Street",       cost:6e7,    bonus:0.020 },
+  { g:"orange",   name:"Sunbeam Square",       cost:1e8,    bonus:0.020 },
+  /* ── TIER 1 ── teal */
+  { g:"teal",     name:"Catnap Cove",          cost:2e8,    bonus:0.022 },
+  { g:"teal",     name:"Sleepy Hollow Lane",   cost:3.5e8,  bonus:0.022 },
+  { g:"teal",     name:"Dreamcloud Drive",     cost:5e8,    bonus:0.022 },
+  /* ── TIER 2 ── green */
+  { g:"green",    name:"Diamond Den",          cost:6e8,    bonus:0.026 },
+  { g:"green",    name:"Royal Catwalk",        cost:1e9,    bonus:0.026 },
+  { g:"green",    name:"Emerald Esplanade",    cost:1.8e9,  bonus:0.026 },
+  /* ── TIER 2 ── amber */
+  { g:"amber",    name:"Honey Hollow",         cost:4e9,    bonus:0.030 },
+  { g:"amber",    name:"Saffron Street",       cost:7e9,    bonus:0.030 },
+  /* ── TIER 2 ── violet */
+  { g:"violet",   name:"Dusk Drive",           cost:1.5e10, bonus:0.034 },
+  { g:"violet",   name:"Twilight Tower",       cost:2.5e10, bonus:0.034 },
+  { g:"violet",   name:"Nebula Nook",          cost:4e10,   bonus:0.034 },
+  /* ── TIER 3 ── blue */
+  { g:"blue",     name:"Caviar Court",         cost:8e10,   bonus:0.040 },
+  { g:"blue",     name:"Golden Throne",        cost:1.5e11, bonus:0.040 },
+  { g:"blue",     name:"Sapphire Summit",      cost:2.5e11, bonus:0.040 },
+  /* ── TIER 3 ── rose */
+  { g:"rose",     name:"Cherry Blossom Lane",  cost:5e11,   bonus:0.045 },
+  { g:"rose",     name:"Petal Palace",         cost:9e11,   bonus:0.045 },
+  /* ── TIER 3 ── silver */
+  { g:"silver",   name:"Moonbeam Market",      cost:2e12,   bonus:0.050 },
+  { g:"silver",   name:"Frostwhisker Fountain",cost:3.5e12, bonus:0.050 },
+  { g:"silver",   name:"Crystal Crescent",     cost:6e12,   bonus:0.050 },
+  /* ── TIER 4 ── crimson */
+  { g:"crimson",  name:"Scarlet Arcade",       cost:2e13,   bonus:0.060 },
+  { g:"crimson",  name:"Ruby Row",             cost:4e13,   bonus:0.060 },
+  { g:"crimson",  name:"Inferno Isle",         cost:7e13,   bonus:0.060 },
+  /* ── TIER 4 ── gold */
+  { g:"gold",     name:"Gilded Gate",          cost:1.5e14, bonus:0.070 },
+  { g:"gold",     name:"Fortune Falls",        cost:3e14,   bonus:0.070 },
+  /* ── TIER 4 ── sapphire */
+  { g:"sapphire", name:"Azure Atrium",         cost:6e14,   bonus:0.080 },
+  { g:"sapphire", name:"Ocean Obelisk",        cost:1.2e15, bonus:0.080 },
+  { g:"sapphire", name:"Deep Sky Domain",      cost:2e15,   bonus:0.080 },
+  /* ── TIER 5 ── celestial */
+  { g:"celestial",name:"Stardust Spire",       cost:1e16,   bonus:0.100 },
+  { g:"celestial",name:"Cosmic Cathedral",     cost:2e16,   bonus:0.100 },
+  { g:"celestial",name:"Void Vanguard",        cost:4e16,   bonus:0.100 },
+  /* ── TIER 5 ── divine */
+  { g:"divine",   name:"Heaven's Hallway",     cost:8e16,   bonus:0.120 },
+  { g:"divine",   name:"Bastet's Basilica",    cost:1.5e17, bonus:0.120 },
+  { g:"divine",   name:"Eternal Empire",       cost:3e17,   bonus:0.120 },
 ];
-const PROP_MAX_LVL = 5;             // 1 = owned, 2-4 = houses, 5 = hotel
-const PROP_SET_BONUS = 0.08;        // completing a whole color group
 
 /* ---------- Talisman Gacha (massive coin sink) ----------
    Rarities grow exponentially rarer. Each talisman gives a small additive income
@@ -609,46 +716,87 @@ const TAL_RARITY = {}; TALISMAN_RARITIES.forEach(r=>TAL_RARITY[r.id]=r);
 const LEGENDARY_IDX = RARITY_ORDER.indexOf("legendary");   // pity guarantees this tier or better
 
 const TALISMANS = [
-  // common (4)
+  // common (7)
   {id:"t_yarn",    r:"common",    name:"Yarn Charm",        emoji:"🧶"},
   {id:"t_paw",     r:"common",    name:"Lucky Paw",         emoji:"🐾"},
   {id:"t_bell",    r:"common",    name:"Jingle Bell",       emoji:"🔔"},
   {id:"t_feather", r:"common",    name:"Feather Token",     emoji:"🪶"},
-  // uncommon (4)
+  {id:"t_acorn",   r:"common",    name:"Acorn Trinket",     emoji:"🌰"},
+  {id:"t_ribbon",  r:"common",    name:"Pink Ribbon",       emoji:"🎀"},
+  {id:"t_stone",   r:"common",    name:"Pebble Rune",       emoji:"🪨"},
+  // uncommon (6)
   {id:"t_fish",    r:"uncommon",  name:"Silver Sardine",    emoji:"🐟"},
   {id:"t_milk",    r:"uncommon",  name:"Cream Saucer",      emoji:"🥛"},
   {id:"t_mouse",   r:"uncommon",  name:"Toy Mouse",         emoji:"🐭"},
   {id:"t_clover",  r:"uncommon",  name:"Clover Tag",        emoji:"🍀"},
-  // rare (3)
+  {id:"t_catnap",  r:"uncommon",  name:"Catnap Pillow",     emoji:"😴"},
+  {id:"t_pawprint",r:"uncommon",  name:"Golden Pawprint",   emoji:"🟡"},
+  // rare (5)
   {id:"t_ruby",    r:"rare",      name:"Ruby Collar",       emoji:"❤️"},
   {id:"t_nip",     r:"rare",      name:"Catnip Crystal",    emoji:"🌿"},
   {id:"t_moon",    r:"rare",      name:"Moonstone Charm",   emoji:"🌙"},
-  // epic (3)
+  {id:"t_sakura",  r:"rare",      name:"Sakura Petal",      emoji:"🌸"},
+  {id:"t_prism",   r:"rare",      name:"Prism Shard",       emoji:"🔷"},
+  // epic (5)
   {id:"t_crown",   r:"epic",      name:"Velvet Crown",      emoji:"👑"},
   {id:"t_star",    r:"epic",      name:"Shooting Star",     emoji:"💫"},
   {id:"t_gem",     r:"epic",      name:"Prism Gem",         emoji:"💎"},
-  // legendary (2)
+  {id:"t_void",    r:"epic",      name:"Void Fragment",     emoji:"🌑"},
+  {id:"t_spirit",  r:"epic",      name:"Spirit Lantern",    emoji:"🏮"},
+  // legendary (4)
   {id:"t_phoenix", r:"legendary", name:"Phoenix Feather",   emoji:"🔥"},
   {id:"t_galaxy",  r:"legendary", name:"Galaxy Orb",        emoji:"🌌"},
-  // mythic (2)
+  {id:"t_sunfire", r:"legendary", name:"Sunfire Amulet",    emoji:"☀️"},
+  {id:"t_tidecall",r:"legendary", name:"Tidecaller Shell",  emoji:"🐚"},
+  // mythic (3)
   {id:"t_chrono",  r:"mythic",    name:"Chrono Whisker",    emoji:"⏳"},
   {id:"t_rainbow", r:"mythic",    name:"Rainbow Heart",     emoji:"🌈"},
-  // godly (1)
+  {id:"t_storm",   r:"mythic",    name:"Stormclaw Fang",    emoji:"⚡"},
+  // godly (2)
   {id:"t_deity",   r:"godly",     name:"Bastet's Blessing", emoji:"🐈‍⬛"},
+  {id:"t_cosmos",  r:"godly",     name:"Cosmic Whisker",    emoji:"🌠"},
 ];
 
-/* Banners: higher tiers cost much more but shift odds toward rarer talismans.
-   Each odds table sums to 1. Godly odds climb 1e-5 -> 2e-4 -> 3e-3 across banners. */
+/* ---------- Scroll types: the new gacha currency ----------
+   Basic Scroll  → Regular banner odds
+   Advanced Scroll → Rare banner odds
+   Pity Scroll   → Super Rare banner odds + guaranteed Legendary+ */
+const SCROLL_TYPES = [
+  { id:"basic",    name:"Basic Scroll",    emoji:"📜", bannerIdx:0, color:"#9fb0c0" },
+  { id:"advanced", name:"Advanced Scroll", emoji:"📋", bannerIdx:1, color:"#5aa9ff" },
+  { id:"pity",     name:"Scroll of Pity",  emoji:"✨", bannerIdx:2, color:"#b06bff" },
+];
+const SCROLL_BY_ID = {}; SCROLL_TYPES.forEach(s=>SCROLL_BY_ID[s.id]=s);
+
+/* Banners: each scroll type maps to a banner with different odds */
 const BANNERS = [
-  {id:"regular", name:"Regular Roll", emoji:"🎰", costMult:1,  pity:1000,
+  {id:"regular", name:"Basic Roll",    emoji:"📜", scrollId:"basic",    pity:1000,
     odds:{common:0.55, uncommon:0.28, rare:0.12, epic:0.04, legendary:0.0095, mythic:0.00049, godly:0.00001}},
-  {id:"rare", name:"Rare Roll", emoji:"✨", costMult:10, pity:600,
+  {id:"rare",    name:"Advanced Roll", emoji:"📋", scrollId:"advanced", pity:600,
     odds:{uncommon:0.50, rare:0.33, epic:0.13, legendary:0.035, mythic:0.0048, godly:0.0002}},
-  {id:"super", name:"Super Rare Roll", emoji:"🌟", costMult:60, pity:300,
+  {id:"super",   name:"Pity Roll",     emoji:"✨", scrollId:"pity",     pity:1,
     odds:{rare:0.55, epic:0.30, legendary:0.12, mythic:0.027, godly:0.003}},
 ];
 const BANNER_BY_ID = {}; BANNERS.forEach(b=>BANNER_BY_ID[b.id]=b);
-const ROLL_COUNTS = [1,10,50,100];
+const ROLL_COUNTS = [1,10];
+
+/* ---------- Daily & Weekly Quests ----------
+   Quests reset on a timer and reward scrolls on completion.
+   type: "daily" resets each day, "weekly" resets each Monday. */
+const QUEST_DEFS = [
+  // Daily quests
+  {id:"q_tap100",   type:"daily",  emoji:"👆", name:"Tap 100 Times",          desc:"Tap your cat 100 times",                reward:{basic:2},            cond:s=>s.pets>=100},
+  {id:"q_earn1",    type:"daily",  emoji:"💰", name:"Earn While Away",         desc:"Earn at least $1K lifetime this run",   reward:{basic:1},            cond:s=>s.lifetime>=1e3},
+  {id:"q_combo10",  type:"daily",  emoji:"🔥", name:"Reach Combo ×10",         desc:"Build a 10-tap combo streak",           reward:{basic:3},            cond:s=>(s.bestCombo||0)>=10},
+  {id:"q_buycat",   type:"daily",  emoji:"🐱", name:"Buy a Cat",               desc:"Purchase any cat today",                reward:{basic:2},            cond:s=>s._questBoughtCat},
+  {id:"q_streak3",  type:"daily",  emoji:"🔥", name:"3-Day Streak",            desc:"Maintain a 3-day daily streak",         reward:{advanced:1},         cond:s=>(s.dailyStreak||0)>=3},
+  // Weekly quests
+  {id:"q_w_roll10", type:"weekly", emoji:"🎰", name:"Roll 10 Times",           desc:"Use 10 scrolls this week",              reward:{advanced:2},         cond:s=>(s._questWeeklyRolls||0)>=10},
+  {id:"q_w_cats50", type:"weekly", emoji:"🐈", name:"Cat Collector",           desc:"Own 50 cats total",                     reward:{advanced:3},         cond:s=>{ let n=0; for(let i=0;i<s.cats.length;i++) n+=s.cats[i]; return n>=50; }},
+  {id:"q_w_earn1m", type:"weekly", emoji:"💎", name:"Big Earner",              desc:"Earn $1M lifetime this run",            reward:{advanced:2,basic:5}, cond:s=>s.lifetime>=1e6},
+  {id:"q_w_golden", type:"weekly", emoji:"🌟", name:"Golden Hunter",           desc:"Catch 3 Golden Cats this week",         reward:{pity:1},             cond:s=>(s._questWeeklyGolden||0)>=3},
+  {id:"q_w_rebirth",type:"weekly", emoji:"✨", name:"Prestige Seeker",         desc:"Complete a Rebirth",                    reward:{pity:1,advanced:2},  cond:s=>(s._questWeeklyRebirths||0)>=1},
+];
 
 /* ---------- State ---------- */
 function newState(){
@@ -660,9 +808,18 @@ function newState(){
     achievements:{}, skills:{idle:0,tap:0,cost:0,offline:0,mice:0}, spentMice:0,
     pets:0, bestCombo:0, goldenCaught:0, lastDaily:"", dailyStreak:0,
     goldenMice:0, rebirths:0, timePlayed:0,
-    talismans:{}, gacha:{pity:0, rolls:0},
+    talismans:{}, gacha:{pity:0, rolls:0}, reforges:{},   // reforges: {talismanId:{tap,cat,afk}}
+    scrolls:{basic:0, advanced:0, pity:0},   // scroll inventory
+    quests:{},                                // quest completion tracking: {questId: true/false}
+    questsClaimedDaily:"",                    // date string of last daily quest reset
+    questsClaimedWeekly:"",                   // week string of last weekly quest reset
+    _questBoughtCat:false,                    // ephemeral quest trackers (reset with quests)
+    _questWeeklyRolls:0,
+    _questWeeklyGolden:0,
+    _questWeeklyRebirths:0,
     comboRewards:{}, prefs:{sound:true, music:true, motion:true, dark:false},
-    name:"", lastSave:Date.now(),
+    name:"", nameChanges:0, lastSave:Date.now(),
+    buildType:"balanced",   // "tapper" | "catmaster" | "balanced"
   };
 }
 let state = newState();
@@ -875,7 +1032,7 @@ const REBIRTH_BONUS=0.15;   // permanent income bonus per rebirth completed
 /* ---------- Derived ---------- */
 function totalCats(){ let n=0; for(let i=0;i<CAT_DEFS.length;i++) n+=state.cats[i]; return n; }
 function dexCount(){ return (state.discovered||[]).filter(Boolean).length; }
-function availableTokens(){ return (state.goldenMice||0)-(state.spentMice||0); }
+function availableTokens(){ return Math.max(0, (state.goldenMice||0)-(state.spentMice||0)); }
 // Prestige is now one rebirth at a time. The (n+1)-th rebirth needs this much lifetime this run.
 function rebirthThreshold(n){ return 1e6*Math.pow(5, n||0); }   // 1M, 5M, 25M, 125M, ...
 function canRebirth(){ return (state.lifetime||0) >= rebirthThreshold(state.rebirths||0); }
@@ -887,8 +1044,38 @@ function skillTapMult(){ return 1 + 0.20*(state.skills.tap||0); }
 function skillCostFactor(){ return Math.pow(0.98, state.skills.cost||0); }
 function offlineCapHours(){ return OFFLINE_CAP_HOURS + 2*(state.skills.offline||0); }
 function skillTreasureMult(){ return 1 + 0.07*(state.skills.mice||0); }
+/* ---------- Build Type bonuses ----------
+   Tapper: +60% tap income, cats earn 30% less, combos earn 25% more value per tick
+   Catmaster: +50% cat income, taps earn 25% less, combo window extended by 500ms
+   Balanced: no changes (default) */
+function buildTapMult(){
+  if((state.buildType||"balanced")==="tapper") return 1.60;
+  if((state.buildType||"balanced")==="catmaster") return 0.75;
+  return 1;
+}
+function buildCatMult(){
+  if((state.buildType||"balanced")==="catmaster") return 1.50;
+  if((state.buildType||"balanced")==="tapper") return 0.70;
+  return 1;
+}
+function buildComboWindow(){
+  return COMBO_WINDOW + ((state.buildType||"balanced")==="catmaster" ? 500 : 0);
+}
+/* ---------- Reforge: per-talisman ±% to Tap / Cat / AFK power ----------
+   Each owned talisman can hold one reforge affix; the totals feed the three multipliers. */
+function reforgeTotals(){
+  let t=0,c=0,a=0;
+  if(state.reforges){ for(const id in state.reforges){
+    if((state.talismans&&state.talismans[id])>0){ const r=state.reforges[id]; if(r){ t+=r.tap||0; c+=r.cat||0; a+=r.afk||0; } }
+  } }
+  return {tap:t, cat:c, afk:a};
+}
+function reforgeTapMult(){ return Math.max(0.1, 1 + reforgeTotals().tap/100); }
+function reforgeCatMult(){ return Math.max(0.1, 1 + reforgeTotals().cat/100); }
+function reforgeAfkMult(){ return Math.max(0.1, 1 + reforgeTotals().afk/100); }
 function propCost(i){ const lvl=state.properties[i]||0; return PROPERTY_DEFS[i].cost*Math.pow(2.8,lvl); }
 function groupComplete(g){ return PROPERTY_DEFS.every((p,i)=> p.g!==g || (state.properties[i]||0)>=1); }
+function groupUnlocked(g){ return (state.rebirths||0) >= (PROP_GROUPS[g].tier||0); }
 function propertyMult(){
   let m=1;
   PROPERTY_DEFS.forEach((p,i)=>{ m += (state.properties[i]||0)*p.bonus; });
@@ -897,8 +1084,21 @@ function propertyMult(){
 }
 let frenzy={mult:1,until:0};
 function goldenBuffMult(){ return Date.now()<frenzy.until ? frenzy.mult : 1; }
-function globalUpgradeMult(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.mult&&state.upgrades[u.id]) m*=u.mult; } return m; }
+function globalUpgradeMult(){ let m=1; for(const u of UPGRADE_DEFS){ if(state.upgrades[u.id]){ if(u.mult) m*=u.mult; if(u.globalMult) m*=u.globalMult; } } return m; }
 function clickMultiplier(){ let m=1; for(const u of UPGRADE_DEFS){ if(u.clickMult&&state.upgrades[u.id]) m*=u.clickMult; } return m; }
+function upgradeComboBonus(){ let b=0; for(const u of UPGRADE_DEFS){ if(u.comboBonus&&state.upgrades[u.id]) b+=u.comboBonus; } return b; }
+function upgradeComboCap(){ let b=0; for(const u of UPGRADE_DEFS){ if(u.comboCap&&state.upgrades[u.id]) b+=u.comboCap; } return b; }
+function upgradeTapShare(){ let b=0; for(const u of UPGRADE_DEFS){ if(u.tapShare&&state.upgrades[u.id]) b+=u.tapShare; } return b; }
+// effective combo multiplier considering comboCap upgrades
+function effectiveComboCap(){ return COMBO_MAX + upgradeComboCap(); }
+function effectiveComboMult(){
+  if(Date.now()-_comboLast > buildComboWindow() || _combo<2) return 1;
+  const effCombo = Math.max(0, _combo - upgradeComboBonus()); // bonus makes it feel like higher combo
+  const cap = effectiveComboCap();
+  const base = 1 + Math.min(effCombo, cap) * COMBO_STEP;
+  const over  = Math.max(0, effCombo - cap) * COMBO_OVER_STEP;
+  return base + over;
+}
 // talismans: each owned talisman adds a small bonus; duplicates add a diminishing amount,
 // capped at DUPE_CAP_MULT x the first-copy value so the collection never gets overpowered.
 function talismanBonus(t){
@@ -910,11 +1110,14 @@ function talismanBonus(t){
 function talismanMult(){ let s=0; for(const t of TALISMANS) s+=talismanBonus(t); return 1+s; }
 // combined passive income multiplier (everything except each cat's base rate)
 function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*skillTreasureMult()*propertyMult()*goldenBuffMult()*talismanMult(); }
+// pricing multiplier — same as incomeMult but WITHOUT the frenzy buff so a golden-cat
+// event doesn't temporarily inflate gacha/upgrade costs by 5×
+function incomeMultForPricing(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*skillTreasureMult()*propertyMult()*talismanMult(); }
 // soft cap: the first CAT_SOFT_CAP of a tier earn full rate; every extra one earns far less,
 // so hoarding one cheap cat can't run the economy away.
 function effectiveCount(n){ return n<=CAT_SOFT_CAP ? n : CAT_SOFT_CAP + (n-CAT_SOFT_CAP)*CAT_OVERCAP_EFF; }
 function catProduction(i){ return effectiveCount(state.cats[i])*CAT_DEFS[i].baseProd; }
-function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*incomeMult(); }
+function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProduction(i); return b*incomeMult()*buildCatMult()*reforgeCatMult(); }
 /* ---------- Tap power: "Pounce Combo" alternative playstyle ----------
    Active tapping is its own progression lane. Each tap is worth the LARGER of:
      · a flat amount (tap upgrades + Tap Power skill + prestige) — bootstraps early game, and
@@ -923,22 +1126,22 @@ function incomePerSec(){ let b=0; for(let i=0;i<CAT_DEFS.length;i++) b+=catProdu
    system is bounded by the 14-tap/sec anti-autoclicker cap, so even fully maxed an active
    tapper roughly *doubles* their rate while present — a real alternative, never a runaway. */
 const COMBO_WINDOW = 1500;     // ms — tap again within this to keep the streak alive
-const COMBO_MAX    = 50;       // combo length where the multiplier caps
-const COMBO_STEP   = 0.03;     // +3% tap value per combo (max +150% => x2.5)
+const COMBO_MAX    = 250;      // combo length where the base multiplier caps (x2.5)
+const COMBO_STEP   = 0.006;    // +0.6% tap value per combo (250 * 0.006 = 1.5 => x2.5 total)
+const COMBO_OVER_STEP = 0.0002;// +0.02% per combo PAST 250 (every 500 extra = +0.1)
 const TAP_SHARE_BASE = 0.015;  // base: each tap is worth ~1.5% of one second of idle income
 let _combo = 0, _comboLast = 0;            // ephemeral streak (not saved)
-function tapShare(){ return TAP_SHARE_BASE + 0.0015*(state.skills.tap||0); }   // Tap Power deepens it
-function comboMult(){
-  if(Date.now()-_comboLast > COMBO_WINDOW || _combo<2) return 1;
-  return 1 + Math.min(_combo,COMBO_MAX)*COMBO_STEP;
-}
+function tapShare(){ return TAP_SHARE_BASE + 0.0015*(state.skills.tap||0) + upgradeTapShare(); }   // Tap Power deepens it
+function comboMult(){ return effectiveComboMult(); }
 // Base value of a single tap, *before* the combo multiplier.
+// Flat path uses rebirthMultiplier() (same +15%/rebirth as idle income) for consistency.
+// Share path inherits rebirthMultiplier through incomePerSec() already.
 function tapBaseValue(){
-  const flat = (1 + (state.rebirths||0)) * clickMultiplier() * skillTapMult();
+  const flat = rebirthMultiplier() * clickMultiplier() * skillTapMult() * buildTapMult();
   const share = tapShare() * incomePerSec();
   return Math.max(flat, share);
 }
-function clickValue(){ return tapBaseValue() * comboMult() * tapBuffMult(); }
+function clickValue(){ return tapBaseValue() * comboMult() * tapBuffMult() * reforgeTapMult(); }
 function catCost(i,owned){ return CAT_DEFS[i].baseCost*Math.pow(COST_GROWTH,owned)*skillCostFactor(); }
 function catUnlocked(i){ return i===0 || state.cats[i-1]>=1; }
 function highestOwned(){ let h=0; for(let i=0;i<CAT_DEFS.length;i++) if(state.cats[i]>0) h=i; return h; }
@@ -947,34 +1150,35 @@ function unlockedCount(){ let n=0; for(let i=0;i<CAT_DEFS.length;i++) if(catUnlo
 function catBulk(i){
   const owned=state.cats[i];
   if(buyAmount==="max"){
-    let count=0,cost=0,cur=catCost(i,owned),cash=state.money;
-    while(cash>=cur && count<200000){ cash-=cur; cost+=cur; count++; cur=catCost(i,owned+count); }
-    if(count===0){ return {count:1, cost:catCost(i,owned), affordable:false}; }
-    return {count,cost,affordable:true};
+    // Closed-form solution using geometric series: cost of buying k cats starting at `owned`
+    // = baseCost * skillFactor * COST_GROWTH^owned * (COST_GROWTH^k - 1) / (COST_GROWTH - 1)
+    // Solve for k: k = floor(log(1 + cash*(r-1)/(base*r^owned*f)) / log(r))
+    const base=CAT_DEFS[i].baseCost, f=skillCostFactor(), r=COST_GROWTH;
+    const firstCost=base*Math.pow(r,owned)*f;
+    if(state.money<firstCost) return {count:1, cost:firstCost, affordable:false};
+    // binary search is simpler and avoids log precision issues
+    let lo=1, hi=Math.min(200000, Math.ceil(Math.log(state.money/firstCost+1)/Math.log(r))+2);
+    // geometric sum: firstCost*(r^k - 1)/(r-1)
+    const geoSum=k=> firstCost*(Math.pow(r,k)-1)/(r-1);
+    while(lo<hi){ const mid=Math.ceil((lo+hi)/2); if(geoSum(mid)<=state.money) lo=mid; else hi=mid-1; }
+    const count=lo;
+    return {count, cost:Math.min(geoSum(count), state.money), affordable:true};
   }
   let cost=0; for(let k=0;k<buyAmount;k++) cost+=catCost(i,owned+k);
   return {count:buyAmount, cost, affordable:state.money>=cost};
 }
 
-/* ---------- Gacha pricing & rolling ----------
-   Cost is anchored to the player's progression so it stays accessible early and is still a
-   meaningful coin sink late (the ultra-rich can't dump a fortune into endless cheap rolls).
-   A single regular roll costs the LARGER of:
-     · a floor (so the very start isn't free),
-     · ~1 minute of current income (scales with present power), or
-     · a chunk of all-time earnings (scales gently super-linearly with progression).
-   Buying rolls in bulk (x10/x50/x100) also comes at a per-roll discount. */
-function gachaUnit(){
-  const te = state.totalEarned||0;
-  // gentle super-linear in all-time earnings: 0.5% of lifetime earned, raised to the 1.03 power.
-  // At 1Qa earned a regular roll is ~14T (~70 rolls per fortune) — far more affordable than before.
-  const progression = te>0 ? 0.005*Math.pow(te,1.03) : 0;
-  return Math.max(1000, incomePerSec()*60, progression);
+/* ---------- Gacha pricing & rolling — now uses SCROLLS instead of money ---------- */
+function scrollCount(scrollId){ return (state.scrolls&&state.scrolls[scrollId])||0; }
+function addScroll(scrollId, n){
+  if(!state.scrolls) state.scrolls={basic:0,advanced:0,pity:0};
+  state.scrolls[scrollId]=(state.scrolls[scrollId]||0)+n;
 }
-function rollCost(bannerId){ return Math.ceil(gachaUnit()*BANNER_BY_ID[bannerId].costMult); }
-// bulk discount: the more you roll at once, the cheaper each roll gets
-const ROLL_DISCOUNT = {1:1, 10:0.9, 50:0.82, 100:0.75};
-function batchCost(per, count){ return Math.ceil(per*count*(ROLL_DISCOUNT[count]||1)); }
+function spendScroll(scrollId, n){
+  if(scrollCount(scrollId)<n) return false;
+  state.scrolls[scrollId]-=n;
+  return true;
+}
 function pickRarity(odds){
   const r=Math.random(); let acc=0;
   for(const k of RARITY_ORDER){ if(odds[k]==null) continue; acc+=odds[k]; if(r<acc) return k; }
@@ -1001,9 +1205,9 @@ function singleRoll(banner){
 }
 function doRoll(bannerId, count){
   const banner=BANNER_BY_ID[bannerId]; if(!banner) return;
-  const per=rollCost(bannerId), total=batchCost(per,count);
-  if(state.money<total){ toast("Need "+money(total)+" for "+count+"× "+banner.name); return; }
-  state.money-=total;
+  const scrollId=banner.scrollId;
+  if(scrollCount(scrollId)<count){ toast("Need "+count+"× "+SCROLL_BY_ID[scrollId].emoji+" "+SCROLL_BY_ID[scrollId].name); return; }
+  if(!spendScroll(scrollId, count)){ toast("Not enough scrolls!"); return; }
   if(!state.talismans) state.talismans={};
   const tally={}; let bestIdx=-1, bestTal=null;
   for(let n=0;n<count;n++){
@@ -1015,6 +1219,8 @@ function doRoll(bannerId, count){
     if(ri>bestIdx){ bestIdx=ri; bestTal=t; }
   }
   state.gacha.rolls=(state.gacha.rolls||0)+count;
+  // track weekly quest rolls
+  state._questWeeklyRolls=(state._questWeeklyRolls||0)+count;
   if(bestIdx>=LEGENDARY_IDX){
     const R=TAL_RARITY[RARITY_ORDER[bestIdx]];
     toast(R.emoji+" "+R.name.toUpperCase()+"! "+bestTal.emoji+" "+bestTal.name); sfx("rare");
@@ -1033,9 +1239,15 @@ function renderStats(){
   $("persec").textContent=money(incomePerSec())+" / sec";
   $("clickval").textContent=money(tapBaseValue());
   $("lifetime").textContent="Lifetime earned: "+money(state.lifetime);
-  const ofr=$("offlineRate"); if(ofr) ofr.textContent="💤 While away: ~"+money(incomePerSec()*3600)+"/hr (up to "+offlineCapHours()+"h)";
+  const ofr=$("offlineRate"); if(ofr) ofr.textContent="💤 While away: ~"+money(incomePerSec()*3600*reforgeAfkMult())+"/hr (up to "+offlineCapHours()+"h)";
   $("rebirthMult").textContent="Prestige x"+rebirthMultiplier().toFixed(2)+(availableTokens()>0?"  ("+fmt(availableTokens())+" 🐭)":"");
+  const ping=$("rebirthPing"); if(ping) ping.style.display=canRebirth()?"":"none";
   $("timeBadge").textContent="⏱ "+fmtTime(state.timePlayed);
+  const sb=$("scrollBadge"); if(sb){
+    const tot=(scrollCount("basic"))+(scrollCount("advanced"))+(scrollCount("pity"));
+    sb.textContent="📜 "+tot+" scroll"+(tot===1?"":"s");
+    sb.style.display=tot>0?"":"none";
+  }
 }
 function updateMascot(){
   const c=CAT_DEFS[highestOwned()];
@@ -1078,7 +1290,7 @@ function renderCatsFull(){
 let _builtSig={};
 function catsSig(){ return unlockedCount(); }
 function catdexSig(){ return (state.discovered||[]).join(""); }
-function gachaSig(){ let s=String((state.gacha&&state.gacha.pity)||0); for(const t of TALISMANS) s+="."+((state.talismans&&state.talismans[t.id])||0); return s; }
+function gachaSig(){ let s=String((state.gacha&&state.gacha.pity)||0)+"|"+["basic","advanced","pity"].map(k=>scrollCount(k)).join(","); for(const t of TALISMANS) s+="."+((state.talismans&&state.talismans[t.id])||0); return s; }
 function updateCats(){
   for(let i=0;i<CAT_DEFS.length;i++){
     if(!catUnlocked(i)) continue;
@@ -1092,17 +1304,55 @@ function updateCats(){
 }
 
 function renderUpgrades(){
-  let html="";
-  for(const u of UPGRADE_DEFS){
-    const owned=!!state.upgrades[u.id];
-    html+=`<div class="item ${owned?'locked':''}">
-      <div class="icon" style="font-size:30px;">${u.emoji}</div>
-      <div class="info"><div class="name">${u.name} ${owned?'✅':''}</div><div class="desc">${u.desc}</div></div>
-      ${owned?`<span class="owned" style="font-size:14px;color:var(--good)">Owned</span>`
-        :`<button class="buy alt" id="upbuy-${u.id}" data-up="${u.id}" ${state.money>=u.cost?"":"disabled"}>${money(u.cost)}</button>`}
-    </div>`;
+  const bt = state.buildType||"balanced";
+  // Build type selector header
+  let html = `<div style="background:var(--panel2);border:2px solid #fbe6f3;border-radius:20px;padding:14px;margin-bottom:16px;">
+    <div class="name" style="text-align:center;margin-bottom:4px;">🧬 Build Type</div>
+    <div class="desc" style="text-align:center;margin-bottom:12px;font-size:12px;">Choose your playstyle — affects tap & cat income permanently</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <button class="smallbtn${bt==='tapper'?' active':''}" id="build-tapper" style="padding:10px 6px;line-height:1.3;font-size:12px;">
+        👆 <b>Tapper</b><br><span style="font-size:10px;font-weight:600;">+60% tap<br>-30% cats</span>
+      </button>
+      <button class="smallbtn${bt==='balanced'?' active':''}" id="build-balanced" style="padding:10px 6px;line-height:1.3;font-size:12px;">
+        ⚖️ <b>Balanced</b><br><span style="font-size:10px;font-weight:600;">No changes<br>Default</span>
+      </button>
+      <button class="smallbtn${bt==='catmaster'?' active':''}" id="build-catmaster" style="padding:10px 6px;line-height:1.3;font-size:12px;">
+        🐾 <b>Cat Master</b><br><span style="font-size:10px;font-weight:600;">+50% cats<br>-25% tap</span>
+      </button>
+    </div>
+    <div class="sub" style="text-align:center;margin-top:8px;font-size:11px;">
+      ${bt==='tapper'?'👆 Tapper: Combos stay active 0ms longer · Tap income ×1.6 · Cat income ×0.7':
+        bt==='catmaster'?'🐾 Cat Master: Combo window +500ms · Cat income ×1.5 · Tap income ×0.75':
+        '⚖️ Balanced: Pure progression, no trade-offs. Switch any time!'}
+    </div>
+  </div>`;
+
+  for(const cat of UPGRADE_CATEGORIES){
+    const items = UPGRADE_DEFS.filter(u => u.category === cat.id);
+    const ownedCount = items.filter(u => state.upgrades[u.id]).length;
+    html += `<div style="margin-bottom:16px;">
+      <div style="font-family:'Baloo 2';font-weight:800;font-size:14px;color:var(--pink-d);padding:4px 6px 8px;border-bottom:2px dashed #f0dcea;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <span>${cat.label}</span>
+        <span style="font-size:11px;color:var(--ink2);font-weight:700;">${ownedCount}/${items.length} owned</span>
+      </div>
+      <div class="sub" style="font-size:11px;margin:0 0 8px 2px;">${cat.desc}</div>`;
+    for(const u of items){
+      const owned = !!state.upgrades[u.id];
+      html += `<div class="item ${owned?'locked':''}">
+        <div class="icon" style="font-size:30px;">${u.emoji}</div>
+        <div class="info"><div class="name">${u.name} ${owned?'✅':''}</div><div class="desc">${u.desc}</div></div>
+        ${owned?`<span class="owned" style="font-size:14px;color:var(--good)">Owned</span>`
+          :`<button class="buy alt" id="upbuy-${u.id}" data-up="${u.id}" ${state.money>=u.cost?"":"disabled"}>${money(u.cost)}</button>`}
+      </div>`;
+    }
+    html += `</div>`;
   }
   $("panel-upgrades").innerHTML=html;
+  // Build type buttons
+  ["tapper","balanced","catmaster"].forEach(b=>{
+    const btn=$(("build-"+b)); if(!btn) return;
+    btn.onclick=()=>{ state.buildType=b; save(); renderUpgrades(); renderStats(); toast({tapper:"👆 Tapper build activated!",balanced:"⚖️ Balanced build activated!",catmaster:"🐾 Cat Master build activated!"}[b]); };
+  });
 }
 // Per-tick refresh that only toggles affordability in place — never rebuilds the
 // panel's innerHTML, so a button can't be destroyed out from under an in-flight tap.
@@ -1125,26 +1375,32 @@ function fmtPct(p){
 function renderGacha(){
   const totalBonus=Math.round((talismanMult()-1)*100);
   const owned=TALISMANS.filter(t=>(state.talismans&&state.talismans[t.id])>0).length;
+  // Scroll inventory display
+  const scrollInv=SCROLL_TYPES.map(s=>`<span style="color:${s.color};font-weight:800;">${s.emoji} ${scrollCount(s.id)}×</span>`).join("  ");
   let html=`<div class="sub" style="text-align:center;margin:0 0 4px;">🎰 Talisman bonus: <b>+${totalBonus}%</b> income · ${owned}/${TALISMANS.length} collected</div>
-    <div class="sub" style="text-align:center;margin:0 0 10px;font-size:11px;">Roll for lucky talismans! Costs scale with your power, so they stay meaningful all game. ♡</div>`;
+    <div style="text-align:center;background:var(--panel2);border:2px solid #fbe6f3;border-radius:18px;padding:10px 14px;margin-bottom:12px;">
+      <div class="sub" style="margin:0 0 4px;font-weight:800;">📦 Your Scrolls</div>
+      <div style="font-size:15px;">${scrollInv}</div>
+      <div class="sub" style="font-size:10px;margin:4px 0 0;">Earn scrolls from daily/weekly quests and goal completions ♡</div>
+    </div>`;
 
-  // banners
-  for(const b of BANNERS){
-    const per=rollCost(b.id);
+  // banners — one per scroll type
+  for(const sc of SCROLL_TYPES){
+    const b=BANNERS[sc.bannerIdx];
+    const have=scrollCount(sc.id);
     const oddsStr=RARITY_ORDER.filter(r=>b.odds[r]!=null)
       .map(r=>`<span style="color:${TAL_RARITY[r].color};font-weight:700;">${TAL_RARITY[r].emoji}${fmtPct(b.odds[r])}</span>`).join(" · ");
     const pity=state.gacha.pity||0, toPity=Math.max(0,b.pity-pity);
     let btns="";
     for(const c of ROLL_COUNTS){
-      const cost=batchCost(per,c), can=state.money>=cost;
-      const off=ROLL_DISCOUNT[c]<1?`<span style="font-size:9px;opacity:.85;"> -${Math.round((1-ROLL_DISCOUNT[c])*100)}%</span>`:"";
-      btns+=`<button class="buy" id="roll-${b.id}-${c}" data-roll="${b.id}" data-count="${c}" ${can?"":"disabled"} style="flex:1;min-width:70px;">x${c}${off}<br>${money(cost)}</button>`;
+      const can=have>=c;
+      btns+=`<button class="buy" id="roll-${b.id}-${c}" data-roll="${b.id}" data-count="${c}" ${can?"":"disabled"} style="flex:1;min-width:80px;">${sc.emoji} x${c}<br>${c} scroll${c>1?"s":""}</button>`;
     }
-    html+=`<div class="propgroup" style="--gc:${TAL_RARITY['legendary'].color};">
+    html+=`<div class="propgroup" style="--gc:${sc.color};">
       <div class="propgrouphead" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>${b.emoji} ${b.name}</span><span id="rollper-${b.id}" style="font-size:11px;color:var(--ink2);">${money(per)} / roll</span></div>
+        <span>${sc.emoji} ${sc.name}</span><span style="font-size:12px;color:var(--ink2);">${have} scroll${have===1?"":"s"} available</span></div>
       <div class="sub" style="margin:0 0 8px;font-size:11px;line-height:1.7;">${oddsStr}</div>
-      <div class="sub" style="margin:0 0 8px;font-size:11px;">🎟️ Pity: ${pity}/${b.pity} — guaranteed ${TAL_RARITY['legendary'].emoji}Legendary+ in <b>${toPity}</b> roll${toPity===1?"":"s"}</div>
+      ${b.pity>1?`<div class="sub" style="margin:0 0 8px;font-size:11px;">🎟️ Pity: ${pity}/${b.pity} — guaranteed ${TAL_RARITY['legendary'].emoji}Legendary+ in <b>${toPity}</b> roll${toPity===1?"":"s"}</div>`:`<div class="sub" style="margin:0 0 8px;font-size:11px;">✨ <b>Every Pity Scroll guarantees Legendary+!</b></div>`}
       <div style="display:flex;gap:6px;flex-wrap:wrap;">${btns}</div>
     </div>`;
   }
@@ -1172,19 +1428,100 @@ function renderGacha(){
   $("panel-gacha").innerHTML=html;
   _builtSig.gacha=gachaSig();
 }
-// Per-tick refresh: roll costs scale with progression, so update the cost labels and
-// affordability in place. Collection/pity only change on a roll (handled by renderGacha).
+// Per-tick refresh: only update button affordability based on scroll count
 function updateGacha(){
-  for(const b of BANNERS){
-    const per=rollCost(b.id);
-    const ph=$("rollper-"+b.id); if(ph) ph.textContent=money(per)+" / roll";
+  for(const sc of SCROLL_TYPES){
+    const b=BANNERS[sc.bannerIdx];
+    const have=scrollCount(sc.id);
     for(const c of ROLL_COUNTS){
       const btn=$("roll-"+b.id+"-"+c); if(!btn) continue;
-      const cost=batchCost(per,c);
-      const off=ROLL_DISCOUNT[c]<1?`<span style="font-size:9px;opacity:.85;"> -${Math.round((1-ROLL_DISCOUNT[c])*100)}%</span>`:"";
-      btn.innerHTML="x"+c+off+"<br>"+money(cost);
-      btn.disabled=state.money<cost;
+      btn.disabled=have<c;
     }
+  }
+}
+
+/* ---------- Reforge Anvil ---------- */
+const REFORGE_STATS=["tap","cat","afk"];
+const REFORGE_LABEL={tap:"Tap Power", cat:"Cat Power", afk:"AFK Reward"};
+const REFORGE_ICON={tap:"👆", cat:"🐈", afk:"💤"};
+function reforgeCost(){ return Math.max(1, Math.floor((state.money||0)*0.05)); }
+// Roll a fresh affix: usually a trade-off (one stat up, another down); rarely all-upside.
+function rollReforge(){
+  const r=Math.random(), res={tap:0,cat:0,afk:0};
+  const pick=()=>REFORGE_STATS[Math.floor(Math.random()*3)];
+  if(r<0.55){ const a=pick(); let b=pick(); while(b===a) b=pick(); res[a]=10; res[b]=-10; }        // common trade
+  else if(r<0.83){ const a=pick(); let b=pick(); while(b===a) b=pick(); res[a]=15; res[b]=-7; }     // favorable trade
+  else if(r<0.96){ res[pick()]=12; }                                                                 // rare: pure single
+  else { res.tap=10; res.cat=10; res.afk=10; }                                                       // legendary: all up
+  return res;
+}
+function reforgeTier(res){
+  const neg=REFORGE_STATS.some(k=>res[k]<0);
+  if(res.tap>0&&res.cat>0&&res.afk>0) return {name:"✨ Blessed",color:"var(--gold-d)"};
+  if(!neg) return {name:"🍀 Pure",color:"var(--good)"};
+  return {name:"Trade-off",color:"var(--ink2)"};
+}
+function affixStr(res){
+  if(!res) return `<span style="color:var(--ink2)">— not reforged yet —</span>`;
+  const parts=REFORGE_STATS.filter(k=>res[k]).map(k=>{
+    const v=res[k], col=v>0?"var(--good)":"var(--danger)";
+    return `<span style="color:${col};font-weight:700;">${v>0?"+":""}${v}% ${REFORGE_LABEL[k]}</span>`;
+  });
+  return parts.join(" · ");
+}
+function reforgeTalisman(id){
+  if(!(state.talismans&&state.talismans[id]>0)){ toast("You don't own that talisman"); return; }
+  const cost=reforgeCost();
+  if((state.money||0)<cost){ toast("Not enough gold to reforge"); return; }
+  state.money-=cost;
+  if(!state.reforges) state.reforges={};
+  state.reforges[id]=rollReforge();
+  const t=TALISMANS.find(x=>x.id===id);
+  sfx("rare");
+  toast("⚒️ Reforged "+(t?t.name:"talisman")+"!");
+  renderReforge(); renderStats();
+}
+function renderReforge(){
+  const tot=reforgeTotals();
+  const owned=TALISMANS.filter(t=>(state.talismans&&state.talismans[t.id])>0);
+  const cost=reforgeCost();
+  const sign=v=>(v>=0?"+":"")+v;
+  const col=v=>v>=0?"var(--good)":"var(--danger)";
+  let html=`<div class="sub" style="text-align:center;margin:0 0 4px;font-weight:800;">⚒️ Reforge Anvil</div>
+    <div class="sub" style="text-align:center;font-size:11px;margin:0 0 10px;">Reforge a talisman to re-roll its powers. Each reforge costs <b>5% of your gold</b> and grants a new bonus — usually a trade-off (e.g. <b>+10% Tap / −10% Cat</b>), but lucky rolls are <b>all upside</b>! ♡</div>
+    <div style="text-align:center;background:var(--panel2);border:2px solid #fbe6f3;border-radius:18px;padding:10px 14px;margin-bottom:12px;">
+      <div class="sub" style="margin:0 0 4px;font-weight:800;">Total Reforge Bonuses</div>
+      <div style="font-size:13px;font-weight:700;">
+        <span style="color:${col(tot.tap)}">👆 ${sign(tot.tap)}% Tap</span> ·
+        <span style="color:${col(tot.cat)}">🐈 ${sign(tot.cat)}% Cat</span> ·
+        <span style="color:${col(tot.afk)}">💤 ${sign(tot.afk)}% AFK</span>
+      </div>
+      <div class="sub" id="reforgeCostLine" style="font-size:11px;margin:6px 0 0;">Next reforge costs <b>${money(cost)}</b></div>
+    </div>`;
+  if(!owned.length){
+    html+=`<p class="sub" style="text-align:center;">You don't own any talismans yet — roll some in the 🎰 Gacha first! ♡</p>`;
+  } else {
+    html+=owned.map(t=>{
+      const R=TAL_RARITY[t.r], res=state.reforges&&state.reforges[t.id], tier=res?reforgeTier(res):null;
+      return `<div class="item">
+        <div class="icon" style="font-size:26px;">${t.emoji}</div>
+        <div class="info"><div class="name">${t.name} <span style="color:${R.color};font-size:11px;">${R.emoji}${R.name}</span>${tier?` <span style="color:${tier.color};font-size:11px;">· ${tier.name}</span>`:""}</div>
+          <div class="desc">${affixStr(res)}</div></div>
+        <button class="buy alt" id="reforgebtn-${t.id}" data-reforge="${t.id}" ${(state.money||0)>=cost?"":"disabled"}>⚒️<br>${money(cost)}</button>
+      </div>`;
+    }).join("");
+  }
+  $("panel-reforge").innerHTML=html;
+}
+// in-place tick refresh so spam-tapping never destroys a button mid-tap
+function updateReforge(){
+  const cost=reforgeCost();
+  const cl=$("reforgeCostLine"); if(cl) cl.innerHTML="Next reforge costs <b>"+money(cost)+"</b>";
+  for(const t of TALISMANS){
+    if(!(state.talismans&&state.talismans[t.id]>0)) continue;
+    const btn=$("reforgebtn-"+t.id); if(!btn) continue;
+    btn.innerHTML="⚒️<br>"+money(cost);
+    btn.disabled=(state.money||0)<cost;
   }
 }
 
@@ -1193,7 +1530,7 @@ function renderRebirth(){
   const thr=rebirthThreshold(n), life=state.lifetime||0, ready=canRebirth();
   const prog=Math.min(100, Math.floor(life/thr*100));
   $("panel-rebirth").innerHTML=`<div class="rebirth-box">
-    <p style="font-weight:600;">Rebirth resets your cash, cats &amp; upgrades — but you keep your prestige bonus, 🐭 tokens, skills, estates &amp; talismans. Each rebirth gives <b>+${Math.round(REBIRTH_BONUS*100)}% income</b> forever and <b>+1 🐭 token</b> to spend on the Skill Tree.</p>
+    <p style="font-weight:600;">Rebirth resets your cash, cats, upgrades &amp; estates — but you keep your prestige bonus, 🐭 tokens, skills &amp; talismans. Each rebirth gives <b>+${Math.round(REBIRTH_BONUS*100)}% income</b> forever and <b>+1 🐭 token</b> to spend on the Skill Tree.</p>
     <div class="mult-badge">Rebirth ${n} · x${rebirthMultiplier().toFixed(2)} income · ${fmt(availableTokens())} 🐭</div>
     <hr>
     <p class="sub">Next rebirth (#${n+1}) needs <b>${money(thr)}</b> lifetime earned this run.</p>
@@ -1266,12 +1603,14 @@ async function autoPublish(){
     if(currentTab==="ranks") loadRanksList();   // keep the on-screen board fresh
   } finally { _publishing=false; }
 }
-// Pick the account's name — once. Validated against the offensive-name filter, then locked in.
+// Pick the account's name. First set is free but counts as 1 of 2 changes.
 function setName(){
   const raw=($("lbName")?$("lbName").value:"").trim().slice(0,16);
   if(!raw){ toast("Type a name first ♡"); return; }
   if(isOffensiveName(raw)){ toast("😼 Please pick a friendlier name!"); return; }
-  state.name=raw; save();
+  state.name=raw;
+  state.nameChanges=Math.max(state.nameChanges||0, 1);  // first set counts as 1 change used
+  save();
   toast(ONLINE ? "Joined the global leaderboard! 🌍" : "Name set! 🏆");
   autoPublish();
   renderRanks();
@@ -1298,7 +1637,7 @@ function renderRanks(){
       </div>
       ${ONLINE&&named?`<div class="sub" id="lbRank" style="margin:2px 0;text-align:center;font-weight:800;font-size:15px;color:var(--lav);">🌍 Global rank: …</div>`:""}
       ${named
-        ? `<div class="sub" style="text-align:center;margin:2px 0 0;font-weight:700;">Playing as <b>${escapeHtml(state.name)}</b> 🔒</div>
+        ? `<div class="sub" style="text-align:center;margin:2px 0 0;font-weight:700;">Playing as <b>${escapeHtml(state.name)}</b> · ${Math.max(0,2-(state.nameChanges||0))} name change(s) left</div>
            <div class="sub" style="text-align:center;font-size:11px;margin:0;">${ONLINE?"Your score auto-updates the global board every minute ♡":"Saved on this device"}</div>`
         : `<input class="nameinput" id="lbName" maxlength="16" placeholder="Choose your name — you only pick once!">
            <button class="buy alt" id="lbSetName">${ONLINE?"🌍 Set name &amp; join leaderboard":"🏆 Set my name"}</button>`}
@@ -1366,11 +1705,119 @@ function isOffensiveName(s){
 }
 function safeName(s){ return isOffensiveName(s) ? "🙀 (censored)" : s; }
 
+/* ---------- Quest helpers ---------- */
+function weekKey(){ const d=new Date(); const jan1=new Date(d.getFullYear(),0,1); const week=Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7); return d.getFullYear()+"-W"+week; }
+function todayKey(){ return new Date().toDateString(); }
+function resetQuestsIfNeeded(){
+  const today=todayKey(), week=weekKey();
+  let changed=false;
+  // Reset daily quests
+  if(state.questsClaimedDaily!==today){
+    state.questsClaimedDaily=today;
+    QUEST_DEFS.filter(q=>q.type==="daily").forEach(q=>{ delete state.quests[q.id]; });
+    state._questBoughtCat=false;
+    changed=true;
+  }
+  // Reset weekly quests
+  if(state.questsClaimedWeekly!==week){
+    state.questsClaimedWeekly=week;
+    QUEST_DEFS.filter(q=>q.type==="weekly").forEach(q=>{ delete state.quests[q.id]; });
+    state._questWeeklyRolls=0;
+    state._questWeeklyGolden=0;
+    state._questWeeklyRebirths=0;
+    changed=true;
+  }
+  if(changed) save();
+}
+function claimQuest(qid){
+  resetQuestsIfNeeded();
+  const q=QUEST_DEFS.find(x=>x.id===qid); if(!q) return;
+  if(state.quests[qid]) return;
+  if(!q.cond(state)){ toast("Quest not completed yet! ♡"); return; }
+  state.quests[qid]=true;
+  // Grant scrolls
+  const r=q.reward;
+  if(r.basic)    addScroll("basic",    r.basic);
+  if(r.advanced) addScroll("advanced", r.advanced);
+  if(r.pity)     addScroll("pity",     r.pity);
+  const parts=[];
+  if(r.basic)    parts.push(r.basic+"× 📜");
+  if(r.advanced) parts.push(r.advanced+"× 📋");
+  if(r.pity)     parts.push(r.pity+"× ✨");
+  toast("🎉 Quest done! Earned: "+parts.join(", ")); sfx("daily");
+  save(); renderGoals(); renderStats();
+}
+function rewardScrollString(r){
+  const p=[];
+  if(r.basic)    p.push(`<span style="color:#9fb0c0;font-weight:800;">${r.basic}× 📜 Basic</span>`);
+  if(r.advanced) p.push(`<span style="color:#5aa9ff;font-weight:800;">${r.advanced}× 📋 Advanced</span>`);
+  if(r.pity)     p.push(`<span style="color:#b06bff;font-weight:800;">${r.pity}× ✨ Pity</span>`);
+  return p.join(" + ");
+}
+function questsRowsHtml(){
+  resetQuestsIfNeeded();
+  const daily=QUEST_DEFS.filter(q=>q.type==="daily");
+  const weekly=QUEST_DEFS.filter(q=>q.type==="weekly");
+  function section(quests, label, icon){
+    return `<div style="font-family:'Baloo 2';font-weight:800;font-size:14px;color:var(--pink-d);padding:4px 6px 8px;border-bottom:2px dashed #f0dcea;margin:10px 0 8px;">${icon} ${label}</div>`
+      +quests.map(q=>{
+        const done=!!state.quests[q.id];
+        const ready=!done&&q.cond(state);
+        return `<div class="item" style="${done?'opacity:.65':''}">
+          <div class="icon" style="font-size:26px;">${done?'✅':q.emoji}</div>
+          <div class="info"><div class="name">${q.name}</div><div class="desc">${q.desc}</div>
+            <div style="margin-top:3px;font-size:11px;">${rewardScrollString(q.reward)}</div></div>
+          ${done?`<span class="owned" style="font-size:12px;color:var(--good)">Done!</span>`
+            :`<button class="buy alt" id="qclaim-${q.id}" data-quest="${q.id}" ${ready?'':'disabled'} style="font-size:12px;padding:7px 10px;">${ready?'Claim!':'Locked'}</button>`}
+        </div>`;
+      }).join("");
+  }
+  return section(daily,"Daily Quests","🌅")+section(weekly,"Weekly Quests","📅");
+}
+
+/* ---------- Achievement scroll rewards: some milestones also grant scrolls (once) ---------- */
+const ACHIEVEMENT_SCROLL_REWARDS = {
+  firstcat:  {basic:3},
+  cats25:    {basic:5},
+  cats100:   {advanced:2},
+  cats500:   {advanced:3},
+  cats1500:  {pity:1},
+  rich1:     {basic:2},
+  rich2:     {basic:5},
+  rich3:     {advanced:3},
+  rich4:     {advanced:5},
+  rich5:     {pity:1},
+  reb1:      {advanced:3},
+  reb5:      {pity:1},
+  reb15:     {pity:2},
+  talfirst:  {basic:3},
+  tallegend: {advanced:2},
+  talgodly:  {pity:1},
+  talfull:   {pity:2},
+  golden:    {basic:2},
+  golden25:  {advanced:2},
+};
+
 /* ---------- Achievements + Daily (Goals tab) ---------- */
 function checkAchievements(){
   let any=false;
   for(const a of ACHIEVEMENTS){
-    if(!state.achievements[a.id] && a.cond()){ state.achievements[a.id]=true; any=true; toast("🏅 Achievement: "+a.name+"!"); }
+    if(!state.achievements[a.id] && a.cond()){ 
+      state.achievements[a.id]=true; any=true; 
+      const sr=ACHIEVEMENT_SCROLL_REWARDS[a.id];
+      if(sr){
+        if(sr.basic)    addScroll("basic",    sr.basic);
+        if(sr.advanced) addScroll("advanced", sr.advanced);
+        if(sr.pity)     addScroll("pity",     sr.pity);
+        const parts=[];
+        if(sr.basic)    parts.push(sr.basic+"× 📜");
+        if(sr.advanced) parts.push(sr.advanced+"× 📋");
+        if(sr.pity)     parts.push(sr.pity+"× ✨");
+        toast("🏅 Achievement: "+a.name+"! Scrolls: "+parts.join(", "));
+      } else {
+        toast("🏅 Achievement: "+a.name+"!");
+      }
+    }
   }
   // Refresh only the (display-only) achievement list — never the interactive daily
   // button — so an unlock firing on the tick can't destroy a button mid-tap.
@@ -1380,9 +1827,14 @@ function checkAchievements(){
 function goalsRowsHtml(){
   return ACHIEVEMENTS.map(a=>{
     const got=!!state.achievements[a.id];
+    // Which achievements also grant a scroll reward (one-time, on first unlock)
+    const scrollReward=ACHIEVEMENT_SCROLL_REWARDS[a.id];
+    const rewardStr=scrollReward&&got?`<span style="font-size:10px;color:#5aa9ff;"> · scroll rewarded ✅</span>`
+      :scrollReward?`<span style="font-size:10px;color:#b06bff;"> · ${rewardScrollString(scrollReward)}</span>`:"";
     return `<div class="item ${got?'':'locked'}">
       <div class="icon" style="font-size:28px;">${got?a.emoji:'🔒'}</div>
-      <div class="info"><div class="name">${a.name} ${got?'✅':''}</div><div class="desc">${a.desc} · +${Math.round(a.bonus*100)}% income</div></div>
+      <div class="info"><div class="name">${a.name} ${got?'✅':''}</div>
+        <div class="desc">${a.desc} · +${Math.round(a.bonus*100)}% income${rewardStr}</div></div>
     </div>`;
   }).join("");
 }
@@ -1391,8 +1843,10 @@ function goalsSummaryHtml(){
   return `🏅 Achievements — ${unlocked}/${ACHIEVEMENTS.length} · <b>+${Math.round((achievementMult()-1)*100)}%</b> income`;
 }
 function renderGoals(){
+  resetQuestsIfNeeded();
   const today=new Date().toDateString();
   const canDaily = state.lastDaily!==today;
+  const scrollInv=SCROLL_TYPES.map(s=>`<span style="color:${s.color};font-weight:800;">${s.emoji} ${scrollCount(s.id)}× ${s.name}</span>`).join("<br>");
   $("panel-goals").innerHTML=`
     <div class="item" style="flex-direction:column;align-items:stretch;gap:8px;">
       <div class="name" style="text-align:center;">🎁 Daily Reward</div>
@@ -1400,9 +1854,18 @@ function renderGoals(){
       <div class="sub" style="text-align:center;margin:0;font-weight:700;">🔥 Current streak: ${state.dailyStreak||0} day${(state.dailyStreak||0)===1?"":"s"}</div>
       <button class="buy alt" id="dailyBtn" ${canDaily?'':'disabled'}>${canDaily?"🎁 Claim today's reward":'✅ Come back tomorrow'}</button>
     </div>
-    <div class="sub" id="goalsSummary" style="text-align:center;margin:8px 0;">${goalsSummaryHtml()}</div>
+    <div class="item" style="flex-direction:column;align-items:stretch;gap:4px;">
+      <div class="name" style="text-align:center;">📦 Your Scrolls</div>
+      <div style="font-size:13px;line-height:2;">${scrollInv}</div>
+    </div>
+    <div id="questsSection">${questsRowsHtml()}</div>
+    <div class="sub" id="goalsSummary" style="text-align:center;margin:12px 0 8px;">${goalsSummaryHtml()}</div>
     <div id="goalsList">${goalsRowsHtml()}</div>`;
   const db=$("dailyBtn"); if(db) db.onclick=claimDaily;
+  // bind quest claim buttons
+  document.querySelectorAll("[data-quest]").forEach(btn=>{
+    btn.onclick=()=>claimQuest(btn.dataset.quest);
+  });
 }
 // In-place refresh of the achievement list/summary (no interactive nodes inside).
 function updateGoalsAchievements(){
@@ -1418,10 +1881,19 @@ function claimDaily(){
   state.lastDaily=today;
   const streak=state.dailyStreak;
   const lumpMult=Math.min(7,streak);                       // reward grows up to a 7-day streak
-  frenzy={mult:2+Math.min(3,Math.floor(streak/2)), until:Date.now()+60000}; updateFrenzyBanner();
+  // Daily frenzy: don't silently kill an active golden-cat frenzy — keep whichever mult is higher,
+  // and always extend the duration by 60s from now.
+  const dailyMult=2+Math.min(3,Math.floor(streak/2));
+  const newUntil=Date.now()+60000;
+  frenzy={ mult:Math.max(frenzy.mult, dailyMult), until:Math.max(frenzy.until, newUntil) };
+  updateFrenzyBanner();
   const lump=Math.max(incomePerSec()*300, state.money*0.05, 100)*lumpMult;
   state.money+=lump; state.lifetime+=lump; state.totalEarned+=lump;
-  toast(`🎁 Daily streak ${streak}🔥 — +${money(lump)}!`); sfx("daily");
+  // Grant a basic scroll for showing up
+  addScroll("basic", 1);
+  // Streak bonus: extra scrolls at streak milestones
+  if(streak>=7) addScroll("advanced", 1);
+  toast(`🎁 Daily streak ${streak}🔥 — +${money(lump)} + 📜 Basic Scroll!`); sfx("daily");
   renderGoals(); renderStats(); save();
 }
 
@@ -1444,24 +1916,71 @@ function renderCatdex(){
 
 /* ---------- Estates tab (Monopoly money-sink) ---------- */
 function propLevelIcon(lvl){ if(lvl>=PROP_MAX_LVL) return "🏨"; return "🏠".repeat(lvl); }
+const PROP_TIER_LABELS = [
+  { tier:0, label:"🏘️ Starter District",    desc:"Available from the start" },
+  { tier:1, label:"🌆 Neighbourhood",        desc:"Unlocks after 1st rebirth" },
+  { tier:2, label:"🏙️ Uptown",               desc:"Unlocks after 2nd rebirth" },
+  { tier:3, label:"✨ Prestige",              desc:"Unlocks after 3rd rebirth" },
+  { tier:5, label:"💎 Elite",                desc:"Unlocks after 5th rebirth" },
+  { tier:8, label:"🌌 Legendary",            desc:"Unlocks after 8th rebirth" },
+];
 function renderProperty(){
-  let html=`<div class="sub" style="text-align:center;margin:0 0 4px;">🏘️ Estate bonus: <b>+${Math.round((propertyMult()-1)*100)}%</b> income</div>
-    <div class="sub" style="text-align:center;margin:0 0 12px;font-size:11px;">Spend your fortune to buy property & build 🏠🏠🏠🏨. Complete a color set for +${Math.round(PROP_SET_BONUS*100)}%!</div>`;
+  const rebirths = state.rebirths||0;
+  const totalBonus = Math.round((propertyMult()-1)*100);
+  let html=`<div style="text-align:center;margin:0 0 4px;">
+    <span class="sub">🏘️ Estate bonus: <b>+${totalBonus}%</b> income</span>
+  </div>
+  <div class="sub" style="text-align:center;margin:0 0 12px;font-size:11px;">Buy & upgrade properties 🏠🏠🏠🏨. Complete a color set for +${Math.round(PROP_SET_BONUS*100)}% each!</div>`;
+
+  // Group groups by tier
+  const tierGroups = {};
   for(const g in PROP_GROUPS){
-    const grp=PROP_GROUPS[g], done=groupComplete(g);
-    html+=`<div class="propgroup" style="--gc:${grp.color}">
-      <div class="propgrouphead">${grp.name} ${done?`<span style="color:var(--good)">✅ Set +${Math.round(PROP_SET_BONUS*100)}%</span>`:""}</div>`;
-    PROPERTY_DEFS.forEach((p,i)=>{ if(p.g!==g) return;
-      const lvl=state.properties[i]||0, maxed=lvl>=PROP_MAX_LVL, cost=propCost(i), can=!maxed&&state.money>=cost;
-      html+=`<div class="item">
-        <div class="icon" style="font-size:24px;">${lvl>0?(lvl>=PROP_MAX_LVL?"🏨":"🏠"):"🏞️"}</div>
-        <div class="info"><div class="name">${p.name}</div>
-          <div class="desc">${lvl>0?propLevelIcon(lvl)+" · ":""}+${Math.round(p.bonus*100)}%/lvl · Lv ${lvl}/${PROP_MAX_LVL}</div></div>
-        ${maxed?`<span class="owned" style="font-size:13px;color:var(--good)">MAX</span>`
-          :`<button class="buy" id="propbuy-${i}" data-prop="${i}" ${can?"":"disabled"}>${lvl===0?"Buy":"Build"}<br>${money(cost)}</button>`}
+    const t = PROP_GROUPS[g].tier||0;
+    if(!tierGroups[t]) tierGroups[t]=[];
+    tierGroups[t].push(g);
+  }
+
+  for(const tinfo of PROP_TIER_LABELS){
+    const groups = tierGroups[tinfo.tier]||[];
+    if(!groups.length) continue;
+    const unlocked = rebirths >= tinfo.tier;
+
+    html += `<div style="margin-bottom:18px;">
+      <div style="font-family:'Baloo 2';font-weight:800;font-size:15px;color:${unlocked?'var(--pink-d)':'var(--ink2)'};
+        padding:6px 8px;border-bottom:2px dashed ${unlocked?'#f0dcea':'var(--line)'};margin-bottom:10px;
+        display:flex;justify-content:space-between;align-items:center;">
+        <span>${tinfo.label}</span>
+        <span style="font-size:11px;font-weight:700;color:${unlocked?'var(--good)':'var(--danger)'};">${unlocked?'Unlocked ✅':`🔒 ${tinfo.tier} rebirths`}</span>
       </div>`;
-    });
-    html+=`</div>`;
+
+    if(!unlocked){
+      html += `<div class="item locked" style="justify-content:center;padding:14px;">
+        <div style="text-align:center;color:var(--ink2);font-size:13px;font-weight:700;">
+          🔒 Reach <b>${tinfo.tier} rebirths</b> to unlock these estates<br>
+          <span style="font-size:11px;">(You have ${rebirths} rebirth${rebirths===1?'':'s'})</span>
+        </div>
+      </div>`;
+    } else {
+      for(const g of groups){
+        const grp=PROP_GROUPS[g], done=groupComplete(g);
+        html+=`<div class="propgroup" style="--gc:${grp.color}">
+          <div class="propgrouphead">${grp.name}
+            ${done?`<span style="color:var(--good)">✅ Set +${Math.round(PROP_SET_BONUS*100)}%</span>`:""}
+          </div>`;
+        PROPERTY_DEFS.forEach((p,i)=>{ if(p.g!==g) return;
+          const lvl=state.properties[i]||0, maxed=lvl>=PROP_MAX_LVL, cost=propCost(i), can=!maxed&&state.money>=cost;
+          html+=`<div class="item">
+            <div class="icon" style="font-size:24px;">${lvl>0?(lvl>=PROP_MAX_LVL?"🏨":"🏠"):"🏞️"}</div>
+            <div class="info"><div class="name">${p.name}</div>
+              <div class="desc">${lvl>0?propLevelIcon(lvl)+" · ":""}+${Math.round(p.bonus*100)}%/lvl · Lv ${lvl}/${PROP_MAX_LVL}</div></div>
+            ${maxed?`<span class="owned" style="font-size:13px;color:var(--good)">MAX</span>`
+              :`<button class="buy" id="propbuy-${i}" data-prop="${i}" ${can?"":"disabled"}>${lvl===0?"Buy":"Build"}<br>${money(cost)}</button>`}
+          </div>`;
+        });
+        html+=`</div>`;
+      }
+    }
+    html += `</div>`;
   }
   $("panel-property").innerHTML=html;
 }
@@ -1470,15 +1989,18 @@ function renderProperty(){
 function updateProperty(){
   PROPERTY_DEFS.forEach((p,i)=>{
     const lvl=state.properties[i]||0; if(lvl>=PROP_MAX_LVL) return;
+    if(!groupUnlocked(p.g)) return;
     const btn=$("propbuy-"+i); if(!btn) return;
     btn.disabled=state.money<propCost(i);
   });
 }
 function buyProperty(i){
+  const p=PROPERTY_DEFS[i];
+  if(!groupUnlocked(p.g)){ toast("🔒 Unlock this tier by rebirthing more!"); return; }
   const lvl=state.properties[i]||0; if(lvl>=PROP_MAX_LVL) return;
   const cost=propCost(i); if(state.money<cost) return;
   state.money-=cost; state.properties[i]=lvl+1;
-  toast(PROPERTY_DEFS[i].name+(lvl===0?" purchased! 🏠":" upgraded! 🏠")); sfx("buy");
+  toast(p.name+(lvl===0?" purchased! 🏠":" upgraded! 🏠")); sfx("buy");
   renderProperty(); renderStats(); if(currentTab==="cats") updateCats();
 }
 
@@ -1517,9 +2039,10 @@ function updateFrenzyBanner(){
 }
 
 /* ---------- Auto-Paw powerup: a hands-free auto-tapper for a short burst ----------
-   Fires on a 10ms interval, but every tap goes through the rate-limited petCat() path, so it
-   pays at most MAX_TAPS_PER_SEC like any human — it just taps perfectly and builds your Pounce
-   Combo for you. Strong for active/tap builds, but bounded (can't out-earn a real tapper). */
+   Fires on a 10ms interval and bypasses the MAX_TAPS_PER_SEC cap — it's a purchased
+   powerup reward, not an exploit, so it should tap at full speed for its duration.
+   Builds your Pounce Combo too. Strong for active/tap builds and intentionally powerful
+   as a reward for catching the golden cat. */
 let _autoClick = { until:0, iv:null };
 function startAutoClick(ms){
   _autoClick.until = Math.max(_autoClick.until, Date.now()+ms);   // extend if re-caught
@@ -1571,6 +2094,7 @@ function goldenReward(){
     toast("🌟 Lucky cat! +"+money(lump)); sfx("golden");
   }
   state.goldenCaught=(state.goldenCaught||0)+1;
+  state._questWeeklyGolden=(state._questWeeklyGolden||0)+1;
   renderStats(); checkAchievements();
 }
 function spawnGoldenCat(){
@@ -1598,6 +2122,7 @@ function renderAll(){
   if(currentTab==="cats"){ if(_builtSig.cats===catsSig()) updateCats(); else renderCatsFull(); }
   else if(currentTab==="catdex"){ if(_builtSig.catdex!==catdexSig()) renderCatdex(); }
   else if(currentTab==="gacha"){ if(_builtSig.gacha===gachaSig()) updateGacha(); else renderGacha(); }
+  else if(currentTab==="reforge") renderReforge();
   else if(currentTab==="upgrades") renderUpgrades();
   else if(currentTab==="rebirth") renderRebirth();
   else if(currentTab==="ranks") renderRanks();
@@ -1610,6 +2135,7 @@ function buyCat(i){
   if(!catUnlocked(i)) return;
   const b=catBulk(i); if(!b.affordable) return;
   state.money-=b.cost; state.cats[i]+=b.count;
+  state._questBoughtCat=true;  // track daily quest
   if(state.discovered && !state.discovered[i]) state.discovered[i]=true;
   if(unlockedCount()!==lastUnlocked) renderCatsFull(); else updateCats();
   updateMascot(); renderStats(); checkAchievements(); sfx("buy");
@@ -1623,9 +2149,11 @@ function buyUpgrade(id){
 function doRebirth(){
   if(!canRebirth()) return;
   const n=(state.rebirths||0)+1;
-  if(!confirm(`Rebirth #${n}? Cash, cats & upgrades reset — but you gain +${Math.round(REBIRTH_BONUS*100)}% permanent income and +1 🐭 token.`)) return;
+  if(!confirm(`Rebirth #${n}? Cash, cats, upgrades & estates reset — but you gain +${Math.round(REBIRTH_BONUS*100)}% permanent income and +1 🐭 token.`)) return;
   state.rebirths=n; state.goldenMice=(state.goldenMice||0)+1;
+  state._questWeeklyRebirths=(state._questWeeklyRebirths||0)+1;
   state.money=0; state.lifetime=0; state.cats=CAT_DEFS.map(()=>0); state.upgrades={};
+  state.properties=PROPERTY_DEFS.map(()=>0);   // reset estates on rebirth
   toast("✨ Rebirth #"+n+"! +1 🐭 token");
   checkAchievements();
   currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); save();
@@ -1636,24 +2164,31 @@ function doRebirth(){
 const MAX_TAPS_PER_SEC = 14;
 let _tapTimes = [];
 let _lastTapWarn = 0;
+let _lastAutoFloat = 0;
 function petCat(ev, auto){
   const now = Date.now();
-  while(_tapTimes.length && now - _tapTimes[0] > 1000) _tapTimes.shift();
-  if(_tapTimes.length >= MAX_TAPS_PER_SEC){
-    // rate-limited — ignore this tap (no money, no progress). The Auto-Paw powerup runs through
-    // this same cap, so it can never out-earn a human; just don't nag the player about it.
-    if(!auto && now - _lastTapWarn > 2500){ _lastTapWarn = now; toast("😼 Tapping too fast! (max "+MAX_TAPS_PER_SEC+"/sec)"); }
-    return;
+  // Auto-Paw powerup bypasses the anti-autoclicker cap — it's a purchased reward,
+  // not an exploit, so it should tap freely for its duration.
+  if(!auto){
+    while(_tapTimes.length && now - _tapTimes[0] > 1000) _tapTimes.shift();
+    if(_tapTimes.length >= MAX_TAPS_PER_SEC){
+      if(now - _lastTapWarn > 2500){ _lastTapWarn = now; toast("😼 Tapping too fast! (max "+MAX_TAPS_PER_SEC+"/sec)"); }
+      return;
+    }
+    _tapTimes.push(now);
   }
-  _tapTimes.push(now);
   // extend the combo if the previous paid tap was recent, otherwise start a fresh streak
-  _combo = (now-_comboLast <= COMBO_WINDOW) ? _combo+1 : 1;
+  _combo = (now-_comboLast <= buildComboWindow()) ? _combo+1 : 1;
   _comboLast = now;
   if(_combo > (state.bestCombo||0)) state.bestCombo=_combo;
   checkComboMilestone(_combo);
   const v=clickValue(); state.money+=v; state.lifetime+=v; state.totalEarned+=v; state.pets=(state.pets||0)+1;
-  spawnFloat(ev,"+"+money(v),_combo); sfx("tap",_combo); renderStats(); updateComboUI(true);
-  if(currentTab==="cats") updateCats();
+  // during auto-tap spawn floats at ~8/sec max (every 125ms) to avoid DOM spam
+  if(!auto || (now - (_lastAutoFloat||0)) > 125){ _lastAutoFloat=now; spawnFloat(ev,"+"+money(v),_combo); }
+  sfx("tap",_combo);
+  // during auto-tap (100/sec) skip per-tap renders — the main tick at 10/sec handles display
+  if(!auto){ renderStats(); updateComboUI(true); if(currentTab==="cats") updateCats(); }
+  else { updateComboUI(true); }  // combo UI still updates so it looks alive
   if(state.pets%25===0) checkAchievements();
 }
 /* Combo HUD: label + a meter that drains over COMBO_WINDOW; resets the streak when it empties.
@@ -1661,14 +2196,16 @@ function petCat(ev, auto){
 function updateComboUI(bumped){
   const lbl=$("comboLabel"); if(!lbl) return;
   const bar=$("comboBar"), fill=$("comboFill");
-  const now=Date.now(), alive=(now-_comboLast<=COMBO_WINDOW)&&_combo>=2;
+  const now=Date.now(), alive=(now-_comboLast<=buildComboWindow())&&_combo>=2;
   if(alive){
-    lbl.textContent="🔥 Combo "+_combo+"  ×"+comboMult().toFixed(2)+" tap";
+    const cap = effectiveComboCap();
+    const capLabel = _combo >= cap ? ` 🔥MAX` : `/${cap}`;
+    lbl.textContent="🔥 Combo "+_combo+capLabel+"  ×"+comboMult().toFixed(2)+" tap";
     lbl.classList.add("on"); bar.classList.add("on");
-    fill.style.width=(Math.max(0,1-(now-_comboLast)/COMBO_WINDOW)*100)+"%";
+    fill.style.width=(Math.max(0,1-(now-_comboLast)/buildComboWindow())*100)+"%";
     if(bumped){ lbl.classList.remove("bump"); void lbl.offsetWidth; lbl.classList.add("bump"); }
   } else {
-    if(_combo!==0 && now-_comboLast>COMBO_WINDOW) _combo=0;   // streak expired
+    if(_combo!==0 && now-_comboLast>buildComboWindow()) _combo=0;   // streak expired
     lbl.classList.remove("on"); bar.classList.remove("on");
   }
 }
@@ -1679,6 +2216,8 @@ function tick(){
   const now=Date.now(); const dt=(now-lastTick)/1000; lastTick=now;
   const earned=incomePerSec()*dt;
   state.money+=earned; state.lifetime+=earned; state.totalEarned+=earned; state.timePlayed+=dt;
+  // prune stale tap timestamps (prevents unbounded array growth)
+  while(_tapTimes.length && now - _tapTimes[0] > 1000) _tapTimes.shift();
   renderStats();
   updateFrenzyBanner();
   updateComboUI(false);   // drain/expire the tap combo even while idle
@@ -1686,18 +2225,40 @@ function tick(){
   else if(currentTab==="upgrades") updateUpgrades();
   else if(currentTab==="property") updateProperty();
   else if(currentTab==="gacha" && tickN%10===0) updateGacha();  // refresh costs ~every 1s
+  else if(currentTab==="reforge" && tickN%10===0) updateReforge();  // refresh 5%-gold cost ~every 1s
   if((++tickN)%20===0) checkAchievements();   // ~every 2s
 }
 
 /* ---------- Save/Load ---------- */
-const BACKUP_KEY = SAVE_KEY+"_bak";
+const BACKUP_KEY = "catMonopolySave_backup";   // version-agnostic so backups survive key bumps
 function encode(s){ return btoa(unescape(encodeURIComponent(JSON.stringify(s)))); }
 function decode(str){ return JSON.parse(decodeURIComponent(escape(atob(str.trim())))); }
 function save(){ state.lastSave=Date.now(); try{ localStorage.setItem(SAVE_KEY,encode(state)); }catch(e){} }
 function backup(){ try{ localStorage.setItem(BACKUP_KEY,encode(state)); }catch(e){} }
 function load(){
-  const raw=localStorage.getItem(SAVE_KEY); if(!raw) return false;
-  try{ applyLoadedState(decode(raw)); return true; }catch(e){ return false; }
+  // Try the current key first; fall back to the previous version's key for migration
+  let raw=localStorage.getItem(SAVE_KEY);
+  let migrating=false;
+  if(!raw){
+    raw=localStorage.getItem("catMonopolySave_v3");
+    if(raw) migrating=true;
+  }
+  if(!raw) return false;
+  try{
+    const s=decode(raw);
+    applyLoadedState(s);
+    // Migration from v3: reset everyone's rebirths to 0, but give them their 🐭 tokens
+    // and flag them rebirth-eligible if their lifetime qualifies.
+    if(migrating){
+      const oldRebirths=state.rebirths||0;
+      if(oldRebirths>0){
+        state.rebirths=0;
+        state.goldenMice = Math.max(state.goldenMice||0, oldRebirths);
+      }
+      state.version=VERSION;
+    }
+    return true;
+  }catch(e){ return false; }
 }
 function applyLoadedState(s){
   state=Object.assign(newState(),s);
@@ -1735,16 +2296,32 @@ function applyLoadedState(s){
   if(typeof state.prefs.motion!=="boolean") state.prefs.motion=true;
   if(typeof state.prefs.dark!=="boolean") state.prefs.dark=false;
   if(typeof state.talismans!=="object"||!state.talismans) state.talismans={};
+  if(typeof state.reforges!=="object"||!state.reforges) state.reforges={};
   if(typeof state.gacha!=="object"||!state.gacha) state.gacha={pity:0,rolls:0};
   if(typeof state.gacha.pity!=="number") state.gacha.pity=0;
   if(typeof state.gacha.rolls!=="number") state.gacha.rolls=0;
+  if(typeof state.nameChanges!=="number") state.nameChanges=0;
+  // scrolls
+  if(typeof state.scrolls!=="object"||!state.scrolls) state.scrolls={basic:0,advanced:0,pity:0};
+  ["basic","advanced","pity"].forEach(k=>{ if(typeof state.scrolls[k]!=="number") state.scrolls[k]=0; });
+  // quests
+  if(typeof state.quests!=="object"||!state.quests) state.quests={};
+  if(typeof state.questsClaimedDaily!=="string") state.questsClaimedDaily="";
+  if(typeof state.questsClaimedWeekly!=="string") state.questsClaimedWeekly="";
+  if(typeof state._questBoughtCat!=="boolean") state._questBoughtCat=false;
+  if(typeof state._questWeeklyRolls!=="number") state._questWeeklyRolls=0;
+  if(typeof state._questWeeklyGolden!=="number") state._questWeeklyGolden=0;
+  if(typeof state._questWeeklyRebirths!=="number") state._questWeeklyRebirths=0;
+  // If they already had a name set before nameChanges existed, count that as 1 change used
+  if(state.name && state.nameChanges===0) state.nameChanges=1;
+  if(!["tapper","catmaster","balanced"].includes(state.buildType)) state.buildType="balanced";
 }
 function applyOffline(){
   const now=Date.now(); let elapsed=(now-(state.lastSave||now))/1000;
   if(elapsed<5) return;
   const capHours=offlineCapHours();
   const capped=Math.min(elapsed,capHours*3600);
-  const earned=incomePerSec()*capped; if(earned<=0) return;
+  const earned=incomePerSec()*capped*reforgeAfkMult(); if(earned<=0) return;
   state.money+=earned; state.lifetime+=earned; state.totalEarned+=earned;
   $("offlineEarned").textContent=money(earned);
   $("offlineTime").textContent="Away for "+fmtTime(elapsed)+(elapsed>capped?" (capped at "+capHours+"h)":"");
@@ -1792,49 +2369,138 @@ function applyPrefs(){
   document.body.classList.toggle("dark", !!(state.prefs && state.prefs.dark));
 }
 
-/* ---------- Kawaii background music (synthesised, looping — no audio files) ----------
-   A gentle C-major loop (soft bass + arpeggio + a cute pentatonic melody), scheduled with a
-   small look-ahead so timing stays smooth. Lives behind its own 🎵 Music toggle; because
-   browsers block autoplay, it kicks in on the first tap. */
-const _N={C3:130.81,E3:164.81,F3:174.61,G3:196.00,A3:220.00,
-  G4:392.00,A4:440.00,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880.00,
-  C4:261.63,E4:329.63};
-// 4-bar loop (C · Am · F · G), 8 eighth-notes per bar
-const _BASS=[_N.C3,_N.A3,_N.F3,_N.G3];
-const _ARP=[[_N.C4,_N.E4,_N.G4],[_N.A3,_N.C4,_N.E4],[_N.F3,_N.A3,_N.C4],[_N.G3,_N.B4,_N.D5]];
-const _MEL=[ // 32 steps; 0 = rest
-  _N.G4,0,_N.C5,0, _N.E5,0,_N.D5,0,   _N.E5,0,_N.A4,0, _N.C5,0,0,0,
-  _N.A4,0,_N.C5,0, _N.F5,0,_N.E5,0,   _N.D5,0,_N.G4,0, _N.B4,0,_N.D5,0];
-const _BPM=104, _STEP=60/_BPM/2;     // eighth-note length in seconds
-let _music={timer:null,next:0,step:0}, _musicGain=null;
+/* ---------- Lofi Kawaii background music (synthesised, looping) ----------
+   Slow lofi hip-hop feel (~80 BPM) with:
+   · Deep sub-bass (sine) on beat 1 & 3
+   · Jazzy chord stabs (Am7 · Fmaj7 · C · G7) with soft attack
+   · Warm vinyl-style melody (triangle w/ slight detune)
+   · Soft hi-hat pulse on every eighth
+   · Master gain ~3× louder than the old version
+   Browsers block autoplay → kicks in on first tap. */
+const _BPM=80, _BEAT=60/_BPM, _STEP=_BEAT/2;   // eighth-note = 0.375s at 80 BPM
+
+// Note frequencies
+const _HZ={
+  C2:65.41,  G2:98.00,  A2:110.00, F2:87.31,
+  C3:130.81, E3:164.81, F3:174.61, G3:196.00, A3:220.00, B3:246.94,
+  C4:261.63, D4:293.66, E4:329.63, F4:349.23, G4:392.00, A4:440.00, B4:493.88,
+  C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99, A5:880.00,
+  Eb4:311.13, Bb3:233.08, Db4:277.18,
+};
+
+// 4-bar chord progression (Am7 · Fmaj7 · Cmaj7 · G7), each bar = 8 eighth-steps
+const _CHORDS=[
+  [_HZ.A3,_HZ.C4,_HZ.E4,_HZ.G4],    // Am7
+  [_HZ.F3,_HZ.A3,_HZ.C4,_HZ.E4],    // Fmaj7
+  [_HZ.C3,_HZ.E4,_HZ.G4,_HZ.B4],    // Cmaj7
+  [_HZ.G3,_HZ.B3,_HZ.D4,_HZ.F4],    // G7
+];
+// Bass root per bar (one octave below chord root)
+const _BASSN=[_HZ.A2,_HZ.F2,_HZ.C3,_HZ.G2];
+
+// Pentatonic melody over 32 steps (0=rest). Kawaii & slightly melancholic.
+const _MEL=[
+  _HZ.E5,0,_HZ.D5,_HZ.C5, 0,_HZ.E5,0,0,
+  _HZ.A4,0,_HZ.C5,0,       _HZ.D5,0,_HZ.E5,0,
+  _HZ.G5,0,_HZ.E5,_HZ.D5, _HZ.C5,0,0,_HZ.A4,
+  _HZ.B4,0,_HZ.G4,0,       _HZ.A4,_HZ.C5,0,0,
+];
+
+let _music={timer:null,next:0,step:0}, _musicGain=null, _masterComp=null;
 function musicOn(){ return !!(state.prefs && state.prefs.music); }
-function ensureMusicGain(){ const ac=actx(); if(ac&&!_musicGain){ _musicGain=ac.createGain(); _musicGain.gain.value=0.1; _musicGain.connect(ac.destination); } return _musicGain; }
-function mNote(freq,t,dur,gain,type){
-  const ac=actx(); if(!ac||!freq) return;
-  const o=ac.createOscillator(), g=ac.createGain();
-  o.type=type||"triangle"; o.frequency.value=freq;
-  g.gain.setValueAtTime(0.0001,t);
-  g.gain.exponentialRampToValueAtTime(gain,t+0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-  o.connect(g); g.connect(ensureMusicGain()); o.start(t); o.stop(t+dur+0.05);
+
+function ensureMusicGain(){
+  const ac=actx(); if(!ac) return null;
+  if(!_masterComp){
+    _masterComp=ac.createDynamicsCompressor();
+    _masterComp.threshold.value=-18; _masterComp.knee.value=12;
+    _masterComp.ratio.value=4; _masterComp.attack.value=0.003; _masterComp.release.value=0.25;
+    _masterComp.connect(ac.destination);
+  }
+  if(!_musicGain){
+    _musicGain=ac.createGain(); _musicGain.gain.value=0.38;  // much louder master
+    _musicGain.connect(_masterComp);
+  }
+  return _musicGain;
 }
+
+function mNote(freq, t, dur, gain, type, detune){
+  const ac=actx(); const mg=ensureMusicGain(); if(!ac||!mg||!freq) return;
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.type=type||"triangle";
+  o.frequency.value=freq;
+  if(detune) o.detune.value=detune;
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(gain, t+0.04);
+  g.gain.exponentialRampToValueAtTime(gain*0.6, t+dur*0.5);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.connect(g); g.connect(mg); o.start(t); o.stop(t+dur+0.05);
+}
+
+function mChord(notes, t, dur, gain){
+  // slightly detuned per voice for warm lofi width
+  const detunes=[-8,-3,3,8];
+  notes.forEach((f,i)=> mNote(f, t, dur, gain*(0.7-i*0.04), "sine", detunes[i]||0));
+}
+
+function mHiHat(t, gain){
+  const ac=actx(); const mg=ensureMusicGain(); if(!ac||!mg) return;
+  const buf=ac.createBuffer(1,512,ac.sampleRate);
+  const d=buf.getChannelData(0); for(let i=0;i<512;i++) d[i]=(Math.random()*2-1);
+  const src=ac.createBufferSource(), hpf=ac.createBiquadFilter(), g=ac.createGain();
+  hpf.type="highpass"; hpf.frequency.value=8000;
+  g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.04);
+  src.buffer=buf; src.connect(hpf); hpf.connect(g); g.connect(mg); src.start(t);
+}
+
 function scheduleMusic(){
   const ac=actx(); if(!ac) return;
-  while(_music.next < ac.currentTime + 0.14){
-    const s=_music.step%32, bar=Math.floor(s/8)%4, beat=s%8, t=_music.next;
-    if(beat===0) mNote(_BASS[bar], t, _STEP*4, 0.16, "sine");                 // soft bass per bar
-    const arp=_ARP[bar][[0,1,2,1,0,1,2,1][beat]];                            // gentle up/down arp
-    mNote(arp, t, _STEP*0.8, 0.05, "triangle");
-    if(_MEL[s]) mNote(_MEL[s], t, _STEP*1.4, 0.085, "triangle");            // melody
-    _music.next += _STEP; _music.step++;
+  const lookahead=0.18;
+  while(_music.next < ac.currentTime + lookahead){
+    const s=_music.step%32;
+    const bar=Math.floor(s/8)%4;
+    const beat=s%8;   // 0-7 (eighth notes in a bar)
+    const t=_music.next;
+
+    // Sub-bass: beats 0 and 4 (quarter notes 1 & 3), long sustain, deep sine
+    if(beat===0 || beat===4){
+      mNote(_BASSN[bar], t, _BEAT*1.6, 0.55, "sine");
+    }
+    // Extra bass ghost note on beat 6 (weak 4) — lofi groove
+    if(beat===6){
+      mNote(_BASSN[bar]*1.5, t, _BEAT*0.4, 0.18, "sine");
+    }
+
+    // Chord stab on beat 0 of each bar (short, warm)
+    if(beat===0){
+      mChord(_CHORDS[bar], t, _BEAT*1.2, 0.22);
+    }
+    // Softer off-beat chord echo on beat 4
+    if(beat===4){
+      mChord(_CHORDS[bar], t, _BEAT*0.7, 0.10);
+    }
+
+    // Hi-hat: every eighth, accent on downbeats
+    mHiHat(t, (beat%2===0) ? 0.18 : 0.09);
+
+    // Melody: triangle, slightly detuned for warmth, with rests
+    if(_MEL[s]){
+      mNote(_MEL[s], t, _STEP*1.55, 0.28, "triangle", -6);
+      // soft harmony a minor third below on strong beats
+      if(beat===0||beat===4) mNote(_MEL[s]*0.841, t, _STEP*1.2, 0.08, "sine");
+    }
+
+    _music.next += _STEP;
+    _music.step++;
   }
 }
+
 function startMusic(){
   if(_music.timer || !musicOn()) return;
   const ac=actx(); if(!ac) return; if(ac.state==="suspended") ac.resume();
   ensureMusicGain();
-  _music.next=ac.currentTime+0.1; _music.step=0;
-  _music.timer=setInterval(scheduleMusic, 30);
+  _music.next=ac.currentTime+0.12; _music.step=0;
+  _music.timer=setInterval(scheduleMusic, 40);
 }
 function stopMusic(){ if(_music.timer){ clearInterval(_music.timer); _music.timer=null; } }
 // browsers block autoplay → start on the first user gesture
@@ -1847,15 +2513,18 @@ let _tapBuffUntil=0, _tapBuffMult=1;
 function tapBuffMult(){ return Date.now()<_tapBuffUntil ? _tapBuffMult : 1; }
 
 /* ---------- Combo milestones: one-time-ever rewards for big streaks ---------- */
-const COMBO_MILESTONES=[25,50,100];
+const COMBO_MILESTONES=[25,50,100,250];
 function checkComboMilestone(c){
   if(!state.comboRewards) state.comboRewards={};
   for(const m of COMBO_MILESTONES){
     if(c>=m && !state.comboRewards[m]){
       state.comboRewards[m]=true;
-      const reward=Math.max(incomePerSec()*60*(m/25), state.money*0.05*(m/25), 200*m);
+      // Cap money% at 60s of income so hoarders can't exploit by holding cash then comboing
+      const incomeCap=incomePerSec()*60*(m/25);
+      const reward=Math.max(incomeCap, Math.min(state.money*0.05*(m/25), incomeCap*5), 200*m);
       state.money+=reward; state.lifetime+=reward; state.totalEarned+=reward;
-      toast(`🔥 ${m} COMBO! +${money(reward)}`); sfx("combo");
+      const label = m===250 ? "🔥🏆 250 COMBO MAX! " : `🔥 ${m} COMBO! `;
+      toast(`${label}+${money(reward)}`); sfx("combo");
     }
   }
 }
@@ -1864,12 +2533,12 @@ function checkComboMilestone(c){
 let toastTimer;
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),2200); }
 function spawnFloat(ev,txt,combo){ const f=document.createElement("div"); f.className="float"; f.textContent=txt;
-  if(combo&&combo>=8){ f.style.fontSize=(20+Math.min(combo,COMBO_MAX)*0.3)+"px"; f.style.color="var(--gold-d)"; f.style.textShadow="0 1px 0 #fff,0 0 8px rgba(255,206,92,.7)"; }
+  if(combo&&combo>=8){ f.style.fontSize=(20+Math.min(combo,effectiveComboCap())*0.08)+"px"; f.style.color="var(--gold-d)"; f.style.textShadow="0 1px 0 #fff,0 0 8px rgba(255,206,92,.7)"; }
   const x=(ev.clientX||window.innerWidth/4), y=(ev.clientY||200);
   f.style.left=x+"px"; f.style.top=y+"px"; document.body.appendChild(f); setTimeout(()=>f.remove(),1000); }
 function setActiveTab(){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===currentTab));
-  ["cats","property","upgrades","gacha","rebirth","ranks","goals","catdex"].forEach(p=>{
+  ["cats","property","upgrades","gacha","reforge","rebirth","ranks","goals","catdex"].forEach(p=>{
     const el=$("panel-"+p); if(el) el.style.display=currentTab===p?"":"none";
   });
   $("buyAmtRow").style.display=currentTab==="cats"?"flex":"none";
@@ -1887,6 +2556,7 @@ $("panel-upgrades").addEventListener("click",e=>{ const btn=e.target.closest("[d
 $("panel-rebirth").addEventListener("click",e=>{ const btn=e.target.closest("[data-skill]"); if(btn) buySkill(btn.dataset.skill); });
 $("panel-property").addEventListener("click",e=>{ const btn=e.target.closest("[data-prop]"); if(btn) buyProperty(parseInt(btn.dataset.prop)); });
 $("panel-gacha").addEventListener("click",e=>{ const btn=e.target.closest("[data-roll]"); if(btn) doRoll(btn.dataset.roll, parseInt(btn.dataset.count)); });
+$("panel-reforge").addEventListener("click",e=>{ const btn=e.target.closest("[data-reforge]"); if(btn) reforgeTalisman(btn.dataset.reforge); });
 
 $("saveBtn").addEventListener("click",()=>{ save(); toast("Game saved 💾"); });
 $("keyBtn").addEventListener("click",()=>{ save(); $("settingsModal").classList.remove("show"); $("keyText").value=encode(state); $("keyModal").classList.add("show"); });
@@ -1930,6 +2600,11 @@ function openSettings(){
   $("toggleMusic").textContent="🎵 "+toggleTxt(state.prefs.music);
   $("toggleSound").textContent="🔊 "+toggleTxt(state.prefs.sound);
   $("toggleMotion").textContent="🎐 "+toggleTxt(state.prefs.motion);
+  const MAX_NAME_CHANGES=2;
+  const used=state.nameChanges||0;
+  const left=Math.max(0,MAX_NAME_CHANGES-used);
+  const nameLeft=$("nameChangesLeft"); if(nameLeft) nameLeft.textContent="("+left+" of "+MAX_NAME_CHANGES+" left)";
+  const changeBtn=$("changeNameBtn"); if(changeBtn){ changeBtn.disabled=left===0; changeBtn.textContent=left===0?"Used up":"Change"; }
   renderStatsBox();
   $("settingsModal").classList.add("show");
 }
@@ -1952,6 +2627,41 @@ $("restoreBackup").addEventListener("click",()=>{
   try{ applyLoadedState(decode(bak)); save(); $("settingsModal").classList.remove("show");
     currentTab="cats"; setActiveTab(); updateMascot(); applyPrefs(); renderAll(); toast("Backup restored! 😺");
   }catch(e){ toast("Backup was unreadable ❌"); }
+});
+
+/* ---------- Name change (max 2 ever) ---------- */
+const MAX_NAME_CHANGES=2;
+$("changeNameBtn").addEventListener("click",()=>{
+  const used=state.nameChanges||0;
+  const left=Math.max(0,MAX_NAME_CHANGES-used);
+  if(left<=0){ toast("You've used all your name changes 😿"); return; }
+  $("nameChangesInfo").innerHTML=`You have <b>${left}</b> name change${left===1?"":"s"} remaining after this. This cannot be undone!`;
+  $("changeNameInput").value="";
+  $("settingsModal").classList.remove("show");
+  $("changeNameModal").classList.add("show");
+  setTimeout(()=>{ const inp=$("changeNameInput"); if(inp) inp.focus(); }, 100);
+});
+$("cancelNameChange").addEventListener("click",()=>{
+  $("changeNameModal").classList.remove("show");
+  $("settingsModal").classList.add("show");
+});
+$("changeNameModal").addEventListener("click",e=>{ if(e.target.id==="changeNameModal"){ $("changeNameModal").classList.remove("show"); $("settingsModal").classList.add("show"); }});
+$("confirmNameChange").addEventListener("click",()=>{
+  const used=state.nameChanges||0;
+  const left=Math.max(0,MAX_NAME_CHANGES-used);
+  if(left<=0){ toast("No name changes left 😿"); $("changeNameModal").classList.remove("show"); return; }
+  const raw=($("changeNameInput")?$("changeNameInput").value:"").trim().slice(0,16);
+  if(!raw){ toast("Type a name first ♡"); return; }
+  if(isOffensiveName(raw)){ toast("😼 Please pick a friendlier name!"); return; }
+  if(raw===state.name){ toast("That's already your name! 😸"); return; }
+  state.name=raw;
+  state.nameChanges=(state.nameChanges||0)+1;
+  save();
+  $("changeNameModal").classList.remove("show");
+  toast("Name changed to "+raw+" ✨ ("+(MAX_NAME_CHANGES-(state.nameChanges||0))+" left)");
+  autoPublish();
+  if(currentTab==="ranks") renderRanks();
+  openSettings();
 });
 window.addEventListener("beforeunload",save);
 
@@ -2011,18 +2721,14 @@ function maybeShowMobileTip(){
 
 /* ---------- "What's New" update log (shown once per version) ---------- */
 const UPDATE_LOG_KEY="catMonopolySeenUpdate";
-const UPDATE_VERSION="2026-06-03j";   // bump this whenever UPDATE_LOG changes to re-show it
+const UPDATE_VERSION="2026-06-03o";   // bump this whenever UPDATE_LOG changes to re-show it
 const UPDATE_LOG=[
-  "🎵 <b>Background music!</b> A cute little tune now plays while you build your empire. Toggle it any time in <b>⚙️ Settings</b>. ♡",
-  "✨ <b>Rebirth reworked!</b> Rebirth one milestone at a time (1M → 5M → 25M …). Each rebirth gives <b>+15% income forever</b> AND <b>+1 🐭 token</b> to spend in the Skill Tree — so prestiging is finally worth it. ♡",
-  "🎰 <b>Gacha is way more affordable!</b> Roll costs scale much more gently now (≈2–5× cheaper), and rolling in bulk gives a discount — up to <b>-25%</b> on x100. Way more talismans for your coins! ♡",
-  "🌍 <b>Live leaderboard!</b> Pick your name once, then your score auto-updates the global board every minute — no more manual submitting. (Offensive names are blocked. 🙅)",
-  "🌙 <b>Dark mode!</b> Toggle it in <b>⚙️ Settings</b> — easier on the eyes at night. ♡",
-  "🔊 <b>Sound &amp; haptics!</b> Taps, purchases, golden cats and combos now have juicy feedback. Toggle it (and animations) in the new <b>⚙️ Settings</b> panel.",
-  "🎁 <b>Daily streaks:</b> log in on consecutive days and your daily reward grows — up to ×7!",
-  "🔥 <b>Combo milestones:</b> hitting a 25 / 50 / 100 tap combo now pays a one-time bonus.",
-  "✨ <b>Golden Paw:</b> a rare super version of Auto-Paw — 45s of auto-tapping AND double tap value.",
-  "💾 <b>Auto-backups &amp; stats:</b> Settings keeps a safety backup (restore anytime) and shows your lifetime stats. Plus an at-a-glance offline earning rate."
+  "⚒️ <b>Reforge Anvil!</b> A new tab where you can reforge your talismans to boost <b>Tap, Cat, or AFK power</b>. Each reforge costs 5% of your gold and rolls a new bonus — usually a trade-off (+10% one / −10% another), but lucky rolls are all upside! ♡",
+  "📜 <b>Scroll System!</b> Gacha no longer costs coins — earn <b>Basic, Advanced, and Pity Scrolls</b> from daily/weekly quests, achievements, and the daily login. The Scroll of Pity <i>guarantees</i> Legendary+! ♡",
+  "📅 <b>Daily & Weekly Quests!</b> The 🏅 Goals tab now has 5 daily and 5 weekly quests. Complete them to earn scrolls and build your talisman collection! Resets happen automatically each day/week.",
+  "🏆 <b>Achievement Scroll Rewards!</b> Many achievements now also drop scrolls the first time you unlock them — check the 🏅 Goals tab to see what each one gives.",
+  "🎰 <b>More Talismans!</b> 11 new talismans added across all rarities — including two new Godly tier! The collection goes up to 32 unique pieces.",
+  "✨ <b>Cleaner Gacha UI!</b> Removed the 50x and 100x bulk rolls — just 1x and 10x with your scroll inventory clearly shown.",
 ];
 function maybeShowUpdateLog(){
   try{ if(localStorage.getItem(UPDATE_LOG_KEY)===UPDATE_VERSION) return false; }catch(e){}
