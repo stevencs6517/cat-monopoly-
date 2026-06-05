@@ -2207,8 +2207,7 @@ async function fetchTopScores(){
       { headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY } });
     if(!r.ok) throw 0;
     const data=await r.json();
-    return data.map(e=>({ name:e.name, lifetime:Number(e.score)||0, rebirths:e.rebirths||0, time:e.time||0 }));
-  }catch(e){ return null; }
+return data.map(e=>({ name:e.name, lifetime:Number(e.score)||0, rebirths:e.rebirths||0, ascensions:e.ascensions||0, time:e.time||0 }));  }catch(e){ return null; }
 }
 async function fetchMyRank(score){
   if(!ONLINE) return null;
@@ -2227,12 +2226,12 @@ async function submitScoreOnline(entry){
       { method:"POST",
         headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY,
                   "Content-Type":"application/json", Prefer:"resolution=merge-duplicates" },
-        body:JSON.stringify([{ name:entry.name, score:entry.lifetime, rebirths:entry.rebirths, time:entry.time }]) });
+body:JSON.stringify([{ name:entry.name, score:entry.lifetime, rebirths:entry.rebirths, ascensions:entry.ascensions||0, time:entry.time }]) });    
     return r.ok;
   }catch(e){ return false; }
 }
 
-function currentEntry(){ return { name:state.name, lifetime:myScore(), rebirths:state.rebirths, time:Math.floor(state.timePlayed) }; }
+function currentEntry(){ return { name:state.name, lifetime:myScore(), rebirths:state.rebirths, ascensions:state.ascensions||0, time:Math.floor(state.timePlayed) }; }
 function recordLocal(entry){
   let arr=loadLB();
   const idx=arr.findIndex(e=>(e.name||"").toLowerCase()===(entry.name||"").toLowerCase());
@@ -2276,8 +2275,8 @@ function lbRows(arr){
   return arr.map((e,i)=>`
     <div class="lbrow ${i<3?'lb'+(i+1):''} ${e.name===state.name?'me':''}">
       <div class="rank">${medal[i]||("#"+(i+1))}</div>
-      <div class="who"><b>${i===0?'👑 ':''}${escapeHtml(safeName(e.name))}</b><div class="meta">✨ ${e.rebirths} rebirth${e.rebirths===1?'':'s'} · ⏱ ${fmtTime(e.time)}</div></div>
-      <div class="val" style="text-align:right;">${money(e.lifetime)}${e.rebirths>0?`<div style="font-size:11px;color:var(--lav);font-weight:700;">+${e.rebirths} ✨</div>`:''}</div>
+      <div class="who"><b>${i===0?'👑 ':''}${escapeHtml(safeName(e.name))}</b><div class="meta">${e.ascensions ? `🌌 ${e.ascensions} · ` : ''}✨ ${e.rebirths} rebirth${e.rebirths===1?'':'s'} · ⏱ ${fmtTime(e.time)}</div></div>
+      <div class="val" style="text-align:right;">${money(e.lifetime)}${e.rebirths>0 || e.ascensions>0 ? `<div style="font-size:11px;color:var(--lav);font-weight:700;">${e.ascensions>0?`🌌${e.ascensions} `:''}${e.rebirths>0?`✨${e.rebirths}`:''}</div>`:''}</div>
     </div>`).join("");
 }
 
@@ -2288,8 +2287,7 @@ function renderRanks(){
     <div class="item" style="flex-direction:column;align-items:stretch;gap:8px;">
       <div class="sub" style="margin:0;">Your run <span style="font-size:11px;color:var(--ink2);">(resets on rebirth · +✨ rebirths carry over)</span></div>
       <div style="display:flex;justify-content:space-between;font-weight:700;">
-        <span>💰 ${money(myScore())}</span><span>✨ ${state.rebirths}</span><span>⏱ ${fmtTime(state.timePlayed)}</span>
-      </div>
+      <span>💰 ${money(myScore())}</span><span>🌌 ${state.ascensions||0}</span><span>✨ ${state.rebirths}</span><span>⏱ ${fmtTime(state.timePlayed)}</span>      </div>
       ${ONLINE&&named?`<div class="sub" id="lbRank" style="margin:2px 0;text-align:center;font-weight:800;font-size:15px;color:var(--lav);">🌍 Global rank: …</div>`:""}
       ${named
         ? `<div class="sub" style="text-align:center;margin:2px 0 0;font-weight:700;">Playing as <b>${escapeHtml(state.name)}</b> · ${Math.max(0,2-(state.nameChanges||0))} name change(s) left</div>
