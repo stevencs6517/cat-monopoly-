@@ -737,6 +737,24 @@ if("serviceWorker" in navigator){
       .then(()=>{ if(!sessionStorage.getItem("swCleaned")){ sessionStorage.setItem("swCleaned","1"); location.reload(); } });
   }).catch(()=>{});
 }
+/* Force-fresh on update: the FIRST time a device loads a new BUILD_ID, evict any stale
+   PWA/app-shell cache and hard-reload once (guarded so it can't loop) so everyone lands on
+   the live build. Bump BUILD_ID on every release. NOTE: all CSS/JS here is inline, so once
+   the new index.html is fetched the game is already current — this only clears cached shells.
+   If your HOST serves a stale index.html itself, also set `Cache-Control: no-cache` on it
+   server-side; a stale document can't refresh itself from code it doesn't yet contain. */
+const BUILD_ID = "2026-06-04d";   // keep in step with UPDATE_VERSION
+(function freshenOnUpdate(){
+  let seen=null; try{ seen=localStorage.getItem("cmBuild"); }catch(e){}
+  if(seen===BUILD_ID) return;                       // already on this build — do nothing
+  const mark=()=>{ try{ localStorage.setItem("cmBuild",BUILD_ID); }catch(e){} };
+  const reloadOnce=()=>{ if(!sessionStorage.getItem("cmBuildReloaded")){ try{ sessionStorage.setItem("cmBuildReloaded","1"); }catch(e){} location.reload(); } };
+  try{
+    if(window.caches && caches.keys){
+      caches.keys().then(ks=>{ mark(); if(ks.length){ Promise.all(ks.map(k=>caches.delete(k))).then(reloadOnce).catch(reloadOnce); } }).catch(mark);
+    } else { mark(); }
+  }catch(e){ mark(); }
+})();
 /* =====================================================================
    CAT MONOPOLY — kawaii idle game (single file)
    ===================================================================== */
@@ -3474,19 +3492,35 @@ async function joinRaid(){
   if(_raid.phase !== "joining"){ toast("The joining window has closed! ⚔️"); return; }
   if(_raid._joined){ toast("Already joined! ⚔️"); return; }
   if(!state.name){ toast("Set a name in 🏆 Leaderboard first to join raids! ♡"); return; }
+  if(_raid._joinPending){ return; }   // prevent double-tap during async
+  _raid._joinPending = true;
 
   const dps = incomePerSecPassive();
-  _raid._joined = true;
-  _raid._myDps  = dps;
-
-  // Persist join so a refresh doesn't lose it
-  try{ localStorage.setItem("raidJoined_"+_raid.spawnAt, String(dps)); }catch(e){}
 
   // Push to Supabase
   if(ONLINE){
-    // Read fresh raiders list, add self, write back
+    // Re-fetch the authoritative row so we work with the real current raiders list
+    // AND get the canonical spawnAt (in case this client spawned slightly off)
     const row = await raidFetch();
-    const raiders = row && row.raiders_data ? JSON.parse(row.raiders_data) : [];
+    if(!row || row.phase !== "joining"){
+      // Window already closed on the server side
+      _raid._joinPending = false;
+      toast("The joining window has already closed! ⚔️");
+      return;
+    }
+    // Align our local spawnAt to the server's so the localStorage key matches
+    if(row.spawn_at && row.spawn_at !== _raid.spawnAt){
+      _raid.spawnAt = row.spawn_at;
+      _raid.fightAt = row.fight_at || _raid.fightAt;
+      _raid.endsAt  = row.ends_at  || _raid.endsAt;
+    }
+
+    _raid._joined = true;
+    _raid._myDps  = dps;
+    // Persist join with the now-correct spawnAt key
+    try{ localStorage.setItem("raidJoined_"+_raid.spawnAt, String(dps)); }catch(e){}
+
+    const raiders = row.raiders_data ? JSON.parse(row.raiders_data) : [];
     const existing = raiders.findIndex(r=>r.name===state.name);
     if(existing < 0) raiders.push({ name:state.name, dps, stunUntil:0 });
     else raiders[existing].dps = dps;
@@ -3502,6 +3536,10 @@ async function joinRaid(){
       eliminated_at: _raid.eliminatedAt
     });
   } else {
+    _raid._joined = true;
+    _raid._myDps  = dps;
+    // Persist join so a refresh doesn't lose it
+    try{ localStorage.setItem("raidJoined_"+_raid.spawnAt, String(dps)); }catch(e){}
     // Offline: just track locally
     _raid.raidersData.push({ name: state.name||"You", dps, stunUntil:0 });
     const totalDPS = _raid.raidersData.reduce((s,r)=>s+r.dps, 0);
@@ -3510,6 +3548,7 @@ async function joinRaid(){
     _raid.eliminatedAt = Math.round(_raid.totalHP * RAID_HALF_HP_EV);
   }
 
+  _raid._joinPending = false;
   $("raidAlertModal").classList.remove("show");
   toast("⚔️ Joined the raid! Raid starts in "+Math.ceil((_raid.fightAt-Date.now())/1000)+"s");
   raidUpdateUI();
@@ -3525,22 +3564,32 @@ async function raidTick(){
     if(!_raid._initDone) return;  // don't act until initRaid() has finished
     if(now >= _raid.spawnAt && _raid.spawnAt > 0){
       if(ONLINE){
+        // Guard against two clients spawning simultaneously:
+        // only one client should win the spawn. We use a short debounce so that
+        // if another client just spawned, we'll see it on the next fetch.
+        if(_raid._spawnLock) return;   // already waiting — skip this tick
+        _raid._spawnLock = true;
+        setTimeout(()=>{ _raid._spawnLock = false; }, 3000);
+
         // Re-fetch to see if another client already spawned
         const row = await raidFetch();
-        if(row && row.phase === "joining"){
+        if(row && (row.phase === "joining" || row.phase === "active")){
           // Already spawned by another client — sync
           _raid.phase = row.phase;
           _raid.bossIdx = row.boss_idx;
           _raid.fightAt = row.fight_at;
           _raid.endsAt  = row.ends_at;
+          _raid.spawnAt = row.spawn_at || _raid.spawnAt;  // align spawnAt so join-key matches
           _raid.raidersData = row.raiders_data ? JSON.parse(row.raiders_data) : [];
           _raid.totalHP  = row.total_hp || 0;
           _raid.currentHP= row.current_hp || 0;
           _raid.eliminatedAt = row.eliminated_at || 0;
-          showRaidAlert();
+          if(row.phase === "joining") showRaidAlert();
+          raidUpdateUI();
         } else if(!row || row.phase === "idle"){
           await spawnRaidBoss();
         }
+        _raid._spawnLock = false;
       } else {
         await spawnRaidBoss();
       }
@@ -3599,9 +3648,12 @@ async function raidTick(){
 
       // Write damage to Supabase (debounced — every 2s)
       if(ONLINE && now - (_raid._lastDmgPush||0) > 2000){
+        // Subtract the damage we actually accumulated since the last push,
+        // not a hardcoded dps*2 — that was why the boss HP barely moved.
+        const dmgSinceLastPush = _raid._myDmgTotal - (_raid._lastPushedDmg||0);
+        _raid._lastPushedDmg = _raid._myDmgTotal;
         _raid._lastDmgPush = now;
-        // Subtract our share from global HP
-        const newHP = Math.max(0, (_raid.currentHP || 0) - _raid._myDps * 2);
+        const newHP = Math.max(0, (_raid.currentHP || 0) - dmgSinceLastPush);
         _raid.currentHP = newHP;
         await raidUpsert({ current_hp: Math.max(0, newHP) });
       } else if(!ONLINE){
