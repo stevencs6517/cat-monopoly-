@@ -707,6 +707,7 @@
       <button class="buy alt" id="btnAdminMoney">💰 Give Max Money</button>
       <button class="buy alt" id="btnAdminRaid">👹 Force Spawn Raid Boss</button>
       <button class="buy alt" id="btnAdminScrolls">📜 Give Max Scrolls</button>
+      <button class="buy alt" id="btnAdminTheo">👑 Give Theo (Test)</button>
     </div>
 
     <div class="row">
@@ -833,6 +834,32 @@ const CAT_BASE = [
   {name:"Cosmic Deity Cat",    fur:"#ffe08a", inner:"#fff6d0", eye:"#b06bff", coat:"solid",   acc:"#f5c64e", fluffy:true, fluff:"#fff0b8", extra:"sparkle", minRebirth:15},
   {name:"Eternity Sovereign",  fur:"#c0a0ff", inner:"#f0e8ff", eye:"#ffff80", coat:"solid",   acc:"#8040e0", fluffy:true, fluff:"#d8c0ff", extra:"crown",   minRebirth:18},
   {name:"Omnicat",             fur:"#ff80c0", inner:"#ffe0f0", eye:"#80ffff", coat:"solid",   acc:"#c02080", fluffy:true, fluff:"#ffb0d8", extra:"sparkle", minRebirth:20},
+  // ── Deep prestige tiers (long-term rebirth goals) ──
+  {name:"Titan Paw Cat",        fur:"#7a8aa0", inner:"#cfe0f0", eye:"#ffe060", coat:"stripes", acc:"#3a4a60", fluffy:true, fluff:"#8a9ab0", extra:"crown",   minRebirth:22},
+  {name:"Aurora Seraph Cat",    fur:"#a0f0d0", inner:"#e0fff0", eye:"#ff80c0", coat:"solid",   acc:"#40c090", fluffy:true, fluff:"#c0ffe8", extra:"sparkle", minRebirth:24},
+  {name:"Obsidian Reaper Cat",  fur:"#1a1626", inner:"#3a3050", eye:"#ff4060", coat:"solid",   acc:"#0a0814", extra:"moon",    minRebirth:26},
+  {name:"Radiant Empress Cat",  fur:"#ffd0e8", inner:"#fff0f8", eye:"#a060ff", coat:"solid",   acc:"#f080c0", fluffy:true, fluff:"#ffe0f0", extra:"crown",   minRebirth:28},
+  {name:"Quasar Hunter Cat",    fur:"#4030a0", inner:"#a090ff", eye:"#80ffe0", coat:"spots",   acc:"#201060", ear:"big", extra:"star",     minRebirth:30},
+  {name:"Chronoweaver Cat",     fur:"#c0b0e0", inner:"#f0e8ff", eye:"#ffd040", coat:"stripes", acc:"#6050a0", fluffy:true, fluff:"#d8ccf0", extra:"sparkle", minRebirth:33},
+  {name:"Abyssal Monarch Cat",  fur:"#102030", inner:"#2a4a6a", eye:"#40ffd0", coat:"solid",   acc:"#081018", fluffy:true, fluff:"#1a3045", extra:"crown",   minRebirth:36},
+  {name:"Solaris Archon Cat",   fur:"#ffb020", inner:"#ffe890", eye:"#ff5020", coat:"solid",   acc:"#e08000", fluffy:true, fluff:"#ffd060", extra:"crown",   minRebirth:39},
+  {name:"Astral Leviathan Cat", fur:"#3060d0", inner:"#90c0ff", eye:"#fff080", coat:"spots",   acc:"#1830a0", fluffy:true, fluff:"#5080e8", extra:"sparkle", minRebirth:42},
+  {name:"Voidheart Tyrant Cat", fur:"#201030", inner:"#4a2a6a", eye:"#a0ff60", coat:"solid",   acc:"#100818", extra:"moon",    minRebirth:45},
+  {name:"Celestine Oracle Cat", fur:"#e0d0ff", inner:"#fff0ff", eye:"#60e0ff", coat:"solid",   acc:"#a080e0", fluffy:true, fluff:"#f0e0ff", extra:"sparkle", minRebirth:48},
+  {name:"Genesis Warden Cat",   fur:"#ff80a0", inner:"#ffe0e8", eye:"#80ffff", coat:"stripes", acc:"#d04060", fluffy:true, fluff:"#ffb0c0", extra:"crown",   minRebirth:52},
+  {name:"Infinity Sovereign",   fur:"#80e0ff", inner:"#e0ffff", eye:"#ff80ff", coat:"solid",   acc:"#40a0e0", fluffy:true, fluff:"#b0f0ff", extra:"sparkle", minRebirth:56},
+  {name:"The Cattening",        fur:"#ffe060", inner:"#fff8c0", eye:"#ff40a0", coat:"solid",   acc:"#f0b000", fluffy:true, fluff:"#fff0a0", extra:"crown",   minRebirth:60},
+  // ── Bridge cats: smooth the gap between The Cattening (60) and Ace (95) ──
+  {name:"Supernova Sovereign",  fur:"#ff9040", inner:"#ffe0b0", eye:"#ffffff", coat:"solid",   acc:"#d06010", fluffy:true, fluff:"#ffb870", extra:"crown",   minRebirth:65},
+  {name:"Dimensional Lynx",     fur:"#8060d0", inner:"#d0c0ff", eye:"#ffff60", coat:"spots",   acc:"#4030a0", ear:"big",   fluffy:true, fluff:"#a080e8", extra:"sparkle", minRebirth:70},
+  {name:"Nebula Pharaoh Cat",   fur:"#2a1040", inner:"#7040b0", eye:"#ffdd00", coat:"solid",   acc:"#180828", fluffy:true, fluff:"#5a2898", extra:"crown",   minRebirth:75},
+  {name:"Stormveil Seraph Cat", fur:"#c0e8ff", inner:"#f0f8ff", eye:"#ff6030", coat:"solid",   acc:"#5090c0", fluffy:true, fluff:"#e0f4ff", extra:"sparkle", minRebirth:80},
+  {name:"Ironclad Titan Cat",   fur:"#708090", inner:"#b0c8d8", eye:"#ffa020", coat:"tuxedo",  acc:"#404858", fluffy:true, fluff:"#90a8b8", extra:"moon",     minRebirth:85},
+  {name:"Dawnfire Revenant Cat",fur:"#ff4820", inner:"#ffa080", eye:"#ffffff", coat:"stripes", acc:"#b02000", fluffy:true, fluff:"#ff8050", extra:"crown",   minRebirth:90},
+  // ── ✦ SUPER END-GAME ✦ ──
+  {name:"Ace",                  fur:"#16161f", inner:"#3a3a52", eye:"#ff2e63", coat:"tuxedo",  acc:"#ffce5c", fluffy:true, fluff:"#20202e", extra:"crown",   minRebirth:95,  aura:true, auraColor:"#ff2e63", announce:true, announceEmoji:"🃏", announceNote:"a super end-game cat!"},
+  // Theo — the single rarest cat in the entire game (ultimate prestige goal)
+  {name:"Theo",                 fur:"#fff3c8", inner:"#fff9e6", eye:"#9b6bff", coat:"solid",   acc:"#ffae00", fluffy:true, fluff:"#ffe7a0", extra:"sparkle", minRebirth:100, aura:true, auraColor:"#ffd84d", announce:true, announceEmoji:"👑", announceNote:"the RAREST cat in the entire game!"},
 ];
 
 // generate balanced cost/production for all tiers
@@ -841,8 +868,8 @@ function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/
 const CAT_DEFS = CAT_BASE.map((c,i)=>({
   ...c, id:i,
   slug: slugify(c.name),
-  baseCost: sig(60*Math.pow(8.5,i),3),   // pricier base + steep per-tier scaling
-  baseProd: sig(0.056*Math.pow(4.8,i),2),// lower power per cat — income grows slower than cost (tuned harder)
+  baseCost: sig(60*Math.pow(7.5,i),3),   // cost scaling (7.5x/tier — was 8.5x, eased to reduce mid-game wall)
+  baseProd: sig(0.056*Math.pow(4.8,i),2),// prod scaling (4.8x/tier) — payback ratio 1.56x vs old 1.77x
 }));
 
 /* ---------- Upgrades / modifiers ----------
@@ -1110,7 +1137,7 @@ function newState(){
     properties:PROPERTY_DEFS.map(()=>0),
     achievements:{}, skills:{idle:0,tap:0,cost:0,offline:0,mice:0}, spentMice:0,
     pets:0, bestCombo:0, goldenCaught:0, lastDaily:"", dailyStreak:0,
-    goldenMice:0, rebirths:0, timePlayed:0,
+    goldenMice:0, rebirths:0, totalRebirths:0, autoRebirth:false, timePlayed:0,
     talismans:{}, gacha:{pity:0, rolls:0}, reforges:{}, reforgeLocks:{},   // reforges: {talismanId:{tap,cat,afk}}
     scrolls:{basic:0, advanced:0, pity:0},   // scroll inventory
     quests:{},                                // quest completion tracking: {questId: true/false}
@@ -1279,8 +1306,19 @@ function accessoryMarkup(c){
 function catSVG(c, size){
   const inner=c.inner||"#ffd0e0", eyec=c.eye||"#5a4a78";
   const earColor = c.coat==="pointed" ? (c.acc||c.fur) : c.fur;
+  // Legendary aura — a pulsing halo + glow for flagged ultra-rare cats (Ace, Theo…)
+  const ac = c.auraColor||"#ffd84d";
+  const aura = c.aura ? `
+    <defs><radialGradient id="aura${c.id}" cx="50%" cy="50%" r="50%">
+      <stop offset="52%" stop-color="${ac}" stop-opacity="0"/>
+      <stop offset="78%" stop-color="${ac}" stop-opacity=".6"/>
+      <stop offset="100%" stop-color="${ac}" stop-opacity="0"/></radialGradient></defs>
+    <circle cx="60" cy="62" r="58" fill="url(#aura${c.id})">
+      <animate attributeName="opacity" values=".5;1;.5" dur="2.4s" repeatCount="indefinite"/></circle>` : "";
+  const svgStyle = c.aura ? ` style="filter:drop-shadow(0 0 5px ${ac});overflow:visible;"` : "";
   const svg=`
-  <svg viewBox="0 0 120 120" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 120 120" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg"${svgStyle}>
+    ${aura}
     ${fluffMarkup(c)}
     ${earMarkup(c.ear||"up", earColor, inner)}
     <ellipse cx="60" cy="65" rx="41" ry="37" fill="${c.fur}"/>
@@ -1355,16 +1393,16 @@ const SKILLS=[
   {id:"offline",emoji:"🌙",name:"Night Owl",desc:"+2h offline cap per rank",max:6,cost:r=>2*(r+1)},
   {id:"mice",emoji:"💎",name:"Treasure Cat",desc:"+7% all income per rank",max:8,cost:r=>3*(r+1)},
 ];
-const REBIRTH_BONUS=0.15;   // permanent income bonus per rebirth completed
+const REBIRTH_BONUS=1.40;   // multiplicative base per rebirth: multiplier = REBIRTH_BONUS^rebirths (was flat +50% additive — multiplicative feels rewarding all the way through)
 
 /* ---------- Derived ---------- */
 function totalCats(){ let n=0; for(let i=0;i<CAT_DEFS.length;i++) n+=state.cats[i]; return n; }
 function dexCount(){ return (state.discovered||[]).filter(Boolean).length; }
 function availableTokens(){ return Math.max(0, (state.goldenMice||0)-(state.spentMice||0)); }
 // Prestige is now one rebirth at a time. The (n+1)-th rebirth needs this much lifetime this run.
-function rebirthThreshold(n){ return 1e6*Math.pow(8, n||0); }   // 1M, 8M, 64M, 512M, 4.1B, 33B, ... (×8/rebirth — steep, so prestige stays meaningful)
+function rebirthThreshold(n){ return 1e6*Math.pow(5, n||0); }   // 1M, 5M, 25M, 125M, … (×5/rebirth — was ×8, softened so runs stay meaningful)
 function canRebirth(){ return (state.lifetime||0) >= rebirthThreshold(state.rebirths||0); }
-function rebirthMultiplier(){ return 1 + (state.rebirths||0)*REBIRTH_BONUS; }
+function rebirthMultiplier(){ return Math.pow(REBIRTH_BONUS, state.rebirths||0); }   // multiplicative: 1.4^n — each rebirth feels impactful at any count
 function achievementMult(){ let m=1; for(const a of ACHIEVEMENTS){ if(state.achievements[a.id]) m+=a.bonus; } return m; }
 function dexMult(){ return 1 + dexCount()*0.02; }
 function skillIdleMult(){ return 1 + 0.08*(state.skills.idle||0); }
@@ -1454,19 +1492,22 @@ function talismanMult(){ let s=0; for(const t of TALISMANS) s+=talismanBonus(t);
 
 // ---- Ascension (2nd prestige) ----
 const ASCEND_REQ_REBIRTHS = 12;   // must reach this many rebirths before you can ascend
-const ASCEND_BASE_BONUS   = 0.20; // +20% permanent income per ascension (before the tree)
+const ASCEND_BASE_BONUS   = 0.30; // +30% permanent income per ascension (was +20%)
 const ASCEND_NODES = [
-  {id:"cosmic", emoji:"🌟", name:"Cosmic Power", desc:"+10% all income / rank", per:0.10, max:50, cost:r=>r+1},
-  {id:"surge",  emoji:"💥", name:"Star Surge",   desc:"+30% all income / rank", per:0.30, max:20, cost:r=>5*(r+1)},
-  {id:"warp",   emoji:"🕳️", name:"Time Warp",    desc:"+2h offline cap / rank", per:2,    max:8,  cost:r=>3*(r+1)},
+  {id:"cosmic",  emoji:"🌟", name:"Cosmic Power",   desc:"+10% all income / rank", per:0.10, max:50, cost:r=>Math.ceil((r+1)/5)},   // max cost 10 dust (was 50)
+  {id:"surge",   emoji:"💥", name:"Star Surge",     desc:"+30% all income / rank", per:0.30, max:20, cost:r=>r+1},                   // max cost 20 dust (was 100)
+  {id:"greater", emoji:"🌠", name:"Greater Cosmos", desc:"+60% all income / rank", per:0.60, max:25, cost:r=>2*(r+1)},               // max cost 50 dust (was 250)
+  {id:"warp",    emoji:"🕳️", name:"Time Warp",      desc:"+2h offline cap / rank", per:2,    max:8,  cost:r=>r+1},                   // max cost 8 dust (was 24)
+  {id:"autoreb", emoji:"♻️", name:"Eternal Cycle",  desc:"Unlocks Auto-Rebirth ♡", per:1,    max:1,  cost:r=>3, unlock:true},
 ];
 function ascendNode(id){ return ASCEND_NODES.find(n=>n.id===id); }
 function ascendRank(id){ return (state.ascendTree&&state.ascendTree[id])||0; }
-function ascendTreeMult(){ return (1+ASCEND_NODES[0].per*ascendRank("cosmic")) * (1+ASCEND_NODES[1].per*ascendRank("surge")); }
+function ascendTreeMult(){ return (1+0.10*ascendRank("cosmic")) * (1+0.30*ascendRank("surge")) * (1+0.60*ascendRank("greater")); }
 function ascendMult(){ return (1 + ASCEND_BASE_BONUS*(state.ascensions||0)) * ascendTreeMult(); }
-function ascendOfflineHours(){ return ASCEND_NODES[2].per*ascendRank("warp"); }
-// stardust earned for ascending right now (scales with rebirths reached)
-function ascendStardustGain(){ return Math.max(1, Math.floor((state.rebirths||0))); }
+function ascendOfflineHours(){ return 2*ascendRank("warp"); }
+function autoRebirthUnlocked(){ return ascendRank("autoreb")>=1; }
+// stardust earned for ascending right now — scales superlinearly so deeper runs are rewarded
+function ascendStardustGain(){ return Math.max(1, Math.floor(Math.pow(state.rebirths||0, 1.5))); }
 function canAscend(){ return (state.rebirths||0) >= ASCEND_REQ_REBIRTHS; }
 
 // ---- Cat fusion (⭐ star levels) ----
@@ -1481,27 +1522,33 @@ function canFuse(i){ return catStar(i)<FUSE_MAX_STAR && (state.cats[i]||0) >= fu
 // ---- Talisman equip slots + set bonuses ----
 // ADDITIVE layer: every owned talisman still contributes via talismanMult(); equipping just
 // grants an extra "set" bonus on top, so this never nerfs an existing collection.
-const TAL_EQUIP_SLOTS = 3;
+const TAL_EQUIP_SLOTS = TALISMANS.length;   // no cap — equip as many as you own
 function talismanSetInfo(){
   const ids=(state.equippedTalismans||[]).filter(id=>state.talismans&&state.talismans[id]>0);
   let base=0; const rar=[];
   for(const id of ids){ const t=TALISMANS.find(x=>x.id===id); if(!t) continue; base+=(RARITY_ORDER.indexOf(t.r)+1)*0.02; rar.push(t.r); }
   let setMul=1, label="—";
-  if(ids.length===TAL_EQUIP_SLOTS){
+  if(ids.length>=3){
     const uniq=new Set(rar).size;
     if(uniq===1){ setMul=3; label="✨ Pure Set ×3"; }
-    else if(uniq===TAL_EQUIP_SLOTS){ setMul=2; label="🌈 Rainbow Set ×2"; }
+    else if(uniq===ids.length){ setMul=2; label="🌈 Rainbow Set ×2"; }
     else { setMul=1.4; label="Partial Set ×1.4"; }
-  } else if(ids.length>0){ label=`${ids.length}/${TAL_EQUIP_SLOTS} slots`; }
+  } else if(ids.length>0){ label=`${ids.length} equipped`; }
   return { count:ids.length, bonus:base*setMul, setMul, label };
 }
 function talismanSetMult(){ return 1 + talismanSetInfo().bonus; }
 
+// ---- Global collection scaling: ties fusion + the Catdex into ALL income ----
+// every ⭐ star across every cat = +0.5% income; every cat ever discovered = +1% income.
+function totalStars(){ let s=0; const m=state.catStars||{}; for(const k in m) s+=m[k]||0; return s; }
+function discoveredCount(){ return (state.discovered||[]).reduce((n,d)=>n+(d?1:0),0); }
+function metaScaleMult(){ return (1 + 0.005*totalStars()) * (1 + 0.01*discoveredCount()); }
+
 // combined passive income multiplier (everything except each cat's base rate)
-function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*skillTreasureMult()*propertyMult()*goldenBuffMult()*talismanMult()*advBonusMult()*ascendMult()*talismanSetMult(); }
+function incomeMult(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*skillTreasureMult()*propertyMult()*goldenBuffMult()*talismanMult()*advBonusMult()*ascendMult()*talismanSetMult()*metaScaleMult(); }
 // pricing multiplier — same as incomeMult but WITHOUT the frenzy buff so a golden-cat
 // event doesn't temporarily inflate gacha/upgrade costs by 5×
-function incomeMultForPricing(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*skillTreasureMult()*propertyMult()*talismanMult()*advBonusMult()*ascendMult()*talismanSetMult(); }
+function incomeMultForPricing(){ return globalUpgradeMult()*rebirthMultiplier()*achievementMult()*dexMult()*skillIdleMult()*skillTreasureMult()*propertyMult()*talismanMult()*advBonusMult()*ascendMult()*talismanSetMult()*metaScaleMult(); }
 // soft cap: the first CAT_SOFT_CAP of a tier earn full rate; every extra one earns far less,
 // so hoarding one cheap cat can't run the economy away.
 function effectiveCount(n){ return n<=CAT_SOFT_CAP ? n : CAT_SOFT_CAP + (n-CAT_SOFT_CAP)*CAT_OVERCAP_EFF; }
@@ -1536,7 +1583,9 @@ function tapBaseValue(){
 function clickValue(){ return tapBaseValue() * comboMult() * tapBuffMult() * reforgeTapMult(); }
 function catCost(i,owned){ return CAT_DEFS[i].baseCost*Math.pow(COST_GROWTH,owned)*skillCostFactor(); }
 function catUnlocked(i){
-  if((CAT_DEFS[i].minRebirth||0) > (state.rebirths||0)) return false;   // prestige-locked
+  // Gated by LIFETIME rebirths (state.totalRebirths) which DON'T reset on ascension — so the
+  // deep cats (Ace 95, Theo 100) stay reachable even though ascending resets your rebirth count.
+  if((CAT_DEFS[i].minRebirth||0) > (state.totalRebirths||0)) return false;   // prestige-locked
   return i===0 || state.cats[i-1]>=1;
 }
 function highestOwned(){ let h=0; for(let i=0;i<CAT_DEFS.length;i++) if(state.cats[i]>0) h=i; return h; }
@@ -1686,10 +1735,10 @@ function renderCatsFull(){
   for(let i=0;i<CAT_DEFS.length;i++){
     const c=CAT_DEFS[i];
     if(!catUnlocked(i)){
-      const needReb=(c.minRebirth||0) > (state.rebirths||0);
+      const needReb=(c.minRebirth||0) > (state.totalRebirths||0);
       // Prestige-locked cats reveal their name (aspirational); pre-tier locks stay mysterious.
       const lockName=needReb ? c.name : "??? Cat";
-      const lockHint=needReb ? `🔒 Requires ${c.minRebirth} rebirth${c.minRebirth===1?"":"s"} (you have ${state.rebirths||0})`
+      const lockHint=needReb ? `🔒 Requires ${c.minRebirth} total rebirth${c.minRebirth===1?"":"s"} (you have ${state.totalRebirths||0})`
                              : `Keep collecting to unlock a new cat...`;
       html+=`<div class="item locked">
         <div class="icon">${needReb?catVisual(c,48):catSVG({fur:"#e7dcec",inner:"#f3e6f0",eye:"#cbb6da",coat:"solid"},48)}</div>
@@ -1817,31 +1866,9 @@ function toggleEquipTalisman(id){
   const idx=state.equippedTalismans.indexOf(id);
   if(idx>=0){ state.equippedTalismans.splice(idx,1); }
   else {
-    if(state.equippedTalismans.length>=TAL_EQUIP_SLOTS){ toast(`Only ${TAL_EQUIP_SLOTS} equip slots — unequip one first. ♡`); return; }
     state.equippedTalismans.push(id);
   }
   sfx("buy"); save(); renderGacha(); renderStats();
-}
-function equipSectionHTML(){
-  const info=talismanSetInfo();
-  let slots="";
-  for(let s=0;s<TAL_EQUIP_SLOTS;s++){
-    const id=(state.equippedTalismans||[])[s];
-    const t=id?TALISMANS.find(x=>x.id===id):null;
-    slots += t
-      ? `<button class="dexcell" data-unequip="${t.id}" style="border-color:${TAL_RARITY[t.r].color};cursor:pointer;min-width:78px;">
-           <div class="dexicon" style="font-size:24px;">${t.emoji}</div><div class="dexname">${t.name}</div>
-           <div class="sub" style="margin:2px 0 0;font-size:9px;color:var(--ink2);">tap to remove</div></button>`
-      : `<div class="dexcell" style="min-width:78px;opacity:.6;border-style:dashed;">
-           <div class="dexicon" style="font-size:24px;">➕</div><div class="dexname">Empty</div></div>`;
-  }
-  return `<div class="propgroup" style="--gc:var(--lav);">
-    <div class="propgrouphead" style="display:flex;justify-content:space-between;align-items:center;">
-      <span>⚔️ Equipped Set</span>
-      <span style="font-size:12px;color:var(--good);">+${(info.bonus*100).toFixed(1)}% income · ${info.label}</span></div>
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">${slots}</div>
-    <div class="sub" style="text-align:center;margin:8px 0 2px;font-size:11px;">Tap an owned talisman below to equip (max ${TAL_EQUIP_SLOTS}) · same rarity = ✨Pure ×3 · all different = 🌈Rainbow ×2</div>
-  </div>`;
 }
 function renderGacha(){
   const totalBonus=Math.round((talismanMult()-1)*100);
@@ -1854,8 +1881,6 @@ function renderGacha(){
       <div style="font-size:15px;">${scrollInv}</div>
       <div class="sub" style="font-size:10px;margin:4px 0 0;">Earn scrolls from daily/weekly quests and goal completions ♡</div>
     </div>`;
-  html += equipSectionHTML();
-
   // banners — one per scroll type
   for(const sc of SCROLL_TYPES){
     const b=BANNERS[sc.bannerIdx];
@@ -1884,14 +1909,12 @@ function renderGacha(){
     const cells=list.map(t=>{
       const copies=(state.talismans&&state.talismans[t.id])||0;
       const has=copies>0;
-      const equipped=(state.equippedTalismans||[]).includes(t.id);
       const bonus=Math.round(talismanBonus(t)*1000)/10;  // one decimal %
       const capped=has && (R.base+(copies-1)*R.dupe) >= R.base*DUPE_CAP_MULT;
-      return `<div class="dexcell ${has?'':'undiscovered'}" ${has?`data-equip="${t.id}"`:''} style="${has?`border-color:${R.color};cursor:pointer;`:''}${equipped?'box-shadow:0 0 0 2px var(--lav);':''}">
+      return `<div class="dexcell ${has?'':'undiscovered'}" ${has?`data-equip="${t.id}"`:''} style="${has?`border-color:${R.color};cursor:pointer;`:''}">
         <div class="dexicon" style="font-size:26px;">${has?t.emoji:'❔'}</div>
         <div class="dexname">${has?t.name:'???'}</div>
         ${has?`<div class="sub" style="margin:2px 0 0;font-size:10px;">x${copies} · +${bonus}%${capped?' ⛛':''}</div>`:`<div class="sub" style="margin:2px 0 0;font-size:10px;">not found</div>`}
-        ${equipped?`<div class="sub" style="margin:1px 0 0;font-size:9px;color:var(--lav);font-weight:800;">⚔️ equipped</div>`:''}
       </div>`;
     }).join("");
     html+=`<div style="margin-bottom:6px;">
@@ -2022,16 +2045,24 @@ function renderRebirth(){
   const n=state.rebirths||0;
   const thr=rebirthThreshold(n), life=state.lifetime||0, ready=canRebirth();
   const prog=Math.min(100, Math.floor(life/thr*100));
+  const tot=state.totalRebirths||0;
+  const nextMile=tot-(tot%5)+5;
+  const autoUnlocked=autoRebirthUnlocked(), autoOn=!!state.autoRebirth;
   $("panel-rebirth").innerHTML=`<div class="rebirth-box">
-    <p style="font-weight:600;">Rebirth resets your cash, cats, upgrades &amp; estates — but you keep your prestige bonus, 🐭 tokens, skills &amp; talismans. Each rebirth gives <b>+${Math.round(REBIRTH_BONUS*100)}% income</b> forever and <b>+1 🐭 token</b> to spend on the Skill Tree.</p>
+    <p style="font-weight:600;">Rebirth resets your cash, cats &amp; upgrades — but you keep your prestige bonus, 🏘️ estates (newly-unlocked ones auto-bought free!), 🐭 tokens, skills &amp; talismans. Each rebirth multiplies your income by <b>×${REBIRTH_BONUS.toFixed(1)}</b> (stacks multiplicatively!) and gives <b>+1 🐭 token</b>. Rebirthing is the fastest way to afford the next cat!</p>
     <div class="mult-badge">Rebirth ${n} · x${rebirthMultiplier().toFixed(2)} income · ${fmt(availableTokens())} 🐭</div>
+    <div class="mult-badge">🌌 ${tot} lifetime rebirths</div>
     <hr>
     <p class="sub">Next rebirth (#${n+1}) needs <b>${money(thr)}</b> lifetime earned this run.</p>
     <p class="sub">${ready?"Ready to rebirth! ♡":"You're at "+money(life)+" — <b>"+prog+"%</b> of the way there."}</p>
+    <p class="sub" style="font-size:11px;">🎖️ Next milestone reward at <b>${nextMile}</b> lifetime rebirths (every 5 → 🐭+scrolls, every 25 → ⭐ stardust).</p>
     <button class="buy alt" id="doRebirth" ${ready?"":"disabled"} style="font-size:16px;padding:13px 24px;margin-top:6px;">✨ REBIRTH #${n+1} → +1 🐭</button>
+    ${autoUnlocked
+      ? `<div class="setrow" style="justify-content:center;gap:12px;margin-top:14px;"><span>♻️ Auto-Rebirth</span><button class="smallbtn${autoOn?' active':''}" data-autoreb-toggle="1">${autoOn?'On ✅':'Off'}</button></div>`
+      : `<p class="sub" style="font-size:11px;margin-top:12px;">♻️ Unlock <b>Auto-Rebirth</b> in the 🌌 Ascend tab → Cosmic Tree → <b>Eternal Cycle</b>.</p>`}
   </div>
   ${skillTreeHTML()}`;
-  const b=$("doRebirth"); if(b) b.onclick=doRebirth;
+  const b=$("doRebirth"); if(b) b.onclick=()=>doRebirth();
 }
 
 /* =====================================================================
@@ -2043,7 +2074,7 @@ function renderAscend(){
   let tree="";
   for(const node of ASCEND_NODES){
     const rank=ascendRank(node.id), maxed=rank>=node.max, cost=node.cost(rank), afford=sd>=cost&&!maxed;
-    const cur = rank>0 ? ` · now +${node.id==='warp'?(node.per*rank)+'h':Math.round(node.per*rank*100)+'%'}` : "";
+    const cur = rank>0 ? (node.unlock ? " · ✅ Active" : ` · now +${node.id==='warp'?(node.per*rank)+'h':Math.round(node.per*rank*100)+'%'}`) : "";
     tree+=`<div class="item">
       <div class="icon" style="font-size:28px;">${node.emoji}</div>
       <div class="info"><div class="name">${node.name} <span style="font-size:11px;color:var(--lav);">Lv ${rank}/${node.max}</span></div>
@@ -2053,7 +2084,7 @@ function renderAscend(){
   }
   $("panel-ascend").innerHTML=`<div class="rebirth-box">
     <div style="font-size:34px;">🌌</div>
-    <p style="font-weight:600;">Ascension is the second prestige. It <b>resets your rebirths, cash, cats, upgrades, estates, skills &amp; 🐭 tokens</b> — but you keep talismans, catdex &amp; everything bought here. Each ascension grants <b>+${Math.round(ASCEND_BASE_BONUS*100)}% permanent income</b> plus ⭐ Stardust to spend below.</p>
+    <p style="font-weight:600;">Ascension is the second prestige. It <b>resets your rebirths, cash, cats, upgrades, estates, skills &amp; 🐭 tokens</b> — but you keep talismans, catdex &amp; everything bought here. Each ascension grants <b>+${Math.round(ASCEND_BASE_BONUS*100)}% permanent income</b> plus ⭐ Stardust to spend below. More rebirths before ascending = more stardust (scales as rebirths<sup>1.5</sup>)!</p>
     <div class="mult-badge">Ascensions ${a} · ×${ascendMult().toFixed(2)} income · ⭐ ${fmt(sd)} stardust</div>
     <hr>
     <p class="sub">Requires <b>${ASCEND_REQ_REBIRTHS} rebirths</b> (you have ${state.rebirths||0}). Ascending now grants <b>⭐ ${gain} stardust</b>.</p>
@@ -2200,46 +2231,57 @@ function saveLB(arr){ try{ localStorage.setItem(LB_KEY, JSON.stringify(arr)); }c
 function myScore(){ return Math.floor(state.lifetime||0); }
 
 // --- Supabase REST calls (only used when ONLINE) ---
+const _lbHeaders={ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY };
+// Board ranks by ASCENSION first (deepest prestige), then current-run score — so an ascended
+// player's count is a real top-of-board flex even though ascending resets lifetime to 0.
 async function fetchTopScores(){
   if(!ONLINE) return null;
+  const base=`${SB}/rest/v1/scores`;
   try{
-    const r=await fetch(`${SB}/rest/v1/scores?select=name,score,rebirths,time&order=score.desc&limit=25`,
-      { headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY } });
+    // Try the ascension-aware query; if the column doesn't exist yet, fall back gracefully.
+    let r=await fetch(`${base}?select=name,score,rebirths,time,ascensions&order=ascensions.desc,score.desc&limit=25`,{ headers:_lbHeaders });
+    if(!r.ok) r=await fetch(`${base}?select=name,score,rebirths,time&order=score.desc&limit=25`,{ headers:_lbHeaders });
     if(!r.ok) throw 0;
     const data=await r.json();
-    return data.map(e=>({ name:e.name, lifetime:Number(e.score)||0, rebirths:e.rebirths||0, time:e.time||0 }));
+    return data.map(e=>({ name:e.name, lifetime:Number(e.score)||0, rebirths:e.rebirths||0, time:e.time||0, ascensions:e.ascensions||0 }));
   }catch(e){ return null; }
 }
-async function fetchMyRank(score){
+async function fetchMyRank(score, ascensions){
   if(!ONLINE) return null;
+  const s=Math.floor(score||0), a=Math.floor(ascensions||0);
+  const count=async url=>{ const r=await fetch(url,{ headers:{ ..._lbHeaders, Prefer:"count=exact", Range:"0-0" } });
+    const cr=r.headers.get("content-range"); const t=cr?parseInt(cr.split("/").pop(),10):0; return isNaN(t)?0:t; };
   try{
-    const r=await fetch(`${SB}/rest/v1/scores?select=name&score=gt.${Math.floor(score)}`,
-      { headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY, Prefer:"count=exact", Range:"0-0" } });
-    const cr=r.headers.get("content-range");            // e.g. "0-0/42" or "*/42"
-    const total=cr ? parseInt(cr.split("/").pop(), 10) : 0;  // .pop() handles both "0-0/42" and "*/42"
-    return (isNaN(total)?0:total)+1;                    // players above me + 1
-  }catch(e){ return null; }
+    // players ranked above me = more ascensions, OR same ascensions but higher score
+    return (await count(`${SB}/rest/v1/scores?select=name&or=(ascensions.gt.${a},and(ascensions.eq.${a},score.gt.${s}))`))+1;
+  }catch(e){
+    try{ return (await count(`${SB}/rest/v1/scores?select=name&score=gt.${s}`))+1; }   // fallback: no ascensions column
+    catch(e2){ return null; }
+  }
 }
 async function submitScoreOnline(entry){
   if(!ONLINE) return false;
+  const post=row=>fetch(`${SB}/rest/v1/scores?on_conflict=name`,
+    { method:"POST",
+      headers:{ ..._lbHeaders, "Content-Type":"application/json", Prefer:"resolution=merge-duplicates" },
+      body:JSON.stringify([row]) });
   try{
-    const r=await fetch(`${SB}/rest/v1/scores?on_conflict=name`,
-      { method:"POST",
-        headers:{ apikey:SUPABASE_KEY, Authorization:"Bearer "+SUPABASE_KEY,
-                  "Content-Type":"application/json", Prefer:"resolution=merge-duplicates" },
-        body:JSON.stringify([{ name:entry.name, score:entry.lifetime, rebirths:entry.rebirths, time:entry.time }]) });
+    const full={ name:entry.name, score:entry.lifetime, rebirths:entry.rebirths, time:entry.time, ascensions:entry.ascensions||0 };
+    let r=await post(full);
+    if(!r.ok){ const { ascensions, ...basic }=full; r=await post(basic); }   // retry sans column if it doesn't exist
     return r.ok;
   }catch(e){ return false; }
 }
 
-function currentEntry(){ return { name:state.name, lifetime:myScore(), rebirths:state.rebirths, time:Math.floor(state.timePlayed) }; }
+function currentEntry(){ return { name:state.name, lifetime:myScore(), rebirths:state.rebirths, time:Math.floor(state.timePlayed), ascensions:state.ascensions||0 }; }
 function recordLocal(entry){
   let arr=loadLB();
   const idx=arr.findIndex(e=>(e.name||"").toLowerCase()===(entry.name||"").toLowerCase());
   const local={ ...entry, date:Date.now() };
   // Always overwrite own entry — score resets to 0 on rebirth, so we never guard with >=
   if(idx>=0){ arr[idx]=local; } else arr.push(local);
-  arr.sort((a,b)=>b.lifetime-a.lifetime); saveLB(arr.slice(0,25));
+  // sort by ascensions first (deepest prestige), then current-run score
+  arr.sort((a,b)=>((b.ascensions||0)-(a.ascensions||0)) || (b.lifetime-a.lifetime)); saveLB(arr.slice(0,25));
 }
 // Auto-publish the current run under the player's locked name. Runs on a 60s timer (so the
 // global board stays live), on boot, and right after a name is set. Silent — no toasts.
@@ -2273,12 +2315,14 @@ function setName(){
 function lbRows(arr){
   const medal=["🥇","🥈","🥉"];
   if(!arr || !arr.length) return `<p class="sub" style="text-align:center;">No scores yet — be the first! 🎀</p>`;
-  return arr.map((e,i)=>`
+  return arr.map((e,i)=>{
+    const asc=e.ascensions||0;
+    return `
     <div class="lbrow ${i<3?'lb'+(i+1):''} ${e.name===state.name?'me':''}">
       <div class="rank">${medal[i]||("#"+(i+1))}</div>
-      <div class="who"><b>${i===0?'👑 ':''}${escapeHtml(safeName(e.name))}</b><div class="meta">✨ ${e.rebirths} rebirth${e.rebirths===1?'':'s'} · ⏱ ${fmtTime(e.time)}</div></div>
-      <div class="val" style="text-align:right;">${money(e.lifetime)}${e.rebirths>0?`<div style="font-size:11px;color:var(--lav);font-weight:700;">+${e.rebirths} ✨</div>`:''}</div>
-    </div>`).join("");
+      <div class="who"><b>${i===0?'👑 ':''}${escapeHtml(safeName(e.name))}${asc>0?` <span style="color:var(--lav);font-weight:800;">🌌${asc}</span>`:''}</b><div class="meta">${asc>0?`🌌 ${asc} ascension${asc===1?'':'s'} · `:''}✨ ${e.rebirths} rebirth${e.rebirths===1?'':'s'} · ⏱ ${fmtTime(e.time)}</div></div>
+      <div class="val" style="text-align:right;">${money(e.lifetime)}${asc>0?`<div style="font-size:11px;color:var(--lav);font-weight:800;">🌌 ${asc}</div>`:e.rebirths>0?`<div style="font-size:11px;color:var(--lav);font-weight:700;">+${e.rebirths} ✨</div>`:''}</div>
+    </div>`;}).join("");
 }
 
 function renderRanks(){
@@ -2288,7 +2332,7 @@ function renderRanks(){
     <div class="item" style="flex-direction:column;align-items:stretch;gap:8px;">
       <div class="sub" style="margin:0;">Your run <span style="font-size:11px;color:var(--ink2);">(resets on rebirth · +✨ rebirths carry over)</span></div>
       <div style="display:flex;justify-content:space-between;font-weight:700;">
-        <span>💰 ${money(myScore())}</span><span>✨ ${state.rebirths}</span><span>⏱ ${fmtTime(state.timePlayed)}</span>
+        <span>💰 ${money(myScore())}</span>${(state.ascensions||0)>0?`<span style="color:var(--lav);">🌌 ${state.ascensions}</span>`:''}<span>✨ ${state.rebirths}</span><span>⏱ ${fmtTime(state.timePlayed)}</span>
       </div>
       ${ONLINE&&named?`<div class="sub" id="lbRank" style="margin:2px 0;text-align:center;font-weight:800;font-size:15px;color:var(--lav);">🌍 Global rank: …</div>`:""}
       ${named
@@ -2297,7 +2341,7 @@ function renderRanks(){
         : `<input class="nameinput" id="lbName" maxlength="16" placeholder="Choose your name — you only pick once!">
            <button class="buy alt" id="lbSetName">${ONLINE?"🌍 Set name &amp; join leaderboard":"🏆 Set my name"}</button>`}
     </div>
-    <div class="sub" style="text-align:center;margin:4px 0 10px;">${ONLINE?"🌍 Global Leaderboard · current run · resets on rebirth":"🏆 Local Leaderboard · current run · resets on rebirth"}</div>
+    <div class="sub" style="text-align:center;margin:4px 0 10px;">${ONLINE?"🌍 Global Leaderboard · ranked by 🌌 ascensions, then run earnings":"🏆 Local Leaderboard · ranked by 🌌 ascensions, then run earnings"}</div>
     <div id="lbList"><p class="sub" style="text-align:center;">${ONLINE?"Loading global ranks… ⋆":""}</p></div>
     <div style="text-align:center;margin-top:10px;">${ONLINE?"":'<button class="smallbtn danger" id="lbClear">Clear leaderboard</button>'}</div>`;
   const setBtn=$("lbSetName"); if(setBtn) setBtn.onclick=setName;
@@ -2322,7 +2366,7 @@ async function loadRanksList(){
 }
 async function updateMyRank(){
   const rk=$("lbRank"); if(!rk) return;
-  const rank=await fetchMyRank(myScore());
+  const rank=await fetchMyRank(myScore(), state.ascensions||0);
   const cur=$("lbRank"); if(!cur) return;            // tab may have changed
   cur.textContent = rank ? `🌍 Global rank: #${rank.toLocaleString()}` : "🌍 Global rank: —";
 }
@@ -2585,7 +2629,9 @@ function renderProperty(){
   let html=`<div style="text-align:center;margin:0 0 4px;">
     <span class="sub">🏘️ Estate bonus: <b>+${totalBonus}%</b> income</span>
   </div>
-  <div class="sub" style="text-align:center;margin:0 0 12px;font-size:11px;">Buy & upgrade properties 🏠🏠🏠🏨. Complete a color set for +${Math.round(PROP_SET_BONUS*100)}% each!</div>`;
+  <div class="sub" style="text-align:center;margin:0 0 8px;font-size:11px;">Buy & upgrade properties 🏠🏠🏠🏨. Complete a color set for +${Math.round(PROP_SET_BONUS*100)}% each!</div>
+  <button class="buy alt" data-buyall-estates="1" style="width:100%;margin-bottom:12px;">🏘️ Buy All Affordable Estates</button>
+  <div class="sub" style="text-align:center;margin:-6px 0 12px;font-size:10px;color:var(--ink2);">After a rebirth your estates are kept & all unlocked ones are auto-bought free ♡</div>`;
 
   // Group groups by tier
   const tierGroups = {};
@@ -2648,6 +2694,32 @@ function updateProperty(){
     const btn=$("propbuy-"+i); if(!btn) return;
     btn.disabled=state.money<propCost(i);
   });
+}
+// Free auto-grant used on rebirth: own at least level 1 of every estate unlocked at your
+// current rebirth tier (keeps any higher levels you already had) — no manual re-buying.
+function autoBuyAllEstates(){
+  PROPERTY_DEFS.forEach((p,i)=>{
+    if(groupUnlocked(p.g) && (state.properties[i]||0) < 1) state.properties[i]=1;
+  });
+}
+// Manual convenience button: greedily buy the cheapest affordable estate upgrade until you
+// run out of money or everything unlocked is maxed.
+function buyAllAffordableEstates(){
+  let bought=0, guard=0;
+  while(guard++ < 100000){
+    let bestI=-1, bestCost=Infinity;
+    for(let i=0;i<PROPERTY_DEFS.length;i++){
+      const p=PROPERTY_DEFS[i];
+      if(!groupUnlocked(p.g) || (state.properties[i]||0)>=PROP_MAX_LVL) continue;
+      const c=propCost(i);
+      if(c<=state.money && c<bestCost){ bestCost=c; bestI=i; }
+    }
+    if(bestI<0) break;
+    state.money-=bestCost; state.properties[bestI]=(state.properties[bestI]||0)+1; bought++;
+  }
+  if(bought>0){ toast(`🏘️ Bought ${bought} estate upgrade${bought===1?'':'s'}!`); sfx("buy"); }
+  else toast("Can't afford any estates right now ♡");
+  renderProperty(); renderStats(); if(currentTab==="cats") updateCats();
 }
 function buyProperty(i){
   const p=PROPERTY_DEFS[i];
@@ -2790,15 +2862,29 @@ function renderAll(){
 }
 
 /* ---------- Actions ---------- */
+// First-ever unlock of a flagged ultra-rare cat: big local celebration + a one-time
+// broadcast to global chat so everyone sees it. Gated by `discovered` so it never repeats.
+function maybeAnnounceLegendaryCat(i){
+  const c=CAT_DEFS[i]; if(!c || !c.announce) return;
+  const note=c.announceNote||"an ultra-rare cat!";
+  toast(`${c.announceEmoji||"👑"} You unlocked ${c.name} — ${note}`);
+  sfx("rare");
+  if(ONLINE && state.name) chatSend(`${c.announceEmoji||"👑"} just unlocked ${c.name} — ${note}`);
+}
 function buyCat(i){
   if(!catUnlocked(i)) return;
   const b=catBulk(i);
   if(b.maxed){ toast("That cat is maxed at "+CAT_HARD_CAP+"! 🐾"); return; }
   if(!b.affordable || b.count<=0) return;
+  const wasFuseable=(state.cats[i]||0)>=2;            // had spare copies to fuse?
+  const firstEver=!(state.discovered && state.discovered[i]);   // never owned this cat before?
   state.money-=b.cost; state.cats[i]+=b.count;
   state._questBoughtCat=true;  // track daily quest
   if(state.discovered && !state.discovered[i]) state.discovered[i]=true;
-  if(unlockedCount()!==lastUnlocked) renderCatsFull(); else updateCats();
+  if(firstEver) maybeAnnounceLegendaryCat(i);
+  // rebuild (not just refresh) when unlocks change OR when the Fuse button's visibility
+  // flips on crossing the 2-copy threshold, so the ⭐ Fuse option appears immediately
+  if(unlockedCount()!==lastUnlocked || (wasFuseable!==((state.cats[i]||0)>=2))) renderCatsFull(); else updateCats();
   updateMascot(); renderStats(); checkAchievements(); sfx("buy");
 }
 function buyUpgrade(id){
@@ -2808,14 +2894,17 @@ function buyUpgrade(id){
   state.money-=u.cost; state.upgrades[id]=true;
   toast(u.name+" purchased! ♡"); renderUpgrades(); renderStats(); sfx("buy");
 }
-function doRebirth(){
+function doRebirth(silent){
   if(!canRebirth()) return;
   const n=(state.rebirths||0)+1;
-  if(!confirm(`Rebirth #${n}? Cash, cats, upgrades & estates reset — but you gain +${Math.round(REBIRTH_BONUS*100)}% permanent income and +1 🐭 token.`)) return;
-  state.rebirths=n; state.goldenMice=(state.goldenMice||0)+1;
+  if(!silent && !confirm(`Rebirth #${n}? Cash, cats & upgrades reset — but your ESTATES are kept (and all newly-unlocked ones auto-bought free), and you gain ×${REBIRTH_BONUS.toFixed(1)} permanent income (multiplicative!) and +1 🐭 token.`)) return;
+  state.rebirths=n; state.totalRebirths=(state.totalRebirths||0)+1; state.goldenMice=(state.goldenMice||0)+1;
   state._questWeeklyRebirths=(state._questWeeklyRebirths||0)+1;
+  rebirthMilestoneReward(state.totalRebirths, silent);   // bonus at every 5th / 25th lifetime rebirth
   state.money=0; state.lifetime=0; state.cats=CAT_DEFS.map(()=>0); state.upgrades={};
-  state.properties=PROPERTY_DEFS.map(()=>0);   // reset estates on rebirth
+  // Estates now PERSIST through rebirth, and every estate unlocked at your new rebirth tier is
+  // auto-bought (free) — so you never have to manually re-buy your estate empire after a rebirth.
+  autoBuyAllEstates();
   // Reset per-run quest trackers so weekly quests can't be claimed immediately after rebirth
   // without actually earning them on the new run. (Weekly claimed flags stay — they reset on
   // the calendar week boundary as normal; only the progress counters reset here.)
@@ -2830,9 +2919,22 @@ function doRebirth(){
   _tapBuffUntil=0; _tapBuffMult=1;
   _combo=0; _comboLast=0;
   updateFrenzyBanner();
-  toast("✨ Rebirth #"+n+"! +1 🐭 token");
+  if(!silent) toast("✨ Rebirth #"+n+"! +1 🐭 token");
   checkAchievements();
-  currentTab="cats"; setActiveTab(); updateMascot(); renderAll(); save();
+  if(!silent){ currentTab="cats"; setActiveTab(); }
+  updateMascot(); renderAll(); save();
+}
+// Milestone rewards at every 5th lifetime rebirth (+ bigger at every 25th) so the long grind
+// between cat unlocks always has a payoff. Keyed to totalRebirths so it can't be farmed by
+// ascending and re-doing the early rebirths.
+function rebirthMilestoneReward(total, silent){
+  if(total>0 && total%25===0){
+    state.stardust=(state.stardust||0)+1; addScroll("pity",1); state.goldenMice=(state.goldenMice||0)+1;
+    if(!silent) toast(`🏆 ${total} lifetime rebirths! +⭐1 stardust · +1 Pity Scroll · +1 🐭`);
+  } else if(total>0 && total%5===0){
+    state.goldenMice=(state.goldenMice||0)+1; addScroll("advanced",2);
+    if(!silent) toast(`🎖️ ${total} lifetime rebirths! +1 bonus 🐭 · +2 Advanced Scrolls`);
+  }
 }
 /* Anti-autoclicker: only pay out up to MAX_TAPS_PER_SEC taps in any rolling 1s window. */
 const MAX_TAPS_PER_SEC = 10;
@@ -2911,6 +3013,7 @@ const CAT_AFFINITY_BY_NAME = {
   "Norwegian Forest":"frost", "Toyger Cat":"sun",
   // New prestige cats
   "Prism Weaver Cat":"shadow", "Starforged Cat":"ruin",
+  "Supernova Sovereign":"sun", "Dimensional Lynx":"shadow",
   "Eternity Sovereign":"shadow", "Omnicat":"sun",
 };
 function catAffinity(catId){ return CAT_AFFINITY_BY_NAME[CAT_DEFS[catId].name] || THEMES[catId%4].id; }
@@ -3051,9 +3154,13 @@ function effPower(catId, themeId){
   const lvl  = 1 + delverLevel(catId)*0.04;                     // per-cat levels
   return base*aff*lvl;
 }
-function floorDifficulty(depth){ return 1.5 + depth*0.78; }
+function floorDifficulty(depth){ return 1.5 * Math.pow(1.08, depth - 1); }
 function winChance(depth, catId, themeId){
-  return Math.max(0.05, Math.min(0.95, 0.85 - 0.16*(floorDifficulty(depth)-effPower(catId,themeId)) + catacombWinBonus()));
+  const power = effPower(catId, themeId) + catacombWinBonus()*10;
+  const diff  = floorDifficulty(depth);
+  const ratio = power / diff;
+  const raw   = 1 / (1 + Math.exp(-2.5 * (ratio - 1)));
+  return Math.max(0.05, raw);
 }
 function shardsFloor(depth){ return Math.max(1, Math.round(Math.pow(depth,1.5))); }
 function treasureShards(depth){ return Math.max(1, Math.round(Math.pow(depth,1.2)*0.6)); }
@@ -3438,8 +3545,8 @@ async function initRaid(){
 
 function scheduleNextRaidSpawn(){
   const now = Date.now();
-  // Align to 6h boundary from a fixed epoch (midnight Jan 1 2025 UTC) so all
-  // players on the same server see raids at the same wall-clock times.
+  // Align to the RAID_INTERVAL_MS boundary (3h) from a fixed epoch (midnight Jan 1
+  // 2025 UTC) so all players on the same server see raids at the same wall-clock times.
   const EPOCH = new Date("2025-01-01T00:00:00Z").getTime();
   const elapsed = now - EPOCH;
   const nextBoundary = EPOCH + (Math.floor(elapsed / RAID_INTERVAL_MS) + 1) * RAID_INTERVAL_MS;
@@ -3495,7 +3602,9 @@ async function joinRaid(){
   if(_raid._joinPending){ return; }   // prevent double-tap during async
   _raid._joinPending = true;
 
-  const dps = incomePerSecPassive();
+  // Floor DPS at 1 so a no-income player can't join with dps 0 — which made the boss
+  // spawn with 0 HP and instantly die, handing out free loot rolls every raid.
+  const dps = Math.max(incomePerSecPassive(), 1);
 
   // Push to Supabase
   if(ONLINE){
@@ -3562,33 +3671,38 @@ async function raidTick(){
   // Phase transitions
   if(_raid.phase === "idle"){
     if(!_raid._initDone) return;  // don't act until initRaid() has finished
-
-    // --- NEW FIX: Peek at the database every 15 seconds to catch manual admin spawns ---
-    if(ONLINE && now - (_raid._lastIdleSyncAt||0) > 15000){
-      _raid._lastIdleSyncAt = now;
-      const syncRow = await raidFetch();
-      if(syncRow && (syncRow.phase === "joining" || syncRow.phase === "active")){
-        // An admin forced a spawn! Sync our client immediately.
-        _raid.phase = syncRow.phase;
-        _raid.bossIdx = syncRow.boss_idx;
-        _raid.fightAt = syncRow.fight_at;
-        _raid.endsAt  = syncRow.ends_at;
-        _raid.spawnAt = syncRow.spawn_at || _raid.spawnAt;
-        _raid.raidersData = syncRow.raiders_data ? JSON.parse(syncRow.raiders_data) : [];
-        _raid.totalHP  = syncRow.total_hp || 0;
-        _raid.currentHP= syncRow.current_hp || 0;
-        _raid.eliminatedAt = syncRow.eliminated_at || 0;
-        
-        if(syncRow.phase === "joining") showRaidAlert();
+    // Poll the server for an EARLY / forced spawn (e.g. admin "Force Spawn Raid Boss")
+    // BEFORE our locally-scheduled spawnAt — otherwise other clients wouldn't see a
+    // forced boss until the next 3-hour boundary. Throttled so idle clients don't spam.
+    if(ONLINE && now < _raid.spawnAt && now - (_raid._lastIdlePoll||0) > 10000){
+      _raid._lastIdlePoll = now;
+      const row = await raidFetch();
+      if(row && (row.phase === "joining" || row.phase === "active") && now < (row.ends_at||0)){
+        // A raid is live on the server that we haven't joined — adopt it now.
+        _raid.phase        = row.phase;
+        _raid.bossIdx      = row.boss_idx;
+        _raid.spawnAt      = row.spawn_at || now;   // align so the join-key matches
+        _raid.fightAt      = row.fight_at;
+        _raid.endsAt       = row.ends_at;
+        _raid.raidersData  = row.raiders_data ? JSON.parse(row.raiders_data) : [];
+        _raid.totalHP      = row.total_hp || 0;
+        _raid.currentHP    = row.current_hp || 0;
+        _raid.eliminatedAt = row.eliminated_at || 0;
+        // fresh participation flags for this newly-seen raid
+        _raid._joined = false; _raid._myDps = 0; _raid._stunUntil = 0;
+        _raid._halfFired = false; _raid._rewardClaimed = false; _raid._myDmgTotal = 0;
+        _raid._lastTickAt = now;
+        if(row.phase === "joining") showRaidAlert();
         raidUpdateUI();
         if(currentTab==="adventure") renderAdventure();
+        return;
       }
     }
-    // -----------------------------------------------------------------------------------
-
     if(now >= _raid.spawnAt && _raid.spawnAt > 0){
       if(ONLINE){
         // Guard against two clients spawning simultaneously:
+        // only one client should win the spawn. We use a short debounce so that
+        // if another client just spawned, we'll see it on the next fetch.
         if(_raid._spawnLock) return;   // already waiting — skip this tick
         _raid._spawnLock = true;
         setTimeout(()=>{ _raid._spawnLock = false; }, 3000);
@@ -3670,12 +3784,31 @@ async function raidTick(){
 
       // Write damage to Supabase (debounced — every 2s)
       if(ONLINE && now - (_raid._lastDmgPush||0) > 2000){
+        // Subtract the damage we actually accumulated since the last push,
+        // not a hardcoded dps*2 — that was why the boss HP barely moved.
         const dmgSinceLastPush = _raid._myDmgTotal - (_raid._lastPushedDmg||0);
         _raid._lastPushedDmg = _raid._myDmgTotal;
         _raid._lastDmgPush = now;
-        const newHP = Math.max(0, (_raid.currentHP || 0) - dmgSinceLastPush);
-        _raid.currentHP = newHP;
-        await raidUpsert({ current_hp: Math.max(0, newHP) });
+        // Read the server's latest HP immediately before writing, then subtract our
+        // damage from THAT. Without this, two raiders both subtract from a stale local
+        // value and last-write-wins clobbers each other's damage — so a boss with many
+        // raiders barely lost HP. Read→write window is tiny, so group damage now adds up.
+        const fresh = await raidFetch();
+        if(fresh){
+          _raid.endsAt = fresh.ends_at || _raid.endsAt;
+          if(fresh.phase && fresh.phase !== "active" && fresh.phase !== "joining"){
+            // raid already ended on the server — stop pushing
+            _raid.currentHP = 0;
+          } else {
+            const base = (fresh.current_hp != null) ? fresh.current_hp : (_raid.currentHP||0);
+            const newHP = Math.max(0, base - dmgSinceLastPush);
+            _raid.currentHP = newHP;
+            await raidUpsert({ current_hp: newHP });
+          }
+        } else {
+          // couldn't reach the server — fall back to local subtraction so we don't stall
+          _raid.currentHP = Math.max(0, (_raid.currentHP||0) - dmgSinceLastPush);
+        }
       } else if(!ONLINE){
         _raid.currentHP = Math.max(0, (_raid.currentHP||0) - dmg);
       }
@@ -3984,6 +4117,9 @@ function tick(){
   const now=Date.now(); const dt=(now-lastTick)/1000; lastTick=now;
   const earned=incomePerSecPassive()*dt;
   state.money+=earned; state.lifetime+=earned; state.totalEarned+=earned; state.timePlayed+=dt;
+  // Auto-Rebirth: once unlocked (Cosmic Tree → Eternal Cycle) and toggled on, rebirth the
+  // instant you can — silently, so it never spams confirm dialogs or toasts.
+  if(state.autoRebirth && autoRebirthUnlocked() && canRebirth()) doRebirth(true);
   // prune stale tap timestamps (prevents unbounded array growth)
   while(_tapTimes.length && now - _tapTimes[0] > 1000) _tapTimes.shift();
   renderStats();
@@ -4121,6 +4257,10 @@ function applyLoadedState(s){
   if(typeof state.seasonsPlayed!=="number") state.seasonsPlayed=0;
   if(typeof state.expeditions!=="object"||!state.expeditions) state.expeditions={};
   if(typeof state.expeditionsDone!=="number") state.expeditionsDone=0;
+  // lifetime rebirths (never reset by ascension) — back-fill from current rebirths for old saves
+  if(typeof state.totalRebirths!=="number") state.totalRebirths=state.rebirths||0;
+  if(state.totalRebirths < (state.rebirths||0)) state.totalRebirths=state.rebirths||0;
+  if(typeof state.autoRebirth!=="boolean") state.autoRebirth=false;
 }
 function applyOffline(){
   const now=Date.now(); let elapsed=(now-(state.lastSave||now))/1000;
@@ -4667,8 +4807,19 @@ $("panel-cats").addEventListener("click",e=>{
   const btn=e.target.closest("[data-cat]"); if(btn) buyCat(parseInt(btn.dataset.cat));
 });
 $("panel-upgrades").addEventListener("click",e=>{ const btn=e.target.closest("[data-up]"); if(btn) buyUpgrade(btn.dataset.up); });
-$("panel-rebirth").addEventListener("click",e=>{ const btn=e.target.closest("[data-skill]"); if(btn) buySkill(btn.dataset.skill); });
-$("panel-property").addEventListener("click",e=>{ const btn=e.target.closest("[data-prop]"); if(btn) buyProperty(parseInt(btn.dataset.prop)); });
+$("panel-rebirth").addEventListener("click",e=>{
+  if(e.target.closest("[data-autoreb-toggle]")){
+    if(!autoRebirthUnlocked()){ toast("Unlock Auto-Rebirth in the 🌌 Ascend tree first!"); return; }
+    state.autoRebirth=!state.autoRebirth; sfx("buy");
+    toast(state.autoRebirth?"♻️ Auto-Rebirth ON":"♻️ Auto-Rebirth OFF");
+    renderRebirth(); save(); return;
+  }
+  const btn=e.target.closest("[data-skill]"); if(btn) buySkill(btn.dataset.skill);
+});
+$("panel-property").addEventListener("click",e=>{
+  if(e.target.closest("[data-buyall-estates]")){ buyAllAffordableEstates(); return; }
+  const btn=e.target.closest("[data-prop]"); if(btn) buyProperty(parseInt(btn.dataset.prop));
+});
 $("panel-adventure").addEventListener("click",advClick);
 $("panel-ascend").addEventListener("click",e=>{ const btn=e.target.closest("[data-ascend]"); if(btn) buyAscendNode(btn.dataset.ascend); });
 $("panel-expeditions").addEventListener("click",e=>{
@@ -4774,6 +4925,18 @@ $("btnAdminScrolls").addEventListener("click", () => {
   toast("📜 Max Scrolls Granted!");
 });
   
+$("btnAdminTheo").addEventListener("click", () => {
+  state.rebirths = 100;
+  state.totalRebirths = Math.max(state.totalRebirths||0, 100);
+  const theoIdx = CAT_DEFS.length - 1;
+  state.cats[theoIdx] = Math.max(state.cats[theoIdx]||0, 1);
+  state.discovered[theoIdx] = true;
+  state.money = Math.max(state.money||0, 9e99);
+  state.lifetime = Math.max(state.lifetime||0, 9e99);
+  renderAll(); save();
+  toast("👑 Theo granted! Good luck on the floors~");
+});
+
 $("saveBtn").addEventListener("click",()=>{ save(); toast("Game saved 💾"); });
 $("keyBtn").addEventListener("click",()=>{ save(); $("settingsModal").classList.remove("show"); $("keyText").value=encode(state); $("keyModal").classList.add("show"); });
 $("closeKey").addEventListener("click",()=>$("keyModal").classList.remove("show"));
