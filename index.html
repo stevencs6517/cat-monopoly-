@@ -3558,42 +3558,34 @@ async function raidTick(){
   const now = Date.now();
 
   // Phase transitions
-  if(_raid.phase === "idle"){
+ if(_raid.phase === "idle"){
     if(!_raid._initDone) return;  // don't act until initRaid() has finished
-    if(now >= _raid.spawnAt && _raid.spawnAt > 0){
-      if(ONLINE){
-        // Guard against two clients spawning simultaneously:
-        // only one client should win the spawn. We use a short debounce so that
-        // if another client just spawned, we'll see it on the next fetch.
-        if(_raid._spawnLock) return;   // already waiting — skip this tick
-        _raid._spawnLock = true;
-        setTimeout(()=>{ _raid._spawnLock = false; }, 3000);
 
-        // Re-fetch to see if another client already spawned
-        const row = await raidFetch();
-        if(row && (row.phase === "joining" || row.phase === "active")){
-          // Already spawned by another client — sync
-          _raid.phase = row.phase;
-          _raid.bossIdx = row.boss_idx;
-          _raid.fightAt = row.fight_at;
-          _raid.endsAt  = row.ends_at;
-          _raid.spawnAt = row.spawn_at || _raid.spawnAt;  // align spawnAt so join-key matches
-          _raid.raidersData = row.raiders_data ? JSON.parse(row.raiders_data) : [];
-          _raid.totalHP  = row.total_hp || 0;
-          _raid.currentHP= row.current_hp || 0;
-          _raid.eliminatedAt = row.eliminated_at || 0;
-          if(row.phase === "joining") showRaidAlert();
-          raidUpdateUI();
-        } else if(!row || row.phase === "idle"){
-          await spawnRaidBoss();
-        }
-        _raid._spawnLock = false;
-      } else {
-        await spawnRaidBoss();
+    // --- ADD THIS NEW BLOCK ---
+    // Every 15 seconds, peek at the database to see if an admin forced a spawn
+    if(ONLINE && now - (_raid._lastIdleSyncAt||0) > 15000){
+      _raid._lastIdleSyncAt = now;
+      const row = await raidFetch();
+      if(row && row.phase === "joining"){
+        _raid.phase = row.phase;
+        _raid.bossIdx = row.boss_idx;
+        _raid.fightAt = row.fight_at;
+        _raid.endsAt  = row.ends_at;
+        _raid.spawnAt = row.spawn_at || _raid.spawnAt;
+        _raid.raidersData = row.raiders_data ? JSON.parse(row.raiders_data) : [];
+        _raid.totalHP  = row.total_hp || 0;
+        _raid.currentHP= row.current_hp || 0;
+        _raid.eliminatedAt = row.eliminated_at || 0;
+        showRaidAlert();
+        raidUpdateUI();
+        if(currentTab==="adventure") renderAdventure();
       }
     }
-  }
+    // --------------------------
 
+    if(now >= _raid.spawnAt && _raid.spawnAt > 0){
+      if(ONLINE){
+// ... the rest of the existing code continues ...
   if(_raid.phase === "joining"){
     if(now >= _raid.fightAt){
       _raid.phase = "active";
